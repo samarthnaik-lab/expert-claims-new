@@ -243,19 +243,26 @@ const PartnerBacklogEdit = () => {
   const fetchBacklogDetail = async (id: string) => {
     setIsLoading(true);
     try {
+      // Get session data for authentication
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let authToken = '';
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          authToken = session.jwtToken || '';
+        } catch (e) {
+          console.error('Error parsing session:', e);
+        }
+      }
+
       const response = await fetch(
-        `https://n8n.srv952553.hstgr.cloud/webhook/backlog_id?backlog_id=${id}`,
+        `http://localhost:3000/public/backlog_id?backlog_id=${id}`,
         {
           method: "GET",
           headers: {
-            "Content-Profile": "expc",
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            "Accept-Profile": "expc",
-            session_id: "17e7ab32-86ad-411e-8ee3-c4a09e6780f7",
-            Authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
+            "Accept": "*/*",
             "Content-Type": "application/json",
+            ...(authToken && { "Authorization": `Bearer ${authToken}` })
           },
         }
       );
@@ -568,84 +575,40 @@ const PartnerBacklogEdit = () => {
   const addComment = async () => {
     if (!newComment.trim() || !backlogDetail) return;
     let partnerId = 0;
-    let email = 'admin@exampleerror.com';
-    let role = 'admin';
-    let designation = 'admin';
-    let department = 'admin';
     const userDetailsStr = localStorage.getItem("expertclaims_user_details");
     if (userDetailsStr) {
       const userDetails = JSON.parse(userDetailsStr);
       const userData = Array.isArray(userDetails) ? userDetails[0] : userDetails;
-      partnerId = userData.userid;
-      email = userData.email;
-      role = userData.role;
-      designation = userData.designation;
-   
+      partnerId = userData.userid || userData.id || 0;
+    } else {
+      partnerId = 3; // Default fallback
     }
-    else {
-      partnerId = 436;
-      email = 'admin@exampleerror.com';
-      role = 'admin';
-      designation = 'admin';
-      department = 'admin';
-    }
-
 
     setIsAddingComment(true);
     try {
       const response = await fetch(
-        "https://n8n.srv952553.hstgr.cloud/webhook/comments_insert",
+        "http://localhost:3000/public/comments_insert",
         {
           method: "POST",
           headers: {
-            "Content-Profile": "expc",
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            "Accept-Profile": "expc",
-            session_id: "17e7ab32-86ad-411e-8ee3-c4a09e6780f7",
-            Authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             backlog_id: backlogDetail.backlog_id,
             comment_text: newComment.trim(),
-            created_by: partnerId, // Partner ID
-            createdby_name: "n/a", // Partner name
+            created_by: partnerId,
+            createdby_name: "n/a",
             updated_by: partnerId,
             updatedby_name: "n/a",
-            email: email,
-            role: role,
-            department: designation
+            department: "partner"
           }), 
         }
       );
 
       if (response.ok) {
-        // Add the new comment to the UI immediately
-        const newCommentObj = {
-          backlog_commentid: Date.now(), // Temporary ID
-          backlog_id: backlogDetail.backlog_id,
-          comment_text: newComment.trim(),
-          created_by: partnerId,
-          created_time: new Date().toISOString(),
-          createdby_name: "n/a",
-          updated_by: partnerId,
-          updated_time: new Date().toISOString(),
-          updatedby_name: "n/a",
-          email: email,
-          role: role,
-          department: designation
-        };
-
-        setBacklogDetail(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            backlog_comments: [...(prev.backlog_comments || []), newCommentObj]
-          };
-        });
-
+        // Refresh comments by fetching backlog detail again
+        fetchBacklogDetail(backlogId!);
+        
         setNewComment("");
         setShowAddComment(false);
         toast({
@@ -688,20 +651,16 @@ const PartnerBacklogEdit = () => {
         const formData = new FormData();
         formData.append('document', file);
         formData.append('backlog_id', backlogDetail!.backlog_id.toString());
-        formData.append('document_type', selectedDocumentType || 'Insurance Policy'); // Use selected document type name
+        formData.append('document_type', selectedDocumentType || 'Insurance Policy');
 
-        const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/partnerbacklogentrydoc', {
+        const response = await fetch('http://localhost:3000/public/partnerbacklogentrydoc', {
           method: 'POST',
-          headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-            'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-            'session_id': '0276776c-99fa-4b79-a5a2-70f3a428a0c7'
-          },
           body: formData
         });
 
         if (!response.ok) {
-          throw new Error(`Upload failed for ${file.name}`);
+          const errorData = await response.json().catch(() => ({ message: 'Upload failed' }));
+          throw new Error(errorData.message || `Upload failed for ${file.name}`);
         }
       }
 
@@ -760,22 +719,6 @@ const PartnerBacklogEdit = () => {
 
     setIsUpdatingBacklog(true);
     try {
-      const sessionStr = localStorage.getItem('expertclaims_session');
-      let sessionId = '5fbe26f1-b3ec-468e-bd4e-1858d5535909';
-      let jwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiAiLCJwYXNzd29yZCI6IiIsImlhdCI6MTc2MzQ0MTU3MX0.7xlNPwb5F4qaRwJ42HxBWaR1aom2XdnFPY8onV9NqP8';
-
-      if (sessionStr) {
-        try {
-          const session = JSON.parse(sessionStr);
-          sessionId = session.sessionId || '5fbe26f1-b3ec-468e-bd4e-1858d5535909';
-          jwtToken = session.jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiAiLCJwYXNzd29yZCI6IiIsImlhdCI6MTc2MzQ0MTU3MX0.7xlNPwb5F4qaRwJ42HxBWaR1aom2XdnFPY8onV9NqP8';
-        } catch (e) {
-          console.error('Error parsing session:', e);
-        }
-      }
-
-      const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
-
       const requestBody = {
         backlog_id: backlogDetail.backlog_id,
         case_summary: editableCaseSummary.trim(),
@@ -783,14 +726,9 @@ const PartnerBacklogEdit = () => {
         case_type_id: parseInt(selectedCaseType)
       };
 
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/update_backlog', {
+      const response = await fetch('http://localhost:3000/public/update_backlog', {
         method: 'PATCH',
         headers: {
-          'accept': '*/*',
-          'apikey': API_KEY,
-          'authorization': `Bearer ${API_KEY}`,
-          'session_id': sessionId,
-          'jwt_token': jwtToken,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestBody)

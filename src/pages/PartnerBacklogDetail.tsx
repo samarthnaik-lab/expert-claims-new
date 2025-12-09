@@ -203,12 +203,13 @@ const PartnerBacklogDetail = () => {
 
       // Use localhost:3000 API endpoint
       const response = await fetch(
-        `http://localhost:3000/api/backlog_id?backlog_id=${id}`,
+        `http://localhost:3000/public/backlog_id?backlog_id=${id}`,
         {
           method: "GET",
           headers: {
+            "Accept": "*/*",
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${authToken}`,
+            ...(authToken && { "Authorization": `Bearer ${authToken}` })
           },
         }
       );

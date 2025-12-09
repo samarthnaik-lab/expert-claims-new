@@ -493,10 +493,10 @@ const PartnerDashboard = () => {
       );
       if (response.ok) {
         const data = await response.json();
-        // Map backlog_int_id to backlog_id for compatibility
+        // Use backlog_id from API response (e.g., "ECSI-GA-25-065")
         const mappedData = Array.isArray(data) ? data.map(item => ({
           ...item,
-          backlog_id: item.backlog_int_id || item.backlog_id
+          backlog_id: item.backlog_id || item.backlog_int_id // Prioritize backlog_id over backlog_int_id
         })) : data;
         setAllBacklogData(mappedData);
       }
@@ -857,10 +857,10 @@ const PartnerDashboard = () => {
 
       if (response.ok) {
         const data = await response.json();
-        // Map backlog_int_id to backlog_id for compatibility
+        // Use backlog_id from API response (e.g., "ECSI-GA-25-065")
         const mappedData = Array.isArray(data) ? data.map(item => ({
           ...item,
-          backlog_id: item.backlog_int_id || item.backlog_id
+          backlog_id: item.backlog_id || item.backlog_int_id // Prioritize backlog_id over backlog_int_id
         })) : data;
         setBacklogData(mappedData);
         console.log("Backlog data fetched:", mappedData);
@@ -1873,7 +1873,10 @@ const PartnerDashboard = () => {
                               className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors duration-200"
                             >
                               <td className="p-4">
-                                <span className="font-mono text-sm text-blue-600">
+                                <span 
+                                  className="font-mono text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                                  onClick={() => navigate(`/partner-backlog-detail/${item.backlog_id}`)}
+                                >
                                   {item.backlog_id}
                                 </span>
                               </td>
