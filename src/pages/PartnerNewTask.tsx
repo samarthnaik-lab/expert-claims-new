@@ -411,9 +411,16 @@ const PartnerNewTask = () => {
   const handleSubmitConfirm = async (submitAnother: boolean) => {
     setShowSubmitConfirmation(false);
     
+    // Call handleSubmit and check if it was successful
+    const success = await handleSubmit();
+    
+    // Only proceed if submission was successful
+    if (!success) {
+      return; // Stay on the same page if validation failed
+    }
+    
     if (submitAnother) {
       // Submit the policy and stay on the same page
-      await handleSubmit();
       toast({
         title: "Policy Submitted",
         description: "Policy submitted successfully. You can submit another policy.",
@@ -422,7 +429,6 @@ const PartnerNewTask = () => {
     }
     
     // Submit the policy and navigate to dashboard
-    await handleSubmit();
     navigate("/partner-dashboard");
   };
 
@@ -436,16 +442,18 @@ const PartnerNewTask = () => {
           description: "Task summary is required",
           variant: "destructive",
         });
-        return;
+        setIsSubmitting(false);
+        return false;
       }
 
-      if (!formData.caseType) {
+      if (!formData.caseType || formData.caseType.trim() === "") {
         toast({
           title: "Error",
-          description: "Case type is required",
+          description: "Service Type field is required. Please select a service type.",
           variant: "destructive",
         });
-        return;
+        setIsSubmitting(false);
+        return false;
       }
 
       // Document type validation is optional - only validate if user has selected a document type
@@ -455,7 +463,8 @@ const PartnerNewTask = () => {
           description: "Please specify the document type name",
           variant: "destructive",
         });
-        return;
+        setIsSubmitting(false);
+        return false;
       }
 
       const taskData = createTaskData();
@@ -543,7 +552,7 @@ const PartnerNewTask = () => {
         formDataPayload.append("case_description", formData.description);
         formDataPayload.append("case_type", formData.caseType);
         formDataPayload.append("created_date", new Date().toISOString());
-        formDataPayload.append("status", "created");
+        formDataPayload.append("status", "new");
         formDataPayload.append("customer_username", `partner_${partnerId}_${Date.now()}`);
         formDataPayload.append("customer_first_name", "Partner");
         formDataPayload.append("customer_last_name", "User");
@@ -606,7 +615,8 @@ const PartnerNewTask = () => {
         console.error("Error creating partner backlog entry:", backlogError);
       }
 
-      // Don't show popup or navigate here - let the calling function handle it
+      // Return true to indicate successful submission
+      return true;
     } catch (error) {
       console.error("Error creating task:", error);
       toast({
@@ -614,6 +624,7 @@ const PartnerNewTask = () => {
         description: "Failed to create task",
         variant: "destructive",
       });
+      return false;
     } finally {
       setIsSubmitting(false);
     }

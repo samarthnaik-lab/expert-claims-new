@@ -55,7 +55,7 @@ interface Task {
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, getAuthHeaders } = useAuth();
   const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
@@ -285,10 +285,12 @@ const EmployeeDashboard = () => {
     try {
       const userDetailsStr = localStorage.getItem('expertclaims_user_details');
       let userId = 0; 
+      let department = '';
       if (userDetailsStr) {
         const userDetailsData = JSON.parse(userDetailsStr);
         // Handle array response - get the first object if it's an array
         const userDetails = Array.isArray(userDetailsData) ? userDetailsData[0] : userDetailsData;
+        department = userDetails.department || '';
         // gap_analysis sees all cases, technical_consultant sees only assigned cases
         if (userDetails.department === 'gap_analysis') {
           userId = 0; // Show all cases
@@ -297,16 +299,46 @@ const EmployeeDashboard = () => {
         }
       }
       
-      const response = await fetch(`https://n8n.srv952553.hstgr.cloud/webhook/get_all_backlog_data?employee_id=${userId}`, {
-        method: 'GET',
-        headers: {
+      // Get session details for headers
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        sessionId = session.sessionId || '';
+        jwtToken = session.jwtToken || '';
+      }
+
+      // Get auth headers from context
+      const authHeaders = getAuthHeaders();
+
+      // Determine API endpoint based on department
+      let apiUrl = '';
+      let headers: { [key: string]: string } = {
           'accept': 'application/json',
-          'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-          'content-type': 'application/json',
-          'session_id': '0276776c-99fa-4b79-a5a2-70f3a428a0c7',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-          'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o'
-        }
+        'content-type': 'application/json'
+      };
+
+      if (department.toLowerCase() === 'technical_consultant') {
+        // Use new Node.js API for technical consultants
+        apiUrl = `http://localhost:3000/support/get_all_backlog_data?employee_id=${userId}`;
+        headers['apikey'] = 'YOUR_API_KEY'; // Update with your actual API key if needed
+        headers['authorization'] = authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN');
+        headers['session_id'] = authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID';
+        console.log('Calling technical consultant API:', apiUrl, 'with employee_id:', userId);
+      } else {
+        // Use existing n8n webhook for other departments
+        apiUrl = `https://n8n.srv952553.hstgr.cloud/webhook/get_all_backlog_data?employee_id=${userId}`;
+        headers['accept-language'] = 'en-GB,en-US;q=0.9,en;q=0.8';
+        headers['session_id'] = sessionId || '0276776c-99fa-4b79-a5a2-70f3a428a0c7';
+        headers['apikey'] = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
+        headers['authorization'] = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
+      }
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: headers
       });
 
       if (response.ok) {

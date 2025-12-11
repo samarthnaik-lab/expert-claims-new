@@ -278,8 +278,8 @@ const PartnerBacklogDetail = () => {
         return;
       }
 
-      // Call the n8n webhook API to get document view URL
-      console.log('Calling n8n webhook for document view...');
+      // Call the new API to get document view
+      console.log('Calling document view API...');
       console.log('Document ID:', documentId);
       
       const requestBody = {
@@ -287,15 +287,16 @@ const PartnerBacklogDetail = () => {
       };
       console.log('Request body:', requestBody);
       
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/partnerdocumentview', {
+      // Supabase service role key
+      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+      
+      const response = await fetch('http://localhost:3000/support/partnerdocumentview', {
         method: 'POST',
         headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Content-Profile': 'expc',
-          'Accept-Profile': 'expc',
-          'session_id': 'a9bfe0a4-1e6c-4c69-860f-ec50846a7da6',
-          'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc',
+          'session_id': sessionId,
+          'jwt_token': jwtToken,
+          'apikey': supabaseServiceRoleKey,
+          'authorization': `Bearer ${supabaseServiceRoleKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestBody)

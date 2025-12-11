@@ -211,54 +211,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthenticated(false);
     setUserDetails(null);
     
-    // Clear all localStorage data
+    // Clear ALL localStorage data
     try {
-      // Clear all known localStorage keys
-      localStorage.removeItem('expertclaims_session');
-      localStorage.removeItem('expertclaims_user_details');
-      localStorage.removeItem('expertclaims_customer_session_details');
-      localStorage.removeItem('clientDetails');
-      localStorage.removeItem('clientDetailsSession');
-      localStorage.removeItem('partner_details');
-      
-      // Clear customer session details
-      AuthService.clearCustomerSessionDetails();
-      
-      // Clear any other localStorage items that might exist
-      // This ensures all app-related data is cleared
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key) {
-          // Remove any key that starts with app-specific prefixes
-          if (key.startsWith('expertclaims_') || 
-              key.startsWith('client') || 
-              key.startsWith('partner_') ||
-              key === 'partner_details') {
-            keysToRemove.push(key);
-          }
-        }
-      }
-      
-      // Remove all identified keys
-      keysToRemove.forEach(key => {
-        try {
-          localStorage.removeItem(key);
-        } catch (error) {
-          console.error(`Error removing localStorage key ${key}:`, error);
-        }
-      });
-      
-      console.log('All session data cleared from localStorage');
+      // Clear all localStorage items completely
+      localStorage.clear();
+      console.log('All localStorage data cleared');
     } catch (error) {
       console.error('Error clearing localStorage:', error);
-      // Fallback: clear all localStorage if there's an error
-      try {
-        localStorage.clear();
-        console.log('All localStorage cleared (fallback)');
-      } catch (clearError) {
-        console.error('Error clearing all localStorage:', clearError);
-      }
     }
   };
 

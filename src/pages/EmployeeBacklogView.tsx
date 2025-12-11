@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Calendar, User, FileText, Clock, ZoomIn, ZoomOut, RotateCcw, XCircle, RefreshCw, Trash2, Users, CheckCircle } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BacklogDetail {
   status: any;
@@ -58,6 +59,7 @@ interface BacklogDetail {
 const EmployeeBacklogView = () => {
   const navigate = useNavigate();
   const { backlogId } = useParams<{ backlogId: string }>();
+  const { getAuthHeaders } = useAuth();
   const [backlogDetail, setBacklogDetail] = useState<BacklogDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [employeeName, setEmployeeName] = useState<string>('');
@@ -192,19 +194,28 @@ const EmployeeBacklogView = () => {
   const fetchBacklogDetail = async (id: string) => {
     setIsLoading(true);
     try {
+      // Get auth headers from context
+      const authHeaders = getAuthHeaders();
+      
+      // Get session details
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        sessionId = session.sessionId || '';
+      }
+
+      // Call the new API endpoint
       const response = await fetch(
-        `https://n8n.srv952553.hstgr.cloud/webhook/backlog_id?backlog_id=${id}`,
+        `http://localhost:3000/support/backlog_id?backlog_id=${id}`,
         {
           method: "GET",
           headers: {
-            "Content-Profile": "expc",
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            "Accept-Profile": "expc",
-            session_id: "17e7ab32-86ad-411e-8ee3-c4a09e6780f7",
-            Authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            "Content-Type": "application/json",
+            'accept': 'application/json',
+            'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
+            'authorization': authHeaders['Authorization'] || 'Bearer YOUR_TOKEN',
+            'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+            'Content-Type': 'application/json'
           },
         }
       );
@@ -212,10 +223,21 @@ const EmployeeBacklogView = () => {
       if (response.ok) {
         const data = await response.json();
         console.log("API Response data:", data);
-        if (data && data.length > 0) {
-          console.log("Backlog detail data[0]:", data[0]);
-          setBacklogDetail(data[0]);
-          setSelectedCaseType(data[0].case_type_id?.toString() || "");
+        
+        // Handle both array and object responses
+        let backlogData = null;
+        if (Array.isArray(data)) {
+          if (data.length > 0) {
+            backlogData = data[0];
+          }
+        } else if (data && typeof data === 'object') {
+          backlogData = data;
+        }
+        
+        if (backlogData) {
+          console.log("Backlog detail data:", backlogData);
+          setBacklogDetail(backlogData);
+          setSelectedCaseType(backlogData.case_type_id?.toString() || "");
         } else {
           toast({
             title: "Error",

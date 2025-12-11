@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BacklogDetail {
   status: any;
@@ -68,6 +69,7 @@ interface Employee {
 const EmployeeBacklogEdit = () => {
   const navigate = useNavigate();
   const { backlogId } = useParams<{ backlogId: string }>();
+  const { getAuthHeaders } = useAuth();
   const [backlogDetail, setBacklogDetail] = useState<BacklogDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [employeeName, setEmployeeName] = useState<string>('');
@@ -256,15 +258,25 @@ const EmployeeBacklogEdit = () => {
     try {
       console.log('Fetching technical consultants from API...');
       
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/gettechnicalconsultant', {
+      // Get auth headers from context
+      const authHeaders = getAuthHeaders();
+      
+      // Get session details
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        sessionId = session.sessionId || '';
+      }
+      
+      const response = await fetch('http://localhost:3000/support/gettechnicalconsultant', {
         method: 'GET',
         headers: {
           'accept': 'application/json',
-          'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-          'content-type': 'application/json',
-          'session_id': '0276776c-99fa-4b79-a5a2-70f3a428a0c7',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-          'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o'
+          'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
+          'authorization': authHeaders['Authorization'] || 'Bearer YOUR_TOKEN',
+          'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+          'Content-Type': 'application/json'
         }
       });
 
@@ -308,19 +320,39 @@ const EmployeeBacklogEdit = () => {
   const fetchBacklogDetail = async (id: string) => {
     setIsLoading(true);
     try {
+      // Get employee_id from user details
+      const userDetailsStr = localStorage.getItem('expertclaims_user_details');
+      let employeeId = 0;
+      if (userDetailsStr) {
+        const userDetailsData = JSON.parse(userDetailsStr);
+        const userData = Array.isArray(userDetailsData) ? userDetailsData[0] : userDetailsData;
+        employeeId = userData?.employee_id || userData?.id || 0;
+      }
+
+      // Get auth headers from context
+      const authHeaders = getAuthHeaders();
+      
+      // Get session details
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        sessionId = session.sessionId || '';
+        jwtToken = session.jwtToken || '';
+      }
+
+      // Call the new API endpoint
       const response = await fetch(
-        `https://n8n.srv952553.hstgr.cloud/webhook/backlog_id?backlog_id=${id}`,
+        `http://localhost:3000/support/get_all_backlog_data?employee_id=${employeeId}`,
         {
           method: "GET",
           headers: {
-            "Content-Profile": "expc",
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            "Accept-Profile": "expc",
-            session_id: "17e7ab32-86ad-411e-8ee3-c4a09e6780f7",
-            Authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            "Content-Type": "application/json",
+            'accept': 'application/json',
+            'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
+            'authorization': authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN'),
+            'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+            'Content-Type': 'application/json'
           },
         }
       );
@@ -328,25 +360,37 @@ const EmployeeBacklogEdit = () => {
       if (response.ok) {
         const data = await response.json();
         console.log("API Response data:", data);
-        if (data && data.length > 0) {
-          console.log("Backlog detail data[0]:", data[0]);
-          setBacklogDetail(data[0]);
+        
+        // Handle both array and object responses
+        let backlogList = [];
+        if (Array.isArray(data)) {
+          backlogList = data;
+        } else if (data && typeof data === 'object') {
+          backlogList = [data];
+        }
+        
+        // Find the backlog with matching backlog_id
+        const backlogData = backlogList.find((item: any) => item.backlog_id === id);
+        
+        if (backlogData) {
+          console.log("Backlog detail data:", backlogData);
+          setBacklogDetail(backlogData);
           // Set initial values for dropdowns
-          setSelectedCaseType(data[0].case_type_id?.toString() || "");
+          setSelectedCaseType(backlogData.case_type_id?.toString() || "");
           setSelectedDocumentType("Insurance Policy"); // Default to Insurance Policy name
           setSelectedPriority("medium"); // Default priority
           setSelectedStatus("new"); // Default status
           
           // Auto-select assigned consultant if available
-          if (data[0].assigned_to) {
-            console.log("Auto-selecting assigned consultant:", data[0].assigned_consultant_name, "ID:", data[0].assigned_to);
-            setSelectedAssignee(data[0].assigned_to.toString());
+          if (backlogData.assigned_to) {
+            console.log("Auto-selecting assigned consultant:", backlogData.assigned_consultant_name, "ID:", backlogData.assigned_to);
+            setSelectedAssignee(backlogData.assigned_to.toString());
           }
           
           // Auto-populate status from API response
-          if (data[0].status) {
-            console.log("Auto-selecting status:", data[0].status);
-            setSelectedStatus(data[0].status.toLowerCase().replace(/\s+/g, '_'));
+          if (backlogData.status) {
+            console.log("Auto-selecting status:", backlogData.status);
+            setSelectedStatus(backlogData.status.toLowerCase().replace(/\s+/g, '_'));
           }
         } else {
           toast({
@@ -610,19 +654,29 @@ const EmployeeBacklogEdit = () => {
   
     setIsAddingComment(true);
     try {
+      // Get auth headers from context
+      const authHeaders = getAuthHeaders();
+      
+      // Get session details
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        sessionId = session.sessionId || '';
+        jwtToken = session.jwtToken || '';
+      }
+
       const response = await fetch(
-        "https://n8n.srv952553.hstgr.cloud/webhook/comments_insert",
+        "http://localhost:3000/support/comments_insert",
         {
           method: "POST",
           headers: {
-            "Content-Profile": "expc",
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            "Accept-Profile": "expc",
-            session_id: "17e7ab32-86ad-411e-8ee3-c4a09e6780f7",
-            Authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            "Content-Type": "application/json",
+            'accept': 'application/json',
+            'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
+            'authorization': authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN'),
+            'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+            'content-type': 'application/json'
           },
           body: JSON.stringify({
             backlog_id: backlogDetail.backlog_id,
@@ -756,11 +810,18 @@ const EmployeeBacklogEdit = () => {
     }
 
     try {
-      // Get session data
+      // Get auth headers from context
+      const authHeaders = getAuthHeaders();
+      
+      // Get session details
       const sessionStr = localStorage.getItem("expertclaims_session");
-      const session = sessionStr ? JSON.parse(sessionStr) : {};
-      const sessionId = session.sessionId || "fddc661a-dfb4-4896-b7b1-448e1adf7bc2";
-      const jwtToken = session.jwtToken || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc";
+      let sessionId = '';
+      let jwtToken = '';
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        sessionId = session.sessionId || '';
+        jwtToken = session.jwtToken || '';
+      }
 
       // Get user details
       let userId = 0;
@@ -773,16 +834,15 @@ const EmployeeBacklogEdit = () => {
         userName = userDetails.employee_name || userDetails.name || "";
       }
 
-      // Call the API to update status with expert_description
-      const response = await fetch("https://n8n.srv952553.hstgr.cloud/webhook/updatestatustechnicalconsultant", {
+      // Call the new API to update status with expert_description
+      const response = await fetch("http://localhost:3000/support/updatestatustechnicalconsultant", {
         method: "PATCH",
         headers: {
-          "Content-Profile": "expc",
-          apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-          "Accept-Profile": "expc",
-          session_id: sessionId,
-          Authorization: `Bearer ${jwtToken}`,
-          "Content-Type": "application/json",
+          'accept': 'application/json',
+          'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
+          'authorization': authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN'),
+          'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+          'content-type': 'application/json'
         },
         body: JSON.stringify({
           backlog_id: backlogDetail?.backlog_id,
@@ -1047,6 +1107,19 @@ const EmployeeBacklogEdit = () => {
           };
         }
 
+        // Get auth headers from context
+        const authHeaders = getAuthHeaders();
+        
+        // Get session details
+        const sessionStr = localStorage.getItem('expertclaims_session');
+        let sessionId = '';
+        let jwtToken = '';
+        if (sessionStr) {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        }
+
         const requestBody = {
           backlog_id: backlogDetail?.backlog_id,
           status: "completed",
@@ -1055,14 +1128,14 @@ const EmployeeBacklogEdit = () => {
           user_id: currentUser.employee_id
         };
 
-        const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/updatestatustechnicalconsultant', {
+        const response = await fetch('http://localhost:3000/support/updatestatustechnicalconsultant', {
           method: 'PATCH',
           headers: {
-            'Content-Type': 'application/json',
             'accept': 'application/json',
-            'session_id': '0276776c-99fa-4b79-a5a2-70f3a428a0c7',
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-            'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o'
+            'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
+            'authorization': authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN'),
+            'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+            'content-type': 'application/json'
           },
           body: JSON.stringify(requestBody)
         });
@@ -1197,6 +1270,19 @@ const EmployeeBacklogEdit = () => {
         // Convert status value to display format
         const statusDisplay = selectedStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
+        // Get auth headers from context
+        const authHeaders = getAuthHeaders();
+        
+        // Get session details
+        const sessionStr = localStorage.getItem('expertclaims_session');
+        let sessionId = '';
+        let jwtToken = '';
+        if (sessionStr) {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        }
+
         // Prepare the API request body for status update
         const requestBody = {
           backlog_id: backlogDetail.backlog_id,
@@ -1207,15 +1293,15 @@ const EmployeeBacklogEdit = () => {
 
         console.log('Updating case status:', requestBody);
 
-        // Call the API to update status
-        const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/updatestatustechnicalconsultant', {
+        // Call the new API to update status
+        const response = await fetch('http://localhost:3000/support/updatestatustechnicalconsultant', {
           method: 'PATCH',
           headers: {
-            'Content-Type': 'application/json',
             'accept': 'application/json',
-            'session_id': '0276776c-99fa-4b79-a5a2-70f3a428a0c7',
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-            'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o'
+            'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
+            'authorization': authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN'),
+            'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+            'content-type': 'application/json'
           },
           body: JSON.stringify(requestBody)
         });
