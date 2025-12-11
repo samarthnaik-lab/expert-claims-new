@@ -1181,36 +1181,39 @@ const PartnerBacklogEdit = () => {
 
     setIsSubmittingFeedback(true);
     try {
+      // Get session data from localStorage
       const sessionStr = localStorage.getItem('expertclaims_session');
-      let sessionId = '5fbe26f1-b3ec-468e-bd4e-1858d5535909';
-      let jwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiAiLCJwYXNzd29yZCI6IiIsImlhdCI6MTc2MzQ0MTU3MX0.7xlNPwb5F4qaRwJ42HxBWaR1aom2XdnFPY8onV9NqP8';
-
+      let jwtToken = '';
+      
       if (sessionStr) {
         try {
           const session = JSON.parse(sessionStr);
-          sessionId = session.sessionId || '5fbe26f1-b3ec-468e-bd4e-1858d5535909';
-          jwtToken = session.jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiAiLCJwYXNzd29yZCI6IiIsImlhdCI6MTc2MzQ0MTU3MX0.7xlNPwb5F4qaRwJ42HxBWaR1aom2XdnFPY8onV9NqP8';
+          jwtToken = session.jwtToken || '';
         } catch (e) {
           console.error('Error parsing session:', e);
         }
       }
 
-      const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+      if (!jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to submit feedback",
+          variant: "destructive",
+        });
+        setIsSubmittingFeedback(false);
+        return;
+      }
 
       const requestBody = {
         backlog_id: backlogDetail.backlog_id,
         feedback: feedback.trim()
       };
 
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/feedback', {
+      const response = await fetch('http://localhost:3000/api/feedback', {
         method: 'PATCH',
         headers: {
-          'accept': '*/*',
-          'apikey': API_KEY,
-          'authorization': `Bearer ${API_KEY}`,
-          'session_id': sessionId,
-          'jwt_token': jwtToken,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwtToken}`
         },
         body: JSON.stringify(requestBody)
       });
@@ -1767,7 +1770,7 @@ const PartnerBacklogEdit = () => {
               </div>
             )}
 
-            {/* Document Upload Section */}
+            {/* Document Upload Section */} 
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
               <h3 className="text-lg font-semibold mb-4 text-gray-900">Upload New Documents</h3>
               

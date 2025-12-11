@@ -294,8 +294,11 @@ const EmployeeBacklogView = () => {
         return;
       }
 
-      // Call the n8n webhook API to get document view URL
-      console.log('Calling n8n webhook for document view...');
+      // Get auth headers from context
+      const authHeaders = getAuthHeaders();
+      
+      // Call the support API to get document view
+      console.log('Calling support API for document view...');
       console.log('Document ID:', documentId);
       
       const requestBody = {
@@ -303,15 +306,16 @@ const EmployeeBacklogView = () => {
       };
       console.log('Request body:', requestBody);
       
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/partnerdocumentview', {
+      // Supabase service role key
+      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+      
+      const response = await fetch('http://localhost:3000/support/partnerdocumentview', {
         method: 'POST',
         headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Content-Profile': 'expc',
-          'Accept-Profile': 'expc',
-          'session_id': 'a9bfe0a4-1e6c-4c69-860f-ec50846a7da6',
-          'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc',
+          'session_id': sessionId,
+          'jwt_token': jwtToken,
+          'apikey': supabaseServiceRoleKey,
+          'authorization': `Bearer ${supabaseServiceRoleKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestBody)
@@ -321,7 +325,7 @@ const EmployeeBacklogView = () => {
       console.log('Response headers:', response.headers);
       
       if (!response.ok) {
-        console.error('Failed to call view webhook:', response.status, response.statusText);
+        console.error('Failed to call document view API:', response.status, response.statusText);
         
         // Try to get error details for logging
         let userFriendlyMessage = "Unable to view document. Please try again.";
@@ -432,14 +436,44 @@ const EmployeeBacklogView = () => {
   const deleteDocument = async (documentId: number) => {
     setDeletingDocumentId(documentId);
     try {
+      // Get session data from localStorage
+      const sessionData = localStorage.getItem('expertclaims_session');
+      if (!sessionData) {
+        toast({
+          title: "Error",
+          description: "Please log in to delete documents",
+          variant: "destructive",
+        });
+        setDeletingDocumentId(null);
+        return;
+      }
+
+      const session = JSON.parse(sessionData);
+      const sessionId = session.sessionId;
+      const jwtToken = session.jwtToken;
+
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Invalid session. Please log in again",
+          variant: "destructive",
+        });
+        setDeletingDocumentId(null);
+        return;
+      }
+
+      // Supabase service role key
+      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+
       const response = await fetch(
-        `https://n8n.srv952553.hstgr.cloud/webhook/removedocument?document_id=${documentId}`,
+        `http://localhost:3000/support/removedocument?document_id=${documentId}`,
         {
           method: 'PATCH',
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-            'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-            'session_id': '0276776c-99fa-4b79-a5a2-70f3a428a0c7',
+            'session_id': sessionId,
+            'jwt_token': jwtToken,
+            'apikey': supabaseServiceRoleKey,
+            'authorization': `Bearer ${supabaseServiceRoleKey}`,
             'Content-Type': 'application/json'
           }
         }

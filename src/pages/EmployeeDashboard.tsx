@@ -320,13 +320,25 @@ const EmployeeDashboard = () => {
         'content-type': 'application/json'
       };
 
+      // Supabase service role key
+      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+
       if (department.toLowerCase() === 'technical_consultant') {
         // Use new Node.js API for technical consultants
         apiUrl = `http://localhost:3000/support/get_all_backlog_data?employee_id=${userId}`;
-        headers['apikey'] = 'YOUR_API_KEY'; // Update with your actual API key if needed
-        headers['authorization'] = authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN');
-        headers['session_id'] = authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID';
+        headers['apikey'] = supabaseServiceRoleKey;
+        headers['authorization'] = `Bearer ${supabaseServiceRoleKey}`;
+        headers['session_id'] = sessionId || '';
+        headers['jwt_token'] = jwtToken || '';
         console.log('Calling technical consultant API:', apiUrl, 'with employee_id:', userId);
+      } else if (department.toLowerCase() === 'gap_analysis') {
+        // Use new Node.js API for gap_analysis - gets all data with employee_id=0
+        apiUrl = `http://localhost:3000/support/get_all_backlog_data?employee_id=0`;
+        headers['apikey'] = supabaseServiceRoleKey;
+        headers['authorization'] = `Bearer ${supabaseServiceRoleKey}`;
+        headers['session_id'] = sessionId || '';
+        headers['jwt_token'] = jwtToken || '';
+        console.log('Calling gap_analysis API:', apiUrl);
       } else {
         // Use existing n8n webhook for other departments
         apiUrl = `https://n8n.srv952553.hstgr.cloud/webhook/get_all_backlog_data?employee_id=${userId}`;
@@ -345,16 +357,25 @@ const EmployeeDashboard = () => {
         const result = await response.json();
         console.log('Backlog data:', result);
         
+        // Handle both array response and object with data property
+        let backlogItems = [];
         if (Array.isArray(result)) {
-          setBacklogData(result);
-          toast({
-            title: "Success",
-            description: `Successfully loaded ${result.length} backlog items`,
-          });
+          backlogItems = result;
+        } else if (result && result.data && Array.isArray(result.data)) {
+          backlogItems = result.data;
+        } else if (result && result.success && Array.isArray(result.data)) {
+          backlogItems = result.data;
         } else {
           console.error('Backlog API returned unexpected format:', result);
           setBacklogData([]);
+          return;
         }
+        
+        setBacklogData(backlogItems);
+        toast({
+          title: "Success",
+          description: `Successfully loaded ${backlogItems.length} backlog items`,
+        });
       } else {
         console.error('Failed to fetch backlog data:', response.status);
         setBacklogData([]);

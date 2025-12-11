@@ -320,15 +320,6 @@ const EmployeeBacklogEdit = () => {
   const fetchBacklogDetail = async (id: string) => {
     setIsLoading(true);
     try {
-      // Get employee_id from user details
-      const userDetailsStr = localStorage.getItem('expertclaims_user_details');
-      let employeeId = 0;
-      if (userDetailsStr) {
-        const userDetailsData = JSON.parse(userDetailsStr);
-        const userData = Array.isArray(userDetailsData) ? userDetailsData[0] : userDetailsData;
-        employeeId = userData?.employee_id || userData?.id || 0;
-      }
-
       // Get auth headers from context
       const authHeaders = getAuthHeaders();
       
@@ -342,9 +333,9 @@ const EmployeeBacklogEdit = () => {
         jwtToken = session.jwtToken || '';
       }
 
-      // Call the new API endpoint
+      // Call the support API endpoint to get single backlog detail by ID
       const response = await fetch(
-        `http://localhost:3000/support/get_all_backlog_data?employee_id=${employeeId}`,
+        `http://localhost:3000/support/backlog_id?backlog_id=${id}`,
         {
           method: "GET",
           headers: {
@@ -361,16 +352,13 @@ const EmployeeBacklogEdit = () => {
         const data = await response.json();
         console.log("API Response data:", data);
         
-        // Handle both array and object responses
-        let backlogList = [];
-        if (Array.isArray(data)) {
-          backlogList = data;
-        } else if (data && typeof data === 'object') {
-          backlogList = [data];
+        // Handle array response (API returns array with single backlog item)
+        let backlogData = null;
+        if (Array.isArray(data) && data.length > 0) {
+          backlogData = data[0];
+        } else if (data && typeof data === 'object' && data.backlog_id) {
+          backlogData = data;
         }
-        
-        // Find the backlog with matching backlog_id
-        const backlogData = backlogList.find((item: any) => item.backlog_id === id);
         
         if (backlogData) {
           console.log("Backlog detail data:", backlogData);
@@ -448,8 +436,8 @@ const EmployeeBacklogEdit = () => {
         return;
       }
 
-      // Call the n8n webhook API to get document view URL
-      console.log('Calling n8n webhook for document view...');
+      // Call the support API to get document view
+      console.log('Calling support API for document view...');
       console.log('Document ID:', documentId);
       
       const requestBody = {
@@ -457,15 +445,16 @@ const EmployeeBacklogEdit = () => {
       };
       console.log('Request body:', requestBody);
       
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/partnerdocumentview', {
+      // Supabase service role key
+      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+      
+      const response = await fetch('http://localhost:3000/support/partnerdocumentview', {
         method: 'POST',
         headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Content-Profile': 'expc',
-          'Accept-Profile': 'expc',
-          'session_id': 'a9bfe0a4-1e6c-4c69-860f-ec50846a7da6',
-          'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc',
+          'session_id': sessionId,
+          'jwt_token': jwtToken,
+          'apikey': supabaseServiceRoleKey,
+          'authorization': `Bearer ${supabaseServiceRoleKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestBody)
@@ -475,7 +464,7 @@ const EmployeeBacklogEdit = () => {
       console.log('Response headers:', response.headers);
       
       if (!response.ok) {
-        console.error('Failed to call view webhook:', response.status, response.statusText);
+        console.error('Failed to call document view API:', response.status, response.statusText);
         
         // Try to get error details
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
@@ -582,14 +571,44 @@ const EmployeeBacklogEdit = () => {
   const deleteDocument = async (documentId: number) => {
     setDeletingDocumentId(documentId);
     try {
+      // Get session data from localStorage
+      const sessionData = localStorage.getItem('expertclaims_session');
+      if (!sessionData) {
+        toast({
+          title: "Error",
+          description: "Please log in to delete documents",
+          variant: "destructive",
+        });
+        setDeletingDocumentId(null);
+        return;
+      }
+
+      const session = JSON.parse(sessionData);
+      const sessionId = session.sessionId;
+      const jwtToken = session.jwtToken;
+
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Invalid session. Please log in again",
+          variant: "destructive",
+        });
+        setDeletingDocumentId(null);
+        return;
+      }
+
+      // Supabase service role key
+      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+
       const response = await fetch(
-        `https://n8n.srv952553.hstgr.cloud/webhook/removedocument?document_id=${documentId}`,
+        `http://localhost:3000/support/removedocument?document_id=${documentId}`,
         {
           method: 'PATCH',
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-            'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-            'session_id': '0276776c-99fa-4b79-a5a2-70f3a428a0c7',
+            'session_id': sessionId,
+            'jwt_token': jwtToken,
+            'apikey': supabaseServiceRoleKey,
+            'authorization': `Bearer ${supabaseServiceRoleKey}`,
             'Content-Type': 'application/json'
           }
         }
@@ -1219,15 +1238,28 @@ const EmployeeBacklogEdit = () => {
 
         console.log('Updating consultant assignment:', requestBody);
 
-        // Call the API to update consultant assignment
-        const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/updatecunsultantpolicy', {
+        // Get auth headers from context
+        const authHeaders = getAuthHeaders();
+        
+        // Get session details
+        const sessionStr = localStorage.getItem('expertclaims_session');
+        let sessionId = '';
+        let jwtToken = '';
+        if (sessionStr) {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        }
+
+        // Call the support API to update consultant assignment
+        const response = await fetch('http://localhost:3000/support/updatecunsultantpolicy', {
           method: 'PATCH',
           headers: {
-            'Content-Type': 'application/json',
             'accept': 'application/json',
-            'session_id': '0276776c-99fa-4b79-a5a2-70f3a428a0c7',
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-            'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o'
+            'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
+            'authorization': authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN'),
+            'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+            'content-type': 'application/json'
           },
           body: JSON.stringify(requestBody)
         });
