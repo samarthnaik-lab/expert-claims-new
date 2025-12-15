@@ -102,44 +102,92 @@ const CustomerDocumentUpload = () => {
       try {
         setLoading(true);
   
-        // Get user_id from local storage
-        const sessionData = localStorage.getItem('expertclaims_session');
+        // Get userid from customer session details
+        const customerSessionRaw = localStorage.getItem('expertclaims_customer_session_details');
+        let mobileNumber = '';
         let userId = null;
-  
-        if (sessionData) {
+        
+        if (customerSessionRaw) {
           try {
-            const parsedSession = JSON.parse(sessionData);
-            userId = parsedSession.userId;
+            const customerSessionData = JSON.parse(customerSessionRaw);
+            const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
+            mobileNumber = customerSession?.mobile_number || '';
+            userId = customerSession?.userid || null;
           } catch (e) {
-            console.error('Error parsing session data:', e);
+            console.error('Error parsing customer session data:', e);
+          }
+        }
+        
+        // If we don't have userid yet, fetch from getcustomersessiondetails API
+        if (!userId && mobileNumber) {
+          try {
+            const sessionStr = localStorage.getItem('expertclaims_session');
+            let sessionId = '';
+            if (sessionStr) {
+              try {
+                const session = JSON.parse(sessionStr);
+                sessionId = session.sessionId || '';
+              } catch (error) {
+                console.error('Error parsing session:', error);
+              }
+            }
+            
+            const sessionResponse = await fetch(`http://localhost:3000/customer/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobileNumber)}`, {
+              method: 'GET',
+              headers: {
+                'accept': 'application/json',
+                'content-type': 'application/json',
+                'session_id': sessionId
+              }
+            });
+            
+            if (sessionResponse.ok) {
+              const sessionData = await sessionResponse.json();
+              const sessionDetails = Array.isArray(sessionData) ? sessionData[0] : sessionData;
+              userId = sessionDetails?.userid || null;
+            }
+          } catch (error) {
+            console.error('Error fetching customer session details:', error);
           }
         }
   
         if (!userId) {
-          console.error('No user_id found in session');
+          console.error('No userid found');
           setLoading(false);
           return;
         }
   
+        // Get session_id and jwt_token from localStorage
+        const sessionStr = localStorage.getItem('expertclaims_session');
+        let sessionId = '';
+        let jwtToken = '';
+        if (sessionStr) {
+          try {
+            const session = JSON.parse(sessionStr);
+            sessionId = session.sessionId || '';
+            jwtToken = session.jwtToken || '';
+          } catch (error) {
+            console.error('Error parsing session:', error);
+          }
+        }
+  
         // Build FormData payload
         const formData = new FormData();
-        formData.append('user_id', userId);
+        formData.append('user_id', userId.toString());
   
         const response = await fetch(
-          'https://n8n.srv952553.hstgr.cloud/webhook/customer-case',
+          'http://localhost:3000/customer/customer-case',
           {
             method: 'POST',
             headers: {
-              'apikey':
-                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-              Authorization:
-                'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-              session_id: '4e4a442a-bcb6-48cf-a573-3740a3d295c3',
-              'Accept-Profile': 'expc',
-              'Content-Profile': 'expc',
-              jwt_token:
-                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NzkzMjA3fQ.R8N3U28XD4zQ_ixGNgtBtUKK5F8gGaQg8lrPPWr88dY',
-              // ❌ Do not set "Content-Type", fetch will set it for FormData
+              'accept': '*/*',
+              'accept-language': 'en-US,en;q=0.9',
+              'accept-profile': 'expc',
+              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
+              'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
+              'content-profile': 'expc',
+              'jwt_token': jwtToken,
+              'session_id': sessionId
             },
             body: formData,
           }
@@ -241,7 +289,7 @@ const CustomerDocumentUpload = () => {
       ));
       
       const response = await fetch(
-        'https://n8n.srv952553.hstgr.cloud/webhook/upload',
+        'http://localhost:3000/support/upload',
         {
           method: 'POST',
           headers: {

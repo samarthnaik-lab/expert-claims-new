@@ -200,15 +200,10 @@ const Register = () => {
   const fetchPartners = async () => {
     setIsLoadingPartners(true);
     try {
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/getpartner', {
+      const response = await fetch('http://localhost:3000/support/getpartner', {
         method: 'GET',
         headers: {
-          'accept': 'application/json',
-          'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-          'accept-profile': 'expc',
-          'apikey': '<YOUR_API_KEY>',
-          'authorization': 'Bearer <YOUR_BEARER_TOKEN>',
-          'content-type': 'application/json'
+          'Content-Type': 'application/json'
         }
       });
 

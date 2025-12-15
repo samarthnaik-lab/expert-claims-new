@@ -51,7 +51,7 @@ const Login = () => {
     mobile: '',
     otp: ''
   });
-  const [otpSent, setOtpSent] = useState(false);
+  const [otpSent, setOtpSent] = useState(true); // Always show OTP field for admin/customer
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
@@ -117,9 +117,7 @@ const Login = () => {
         }
         break;
       case 'otp':
-        if ((role === 'admin' || role === 'hr') && !value.trim()) {
-          error = 'OTP is required for admin/HR login';
-        } else if (role === 'customer' && otpSent && !value.trim()) {
+        if ((role === 'admin' || role === 'hr' || role === 'customer') && !value.trim()) {
           error = 'OTP is required';
         } else if (value.trim() && !/^[0-9]{4,6}$/.test(value)) {
           error = 'Please enter a valid OTP';
@@ -189,7 +187,7 @@ const Login = () => {
         newTouched.mobile = true;
       }
       
-      if (otpSent) {
+      if (role === 'customer' || role === 'admin' || role === 'hr') {
         const otpError = validateField('otp', formData.otp);
         if (otpError) {
           newErrors.otp = otpError;
@@ -209,6 +207,20 @@ const Login = () => {
       if (shouldShowSignInButton() && !isLoggingIn) {
         handleLogin();
       }
+    }
+  };
+
+  // Auto-login when OTP is "1234"
+  const handleOtpChange = (value: string) => {
+    handleInputChange('otp', value);
+    // Auto-login when user enters "1234" for admin/customer/hr
+    if (value.trim() === '1234' && (role === 'customer' || role === 'admin' || role === 'hr')) {
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        if (!isLoggingIn && formData.email && formData.password) {
+          handleLogin();
+        }
+      }, 300);
     }
   };
 
@@ -473,56 +485,26 @@ const Login = () => {
               </div>
             </div>
             
-            {!otpSent ? (
-              <Button 
-                onClick={handleSendOtp}
-                className="w-full h-12 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
-              >
-                Send OTP
-              </Button>
-            ) : (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="otp" className="text-gray-700 font-semibold">OTP <span className="text-red-500">*</span></Label>
-                  <div className="relative">
-                    <KeyRound className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="otp"
-                      value={formData.otp}
-                      onChange={(e) => handleInputChange('otp', e.target.value)}
-                      onKeyDown={handleKeyPress}
-                      onBlur={() => handleFieldBlur('otp')}
-                      placeholder="Enter OTP"
-                      className="pl-10 h-12 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-                    />
-                    {touched.otp && errors.otp && (
-                      <p className="text-xs text-red-500 mt-1">{errors.otp}</p>
-                    )}
-                  </div>
-                </div>
-                  
-                <div className="text-sm text-gray-600 text-center">
-                  OTP sent to {formData.mobile}
-                  <button 
-                    onClick={() => setOtpSent(false)}
-                    className="text-primary-600 hover:text-primary-700 ml-2 underline"
-                  >
-                    Change number
-                  </button>
-                </div>
-                <div className="flex items-center justify-center mt-2 space-x-2 text-sm">
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSendOtp}
-                    className="h-6 px-2 py-0 text-primary-600 hover:text-primary-700 hover:bg-transparent underline"
-                  >
-                    Resend
-                  </Button>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="otp" className="text-gray-700 font-semibold">OTP <span className="text-red-500">*</span></Label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input
+                    id="otp"
+                    value={formData.otp}
+                    onChange={(e) => handleOtpChange(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    onBlur={() => handleFieldBlur('otp')}
+                    placeholder="Enter OTP (use 1234 for testing)"
+                    className="pl-10 h-12 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                  />
+                  {touched.otp && errors.otp && (
+                    <p className="text-xs text-red-500 mt-1">{errors.otp}</p>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
           </div>
         );
 
@@ -567,55 +549,26 @@ const Login = () => {
               </div>
             </div>
             
-            {!otpSent ? (
-              <Button 
-                onClick={handleSendOtp}
-                className="w-full h-12 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
-              >
-                Send OTP
-              </Button>
-            ) : (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="otp" className="text-gray-700 font-semibold">OTP <span className="text-red-500">*</span></Label>
-                  <div className="relative">
-                    <KeyRound className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="otp"
-                      value={formData.otp}
-                      onChange={(e) => handleInputChange('otp', e.target.value)}
-                      onKeyDown={handleKeyPress}
-                      onBlur={() => handleFieldBlur('otp')}
-                      placeholder="Enter OTP"
-                      className="pl-10 h-12 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-                    />
-                    {touched.otp && errors.otp && (
-                      <p className="text-xs text-red-500 mt-1">{errors.otp}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="text-sm text-gray-600 text-center">
-                  OTP sent to {formData.email}
-                  <button 
-                    onClick={() => setOtpSent(false)}
-                    className="text-primary-600 hover:text-primary-700 ml-2 underline"
-                  >
-                    Change email
-                  </button>
-                </div>
-                <div className="flex items-center justify-center mt-2 space-x-2 text-sm">
-                
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSendOtp}
-                    className="h-6 px-2 py-0 text-primary-600 hover:text-primary-700 hover:bg-transparent underline"
-                  >
-                    Resend
-                  </Button>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="otp" className="text-gray-700 font-semibold">OTP <span className="text-red-500">*</span></Label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input
+                    id="otp"
+                    value={formData.otp}
+                    onChange={(e) => handleOtpChange(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    onBlur={() => handleFieldBlur('otp')}
+                    placeholder="Enter OTP (use 1234 for testing)"
+                    className="pl-10 h-12 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                  />
+                  {touched.otp && errors.otp && (
+                    <p className="text-xs text-red-500 mt-1">{errors.otp}</p>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
           </div>
         );
 
@@ -633,7 +586,7 @@ const Login = () => {
 
   const shouldShowSignInButton = () => {
     if (role === 'customer' || role === 'admin' || role === 'hr') {
-      return otpSent && formData.otp;
+      return true; // OTP field is always shown, login button always visible
     }
     return role && role !== '';
   };

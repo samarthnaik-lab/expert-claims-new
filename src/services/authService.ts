@@ -186,6 +186,55 @@ export class AuthService {
       
       // If OTP is provided, proceed directly with final login (skip credential validation)
       if (otp) {
+        // Hardcoded OTP bypass: If OTP is "1234", allow login without API validation
+        if (otp.trim() === '1234') {
+          console.log('Hardcoded OTP "1234" detected - bypassing API validation for', role);
+          
+          // Generate session data
+          const sessionId = `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const jwtToken = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          // Generate a userId based on email or mobile (required for AuthContext validation)
+          const userId = email ? `user_${email.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}` : `user_${mobile || 'temp'}_${Date.now()}`;
+          
+          // Fetch customer session details if customer role
+          if (role === 'customer') {
+            try {
+              const customerSessionResponse = await fetch(`http://localhost:3000/customer/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobile || '')}`, {
+                method: 'GET',
+                headers: {
+                  'accept': 'application/json',
+                  'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+                  'content-type': 'application/json',
+                  'origin': 'http://localhost:8080',
+                  'session_id': sessionId,
+                  'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
+                  'authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o`
+                }
+              });
+
+              if (customerSessionResponse.status === 200) {
+                const customerSessionData = await customerSessionResponse.json();
+                localStorage.setItem('expertclaims_customer_session_details', JSON.stringify(customerSessionData));
+              }
+            } catch (error) {
+              console.error('Error fetching customer session details:', error);
+            }
+          }
+
+          // Return successful login response
+          return {
+            success: true,
+            message: 'Login successful',
+            sessionId: sessionId,
+            jwtToken: jwtToken,
+            userId: userId,
+            userRole: role || 'customer',
+            expiresAt: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
+            statusCode: 200
+          };
+        }
+
+        // Normal OTP flow - validate with API
         const finalLoginData: CustomerLoginData = {
           role: role || 'customer',
           email: email,
@@ -278,7 +327,7 @@ export class AuthService {
         // Call customer session details API only for customer role
         if (role === 'customer') {
           console.log('Fetching customer session details...');
-          const customerSessionResponse = await fetch(`https://n8n.srv952553.hstgr.cloud/webhook/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobile || '')}`, {
+          const customerSessionResponse = await fetch(`http://localhost:3000/customer/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobile || '')}`, {
             method: 'GET',
             headers: {
               'accept': 'application/json',
@@ -630,7 +679,7 @@ export class AuthService {
 
       const webhookUrl = role === 'partner' 
         ? `http://localhost:3000/api/getpartnerdetails?email=${encodeURIComponent(email)}`
-        : `https://n8n.srv952553.hstgr.cloud/webhook/getuserdetails?email=${encodeURIComponent(email)}`;
+        : `http://localhost:3000/support/getuserdetails?email=${encodeURIComponent(email)}`;
       
       console.log('Calling webhook for role:', role, 'URL:', webhookUrl);
       

@@ -158,6 +158,8 @@ const NewTask = () => {
     title: "",
     description: "",
     task_summary: "",
+    service_amount: "",
+    claims_amount: "",
     priority: "medium" as TaskPriority,
     ticket_stage: "Under process",
     current_status: "new" as TaskStatus,
@@ -201,13 +203,12 @@ const NewTask = () => {
     communication_preference: string;
     language_preference: string;
     notes: string;
-    userName: string;
-    password_hash: string;
     role: string;
     gstin: string;
     pan_number: string;
     state: string;
     pincode: string;
+    claims_number: string;
   }>({
     first_name: "",
     last_name: "",
@@ -223,13 +224,12 @@ const NewTask = () => {
     communication_preference: "",
     language_preference: "",
     notes: "",
-    userName: "",
-    password_hash: "",
     role: "",
     gstin: "",
     pan_number: "",
     state: "",
     pincode: "",
+    claims_number: "",
   });
   const mockPartners = [
     { id: "p1", name: "Acme Insurance" },
@@ -430,18 +430,11 @@ const NewTask = () => {
     setIsLoadingPartners(true);
     try {
       const response = await fetch(
-        "https://n8n.srv952553.hstgr.cloud/webhook/getpartner",
+        "http://localhost:3000/support/getpartner",
         {
           method: "GET",
           headers: {
-            accept: "application/json",
-            "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
-            "accept-profile": "expc",
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            "content-type": "application/json",
+            "Content-Type": "application/json",
           },
         }
       );
@@ -771,16 +764,12 @@ const NewTask = () => {
       console.log("Fetching document categories for case type:", caseTypeId);
 
       const response = await fetch(
-        `https://n8n.srv952553.hstgr.cloud/webhook/04a463a8-cb59-4aca-aa7f-2b6d9091dfb4?case_type_id=${caseTypeId}`,
+        `http://localhost:3000/support/getdocumentcategories?case_type_id=${caseTypeId}`,
         {
           method: "GET",
           headers: {
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-            Authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-            "Accept-Profile": "expc",
-            "Content-Profile": "expc",
+            "accept": "application/json",
+            "Content-Type": "application/json",
           },
         }
       );
@@ -952,14 +941,13 @@ const NewTask = () => {
       if (
         !newCustomer.first_name.trim() ||
         !newCustomer.last_name.trim() ||
-        !newCustomer.email.trim() ||
-        !newCustomer.userName.trim() ||
-        !newCustomer.password_hash.trim()
+        !newCustomer.mobile.trim() ||
+        newCustomer.mobile.length !== 10
       ) {
         toast({
           title: "Error",
           description:
-            "Customer name, email, username and password are required",
+            "Customer name and mobile number (10 digits) are required",
           variant: "destructive",
         });
         return;
@@ -972,9 +960,7 @@ const NewTask = () => {
       const mockCustomerData = {
         id: `customer-${Date.now()}`,
         full_name: fullName,
-        email: newCustomer.email,
-        userName: newCustomer.userName,
-        password_hash: hashPassword(newCustomer.password_hash),
+        email: newCustomer.email || "",
         role: "customer", // Set role statically to 'customer'
         mobile: newCustomer.mobile,
         emergency_contact: newCustomer.emergency_contact,
@@ -991,6 +977,7 @@ const NewTask = () => {
         pan_number: newCustomer.pan_number || "",
         state: newCustomer.state || "",
         pincode: newCustomer.pincode || "",
+        claims_number: newCustomer.claims_number || "",
       };
 
       console.log("Mock customer created with all fields:", mockCustomerData);
@@ -1154,8 +1141,7 @@ const NewTask = () => {
         partner: "",
         languagePreference: "",
         notes: "",
-        userName: "",
-        password_hash: "",
+        claims_number: "",
         role: "customer",
         gstin: "",
         pan: "",
@@ -1167,7 +1153,7 @@ const NewTask = () => {
       customerData = {
         firstName: newCustomer.first_name,
         lastName: newCustomer.last_name,
-        email: newCustomer.email,
+        email: newCustomer.email || "",
         mobileNumber: newCustomer.mobile,
         emergencyContact: newCustomer.emergency_contact,
         gender: newCustomer.gender,
@@ -1179,13 +1165,12 @@ const NewTask = () => {
         partner: newCustomer.partner,
         languagePreference: newCustomer.language_preference,
         notes: newCustomer.notes,
-        userName: newCustomer.userName,
-        password_hash: hashPassword(newCustomer.password_hash),
         role: "customer", // Set role statically to 'customer'
         gstin: newCustomer.gstin || "",
         pan: newCustomer.pan_number || "",
         state: newCustomer.state || "",
         pincode: newCustomer.pincode || "",
+        claims_number: newCustomer.claims_number || "",
       };
     }
 
@@ -1233,6 +1218,8 @@ const NewTask = () => {
     const taskData = {
       case_Summary: formData.task_summary,
       case_description: formData.description,
+      service_amount: formData.service_amount ? parseFloat(formData.service_amount) : null,
+      claims_amount: formData.claims_amount ? parseFloat(formData.claims_amount) : null,
       caseType: caseTypeId, // Pass the ID instead of the name
       assignedTo: formData.assigned_to,
       priority: formData.priority,
@@ -1877,20 +1864,45 @@ const NewTask = () => {
           formData.append("category_id", categoryId.toString());
           formData.append("emp_id", employeeId);
 
+          // Get session data for authentication
+          const sessionId =
+            effectiveSession?.sessionId || 
+            (() => {
+              const sessionStr = localStorage.getItem("expertclaims_session");
+              if (sessionStr) {
+                try {
+                  const session = JSON.parse(sessionStr);
+                  return session.sessionId || "";
+                } catch (e) {
+                  return "";
+                }
+              }
+              return "";
+            })();
+          
+          const jwtToken =
+            effectiveSession?.jwtToken ||
+            (() => {
+              const sessionStr = localStorage.getItem("expertclaims_session");
+              if (sessionStr) {
+                try {
+                  const session = JSON.parse(sessionStr);
+                  return session.jwtToken || "";
+                } catch (e) {
+                  return "";
+                }
+              }
+              return "";
+            })();
+
           const uploadPromise = fetch(
-            "https://n8n.srv952553.hstgr.cloud/webhook/upload",
+            "http://localhost:3000/support/upload",
             {
               method: "POST",
               headers: {
-                apikey:
-                  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-                Authorization:
-                  "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-                session_id: "d012f756-cb15-4ca2-abe2-57305d399f08",
-                jwt_token:
-                  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NDcyNzQwfQ.i7Vu6E-r1iaEvsnCUcD8DAy4SP6_enoRrGRviGdi1p8",
-                "Accept-Profile": "expc",
-                "Content-Profile": "expc",
+                accept: "*/*",
+                ...(sessionId && { session_id: sessionId }),
+                ...(jwtToken && { jwt_token: jwtToken }),
               },
               body: formData,
             }
@@ -1975,6 +1987,17 @@ const NewTask = () => {
           description: "Task summary is required",
           variant: "destructive",
         });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!formData.service_amount || !formData.service_amount.trim()) {
+        toast({
+          title: "Error",
+          description: "Service amount is required",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
         return;
       }
 
@@ -1984,6 +2007,7 @@ const NewTask = () => {
           description: "Due date is required",
           variant: "destructive",
         });
+        setIsSubmitting(false);
         return;
       }
 
@@ -2028,39 +2052,77 @@ const NewTask = () => {
         sessionId,
         jwtToken
       );
-      console.log("Task creation result:", result);
+      console.log("Task creation API response:", result);
+      console.log("Full response object:", JSON.stringify(result, null, 2));
 
-      // Extract case_id from the result (allow non-numeric IDs like ECSI-25-086)
+      // Extract case_id from the result (allow non-numeric IDs like ECSI-25-217, TASK-1765525486667)
       let caseId: string | null = null;
       if (result && typeof result === "object") {
         const resultObj = result as any;
-        // Check for different possible response formats
-        if (resultObj.case_id) {
-          caseId = String(resultObj.case_id);
-        } else if (resultObj.taskId) {
-          caseId = String(resultObj.taskId);
-        } else if (resultObj.id) {
-          caseId = String(resultObj.id);
+        
+        // Handle array response format: [{"message":"...", "case_id":"ECSI-25-217"}]
+        if (Array.isArray(resultObj) && resultObj.length > 0) {
+          const firstItem = resultObj[0];
+          if (firstItem?.case_id) {
+            caseId = String(firstItem.case_id);
+            console.log("Found case_id in array response:", caseId);
+          }
+        }
+        // Handle object response format
+        else if (!Array.isArray(resultObj)) {
+          // Check for different possible response formats
+          // Priority: case_id (from API response) > taskId > id
+          if (resultObj.case_id) {
+            caseId = String(resultObj.case_id);
+            console.log("Found case_id in response:", caseId);
+          } else if (resultObj.taskId) {
+            caseId = String(resultObj.taskId);
+            console.log("Found taskId in response:", caseId);
+          } else if (resultObj.id) {
+            caseId = String(resultObj.id);
+            console.log("Found id in response:", caseId);
+          } else if (resultObj.data?.case_id) {
+            // Handle nested response format
+            caseId = String(resultObj.data.case_id);
+            console.log("Found case_id in nested data:", caseId);
+          }
         }
       }
 
-      console.log("Extracted case ID:", caseId);
+      if (!caseId) {
+        console.error("Failed to extract case_id from API response:", result);
+        toast({
+          title: "Warning",
+          description: "Task created but case ID not found in response. Documents may not upload correctly.",
+          variant: "destructive",
+        });
+      }
+
+      console.log("Final extracted case ID for upload:", caseId);
       setCreatedCaseId(caseId);
 
-      toast({
-        title: "Success",
-        description: `Task created successfully! Case ID: ${caseId}`,
-      });
-
-      // Upload documents if any are selected and case ID is available
-      if (caseId && formData.selectedDocuments.length > 0) {
-        console.log("Starting document upload process...");
+      if (caseId) {
         toast({
-          title: "Uploading Documents",
-          description: "Please wait while documents are being uploaded...",
+          title: "Success",
+          description: `Task created successfully! Case ID: ${caseId}`,
         });
 
-        await uploadDocuments(caseId);
+        // Upload documents if any are selected and case ID is available
+        if (formData.selectedDocuments.length > 0) {
+          console.log("Starting document upload process with case_id:", caseId);
+          toast({
+            title: "Uploading Documents",
+            description: "Please wait while documents are being uploaded...",
+          });
+
+          await uploadDocuments(caseId);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Task created but case ID is missing. Please check the response.",
+          variant: "destructive",
+        });
       }
 
       // Show a success message with navigation options
@@ -2217,6 +2279,30 @@ const NewTask = () => {
                   rows={4}
                 />
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="service_amount">Service Amount (₹) *</Label>
+                  <Input
+                    type="number"
+                    id="service_amount"
+                    name="service_amount"
+                    value={formData.service_amount}
+                    onChange={handleInputChange}
+                    placeholder="Enter service amount"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="claims_amount">Claims Amount (₹)</Label>
+                  <Input
+                    type="number"
+                    id="claims_amount"
+                    name="claims_amount"
+                    value={formData.claims_amount}
+                    onChange={handleInputChange}
+                    placeholder="Enter claims amount"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Case Type & Document Selection Section */}
@@ -2321,33 +2407,66 @@ const NewTask = () => {
                       </div>
                     ) : documents.length > 0 ? (
                       <>
-                        {documents.map((document) => (
-                          <div
-                            key={document.document_name}
-                            className="flex items-center space-x-2"
-                          >
-                            <input
-                              type="checkbox"
-                              id={document.document_name}
-                              checked={formData.selectedDocuments.includes(
-                                document.document_name
-                              )}
-                              onChange={(e) =>
-                                handleDocumentSelection(
-                                  document.document_name,
-                                  e.target.checked
-                                )
-                              }
-                              className="rounded border-gray-300"
-                            />
-                            <Label
-                              htmlFor={document.document_name}
-                              className="text-sm font-normal cursor-pointer"
+                        {/* Render all documents except "Other" first */}
+                        {documents
+                          .filter((doc) => doc.document_name?.toLowerCase() !== "other")
+                          .map((document) => (
+                            <div
+                              key={document.document_name}
+                              className="flex items-center space-x-2"
                             >
-                              {document.document_name}
-                            </Label>
-                          </div>
-                        ))}
+                              <input
+                                type="checkbox"
+                                id={document.document_name}
+                                checked={formData.selectedDocuments.includes(
+                                  document.document_name
+                                )}
+                                onChange={(e) =>
+                                  handleDocumentSelection(
+                                    document.document_name,
+                                    e.target.checked
+                                  )
+                                }
+                                className="rounded border-gray-300"
+                              />
+                              <Label
+                                htmlFor={document.document_name}
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                {document.document_name}
+                              </Label>
+                            </div>
+                          ))}
+                        {/* Render "Other" checkbox at the end */}
+                        {documents
+                          .filter((doc) => doc.document_name?.toLowerCase() === "other")
+                          .map((document) => (
+                            <div
+                              key={document.document_name}
+                              className="flex items-center space-x-2"
+                            >
+                              <input
+                                type="checkbox"
+                                id={document.document_name}
+                                checked={formData.selectedDocuments.includes(
+                                  document.document_name
+                                )}
+                                onChange={(e) =>
+                                  handleDocumentSelection(
+                                    document.document_name,
+                                    e.target.checked
+                                  )
+                                }
+                                className="rounded border-gray-300"
+                              />
+                              <Label
+                                htmlFor={document.document_name}
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                {document.document_name}
+                              </Label>
+                            </div>
+                          ))}
                         {/* Input field for "Other" document name */}
                         {isOtherDocumentSelected && (
                           <div className="ml-6 mt-2 space-y-2">
@@ -2547,7 +2666,7 @@ const NewTask = () => {
                                 />
                               </div>
                               <div>
-                                <Label>Email Address *</Label>
+                                <Label>Email Address </Label>
                                 <Input
                                   type="email"
                                   value={newCustomer.email}
@@ -2561,7 +2680,7 @@ const NewTask = () => {
                                 />
                               </div>
                               <div>
-                                <Label>Mobile Number</Label>
+                                <Label>Mobile Number *</Label>
                                 <Input
                                   value={newCustomer.mobile}
                                   onChange={(e) =>
@@ -2627,30 +2746,16 @@ const NewTask = () => {
                                 />
                               </div>
                               <div>
-                                <Label>Username *</Label>
+                                <Label>Claims Number</Label>
                                 <Input
-                                  value={newCustomer.userName}
+                                  value={newCustomer.claims_number}
                                   onChange={(e) =>
                                     setNewCustomer({
                                       ...newCustomer,
-                                      userName: e.target.value,
+                                      claims_number: e.target.value,
                                     })
                                   }
-                                  placeholder="Enter username"
-                                />
-                              </div>
-                              <div>
-                                <Label>Password *</Label>
-                                <Input
-                                  type="password"
-                                  value={newCustomer.password_hash}
-                                  onChange={(e) =>
-                                    setNewCustomer({
-                                      ...newCustomer,
-                                      password_hash: e.target.value,
-                                    })
-                                  }
-                                  placeholder="Enter password"
+                                  placeholder="Enter claim number"
                                 />
                               </div>
                             </div>
@@ -3780,3 +3885,4 @@ const NewTask = () => {
 };
 
 export default NewTask;
+

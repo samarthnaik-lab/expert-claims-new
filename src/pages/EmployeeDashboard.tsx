@@ -141,15 +141,11 @@ const EmployeeDashboard = () => {
 
       console.log('Fetching employee dashboard data for user:', userId);
       
-      const response = await fetch(`https://n8n.srv952553.hstgr.cloud/webhook/getemployedashboard?employee_id=${userId}`, {
+      const response = await fetch(`http://localhost:3000/support/getemployedashboard?employee_id=${userId}`, {
         method: 'GET',
         headers: {
           'accept': 'application/json',
-          'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-          'content-type': 'application/json',
-          'session_id': '0276776c-99fa-4b79-a5a2-70f3a428a0c7',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-          'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o'
+          'content-type': 'application/json'
         }
       });
 
@@ -206,7 +202,7 @@ const EmployeeDashboard = () => {
 
       console.log('Fetching tasks from API...');
       
-      const url = `https://n8n.srv952553.hstgr.cloud/webhook/getemployeetasks?employee_id=${employeeId}&page=${taskCurrentPage}&size=${parseInt(taskPageLimit)}`;
+      const url = `http://localhost:3000/support/getemployeetasks?employee_id=${employeeId}&page=${taskCurrentPage}&size=${parseInt(taskPageLimit)}`;
       console.log('Fetching tasks with URL:', url);
       
       const response = await fetch(url, {
@@ -214,12 +210,7 @@ const EmployeeDashboard = () => {
         headers: {
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
-          'accept-profile': 'srtms',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
           'content-type': 'application/json',
-          'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiAiLCJwYXNzd29yZCI6IiIsImlhdCI6MTc1Njg3ODUzMH0.0WNexfWPBUj5kXFA6x761RyTRD_ZvqOP5lY5jqEuGTM',
-          'session_id': '00432b43-fb2b-4093-b544-c5d768d2b9ea',
           'prefer': 'count=exact'
         }
       });
@@ -340,12 +331,12 @@ const EmployeeDashboard = () => {
         headers['jwt_token'] = jwtToken || '';
         console.log('Calling gap_analysis API:', apiUrl);
       } else {
-        // Use existing n8n webhook for other departments
-        apiUrl = `https://n8n.srv952553.hstgr.cloud/webhook/get_all_backlog_data?employee_id=${userId}`;
+        // Use Node.js support API for other departments
+        apiUrl = `http://localhost:3000/support/get_all_backlog_data?employee_id=${userId}`;
+        headers['accept'] = 'application/json';
         headers['accept-language'] = 'en-GB,en-US;q=0.9,en;q=0.8';
-        headers['session_id'] = sessionId || '0276776c-99fa-4b79-a5a2-70f3a428a0c7';
-        headers['apikey'] = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
-        headers['authorization'] = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
+        headers['content-type'] = 'application/json';
+        console.log('Calling Node.js support API for other departments:', apiUrl, 'with employee_id:', userId);
       }
       
       const response = await fetch(apiUrl, {

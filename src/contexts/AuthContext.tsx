@@ -166,30 +166,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsAuthenticated(true);
         localStorage.setItem('expertclaims_session', JSON.stringify(session));
         
-        // Fetch user details after successful login
+        // Fetch user details after successful login (only if email is available)
         try {
-          const userDetailsResult = await AuthService.getUserProfile(credentials.email, credentials.role);
-          
-          // Check status code for user details fetch as well
-          if (userDetailsResult.statusCode && userDetailsResult.statusCode !== 200) {
-            console.log('User details fetch failed with status code:', userDetailsResult.statusCode);
-            // Don't fail the login, just log the error
-            console.error('Failed to fetch user details:', userDetailsResult.message);
-          } else if (userDetailsResult.success && userDetailsResult.data) {
-            setUserDetails(userDetailsResult.data);
+          // Skip fetching user details if email is empty or not available
+          if (!credentials.email || credentials.email.trim() === '') {
+            console.log('Skipping user details fetch - email not available');
+          } else {
+            const userDetailsResult = await AuthService.getUserProfile(credentials.email, credentials.role);
             
-            // Update session with the correct role from API response
-            const updatedSession: Session = {
-              ...session,
-              userRole: userDetailsResult.data.designation || session.userRole
-            };
-            
-            setSession(updatedSession);
-            localStorage.setItem('expertclaims_session', JSON.stringify(updatedSession));
-            
-            console.log('Updated session with correct role:', updatedSession.userRole);
-            console.log('Previous role was:', session.userRole);
-            console.log('New role from API:', userDetailsResult.data.role);
+            // Check status code for user details fetch as well
+            if (userDetailsResult.statusCode && userDetailsResult.statusCode !== 200) {
+              console.log('User details fetch failed with status code:', userDetailsResult.statusCode);
+              // Don't fail the login, just log the error
+              console.error('Failed to fetch user details:', userDetailsResult.message);
+            } else if (userDetailsResult.success && userDetailsResult.data) {
+              setUserDetails(userDetailsResult.data);
+              
+              // Update session with the correct role from API response
+              const updatedSession: Session = {
+                ...session,
+                userRole: userDetailsResult.data.designation || session.userRole
+              };
+              
+              setSession(updatedSession);
+              localStorage.setItem('expertclaims_session', JSON.stringify(updatedSession));
+              
+              console.log('Updated session with correct role:', updatedSession.userRole);
+              console.log('Previous role was:', session.userRole);
+              console.log('New role from API:', userDetailsResult.data.role);
+            }
           }
         } catch (error) {
           console.error('Error fetching user details after login:', error);
@@ -227,8 +232,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Get user details from the session or user details
       const userEmail = userDetails?.email || session.userId;
-      if (!userEmail) {
-        console.error('No user email available for refreshing details');
+      if (!userEmail || userEmail.trim() === '') {
+        console.log('No user email available for refreshing details - skipping');
+        return;
+      }
+      
+      // Check if it's a valid email format (not a generated userId like "user_...")
+      if (userEmail.startsWith('user_') || !userEmail.includes('@')) {
+        console.log('Invalid email format or generated userId - skipping user details fetch');
         return;
       }
       

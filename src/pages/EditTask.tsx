@@ -90,6 +90,8 @@ const EditTask = () => {
         title: '',
         description: '',
         task_summary: '',
+        service_amount: '',
+        claims_amount: '',
         priority: 'medium' as TaskPriority,
         ticket_stage: 'analysis' as TicketStage,
         current_status: 'new' as TaskStatus,
@@ -299,7 +301,7 @@ const EditTask = () => {
         try {
             console.log('Fetching task data for ID:', taskId);
 
-            const response = await fetch(`https://n8n.srv952553.hstgr.cloud/webhook/everything-cases`, {
+            const response = await fetch(`http://localhost:3000/support/everything-cases`, {
                 method: 'POST',
                 headers: {
                     'accept': '*/*',
@@ -329,21 +331,29 @@ const EditTask = () => {
             });
 
             if (response.ok) {
-                const data = await response.json();
-                console.log('Task data received:', data);
+                const responseData = await response.json();
+                console.log('Task data received:', responseData);
 
-                // Process the task data and populate the form
-                if (data && data.length > 0) {
-                    const taskData = data[0];
-                    populateFormWithTaskData(taskData);
+                // Handle both array and object response formats
+                let taskData: any;
+                if (Array.isArray(responseData) && responseData.length > 0) {
+                    taskData = responseData[0]; // Take the first item from the array
+                    console.log('Extracted task data from array:', taskData);
+                } else if (responseData && typeof responseData === 'object' && 'case_id' in responseData) {
+                    taskData = responseData; // Direct object response
+                    console.log('Direct task data:', taskData);
                 } else {
                     toast({
                         title: "Error",
-                        description: "Task not found",
+                        description: "Task not found or invalid response format",
                         variant: "destructive",
                     });
                     navigate('/admin-dashboard');
+                    return;
                 }
+
+                // Populate the form with the task data
+                populateFormWithTaskData(taskData);
             } else {
                 console.error('Failed to fetch task data:', response.status);
                 toast({
@@ -377,6 +387,8 @@ const EditTask = () => {
             title: taskData.title || '',
             description: taskData.case_description || '',
             task_summary: taskData.case_summary || '',
+            service_amount: taskData.service_amount?.toString() || '',
+            claims_amount: taskData.claims_amount?.toString() || '',
             priority: taskData.priority || 'medium',
             ticket_stage: taskData.ticket_stage || 'analysis',
             current_status: taskData.current_status || 'new',
@@ -584,18 +596,11 @@ const EditTask = () => {
     const fetchPartners = async () => {
     try {
       const response = await fetch(
-        "https://n8n.srv952553.hstgr.cloud/webhook/getpartner",
+        "http://localhost:3000/support/getpartner",
         {
           method: "GET",
           headers: {
-            accept: "application/json",
-            "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
-            "accept-profile": "expc",
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            "content-type": "application/json",
+            "Content-Type": "application/json",
           },
         }
       );
@@ -880,16 +885,12 @@ const EditTask = () => {
             console.log("Fetching document categories for case type:", caseTypeId);
 
             const response = await fetch(
-                `https://n8n.srv952553.hstgr.cloud/webhook/04a463a8-cb59-4aca-aa7f-2b6d9091dfb4?case_type_id=${caseTypeId}`,
+                `http://localhost:3000/support/getdocumentcategories?case_type_id=${caseTypeId}`,
                 {
                     method: "GET",
                     headers: {
-                        apikey:
-                            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-                        Authorization:
-                            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-                        "Accept-Profile": "expc",
-                        "Content-Profile": "expc",
+                        "accept": "application/json",
+                        "Content-Type": "application/json",
                     },
                 }
             );
@@ -1440,7 +1441,8 @@ const EditTask = () => {
             return;
         }
 
-        const caseId = currentTaskData?.case_id || taskId;
+        // Use taskId (full case ID from URL like "ECSI-25-230") as priority
+        const caseId = taskId || currentTaskData?.case_id?.toString();
 
         // Get employee_id from localStorage
         const userDetailsRaw = localStorage.getItem('expertclaims_user_details');
@@ -1608,7 +1610,7 @@ const EditTask = () => {
                     }
 
                     const uploadPromise = fetch(
-                        "https://n8n.srv952553.hstgr.cloud/webhook/upload",
+                        "http://localhost:3000/support/upload",
                         {
                             method: "POST",
                             headers: {
@@ -1771,7 +1773,8 @@ const EditTask = () => {
             return;
         }
 
-        const caseId = currentTaskData?.case_id || taskId;
+        // Use taskId (full case ID from URL like "ECSI-25-230") as priority
+        const caseId = taskId || currentTaskData?.case_id?.toString();
         let sessionId = "fddc661a-dfb4-4896-b7b1-448e1adf7bc2";
         let jwtToken =
             "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc";
@@ -1803,7 +1806,7 @@ const EditTask = () => {
 
         try {
             const response = await fetch(
-                `https://n8n.srv952553.hstgr.cloud/webhook/removecrmdocument?document_id=${documentId}`,
+                `http://localhost:3000/support/removecrmdocument?document_id=${documentId}`,
                 {
                     method: "PATCH",
                     headers: {
@@ -1892,7 +1895,7 @@ const EditTask = () => {
             };
             console.log('Request body:', requestBody);
             
-            const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/view', {
+            const response = await fetch('http://localhost:3000/support/view', {
                 method: 'POST',
                 headers: {
                     'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
@@ -2424,7 +2427,7 @@ const EditTask = () => {
 
             console.log('Creating new payment phase:', createData);
 
-            const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/createcasepaymentphases', {
+            const response = await fetch('http://localhost:3000/support/createcasepaymentphases', {
                 method: 'POST',
                 headers: {
                     'accept': '*/*',
@@ -2476,6 +2479,17 @@ const EditTask = () => {
                     description: "Task summary is required",
                     variant: "destructive",
                 });
+                setIsSubmitting(false);
+                return;
+            }
+
+            if (!formData.service_amount || !formData.service_amount.trim()) {
+                toast({
+                    title: "Error",
+                    description: "Service amount is required",
+                    variant: "destructive",
+                });
+                setIsSubmitting(false);
                 return;
             }
 
@@ -2485,6 +2499,7 @@ const EditTask = () => {
                     description: "Due date is required",
                     variant: "destructive",
                 });
+                setIsSubmitting(false);
                 return;
             }
 
@@ -2524,6 +2539,8 @@ const EditTask = () => {
         const taskData = {
             case_id: currentTaskData?.case_id?(currentTaskData?.case_id):null,
             case_description: formData.description,
+            service_amount: formData.service_amount ? parseFloat(formData.service_amount) : null,
+            claims_amount: formData.claims_amount ? parseFloat(formData.claims_amount) : null,
             due_date: formData.due_date,
             partner_id: formData.partner_id,
             case_type: caseTypeId,
@@ -2539,7 +2556,7 @@ const EditTask = () => {
             console.log('Task update data prepared:', taskData);
 
             // Call the update API
-            const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/update_Task', {
+            const response = await fetch('http://localhost:3000/support/update_Task', {
                 method: 'PATCH',
                 headers: {
                     'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
@@ -2663,6 +2680,30 @@ const EditTask = () => {
                                     rows={4}
                                 />
                             </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="service_amount">Service Amount (₹) *</Label>
+                                    <Input
+                                        type="number"
+                                        id="service_amount"
+                                        name="service_amount"
+                                        value={formData.service_amount}
+                                        onChange={handleInputChange}
+                                        placeholder="Enter service amount"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="claims_amount">Claims Amount (₹)</Label>
+                                    <Input
+                                        type="number"
+                                        id="claims_amount"
+                                        name="claims_amount"
+                                        value={formData.claims_amount}
+                                        onChange={handleInputChange}
+                                        placeholder="Enter claims amount"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         {/* Case Type & Document Selection Section */}
@@ -2691,33 +2732,66 @@ const EditTask = () => {
                                             </div>
                                         ) : documents.length > 0 ? (
                                             <>
-                                                {documents.map((document, index) => (
-                                                    <div
-                                                        key={`doc-${index}-${document.document_name}-${document.category_id || 'no-cat'}`}
-                                                        className="flex items-center space-x-2"
-                                                    >
-                                                        <input
-                                                            type="checkbox"
-                                                            id={document.document_name}
-                                                            checked={formData.selectedDocuments.includes(
-                                                                document.document_name
-                                                            )}
-                                                            onChange={(e) =>
-                                                                handleDocumentSelection(
-                                                                    document.document_name,
-                                                                    e.target.checked
-                                                                )
-                                                            }
-                                                            className="rounded border-gray-300"
-                                                        />
-                                                        <Label
-                                                            htmlFor={document.document_name}
-                                                            className="text-sm font-normal cursor-pointer"
+                                                {/* Render all documents except "Other" first */}
+                                                {documents
+                                                    .filter((doc) => doc.document_name?.toLowerCase() !== "other")
+                                                    .map((document, index) => (
+                                                        <div
+                                                            key={`doc-${index}-${document.document_name}-${document.category_id || 'no-cat'}`}
+                                                            className="flex items-center space-x-2"
                                                         >
-                                                            {document.document_name}
-                                                        </Label>
-                                                    </div>
-                                                ))}
+                                                            <input
+                                                                type="checkbox"
+                                                                id={document.document_name}
+                                                                checked={formData.selectedDocuments.includes(
+                                                                    document.document_name
+                                                                )}
+                                                                onChange={(e) =>
+                                                                    handleDocumentSelection(
+                                                                        document.document_name,
+                                                                        e.target.checked
+                                                                    )
+                                                                }
+                                                                className="rounded border-gray-300"
+                                                            />
+                                                            <Label
+                                                                htmlFor={document.document_name}
+                                                                className="text-sm font-normal cursor-pointer"
+                                                            >
+                                                                {document.document_name}
+                                                            </Label>
+                                                        </div>
+                                                    ))}
+                                                {/* Render "Other" checkbox at the end */}
+                                                {documents
+                                                    .filter((doc) => doc.document_name?.toLowerCase() === "other")
+                                                    .map((document, index) => (
+                                                        <div
+                                                            key={`doc-other-${index}-${document.document_name}-${document.category_id || 'no-cat'}`}
+                                                            className="flex items-center space-x-2"
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                id={document.document_name}
+                                                                checked={formData.selectedDocuments.includes(
+                                                                    document.document_name
+                                                                )}
+                                                                onChange={(e) =>
+                                                                    handleDocumentSelection(
+                                                                        document.document_name,
+                                                                        e.target.checked
+                                                                    )
+                                                                }
+                                                                className="rounded border-gray-300"
+                                                            />
+                                                            <Label
+                                                                htmlFor={document.document_name}
+                                                                className="text-sm font-normal cursor-pointer"
+                                                            >
+                                                                {document.document_name}
+                                                            </Label>
+                                                        </div>
+                                                    ))}
                                                 {/* Input field for "Other" document name */}
                                                 {isOtherDocumentSelected && (
                                                     <div className="ml-6 mt-2 space-y-2">

@@ -9,7 +9,7 @@ export interface TaskCustomer {
   customer_id?: number;
   firstName: string;
   lastName: string;
-  email: string;
+  email?: string;
   mobileNumber: string;
   emergencyContact: string;
   gender: string;
@@ -21,13 +21,12 @@ export interface TaskCustomer {
   partner: string;
   languagePreference: string;
   notes: string;
-  userName: string;
-  password_hash: string;
   role: string;
   gstin?: string;
   pan?: string;
   state?: string;
   pincode?: string;
+  claims_number?: string;
 }
 
 export interface TaskPayment {
@@ -81,44 +80,56 @@ export class TaskService {
       console.log('Response status:', response.status);
       console.log('Response ok:', response.ok);
 
+      // Handle array response format: [{"message":"...", "case_id":"..."}]
+      let responseData = data;
+      if (Array.isArray(data) && data.length > 0) {
+        responseData = data[0];
+        console.log('Response is an array, using first element:', responseData);
+      }
+
       // Check if the response indicates an error
       if (!response.ok) {
         // Try to extract error message from response
         let errorMessage = `HTTP error! status: ${response.status}`;
         
-        if (data?.message) {
-          errorMessage = data.message;
-        } else if (data?.error) {
-          errorMessage = data.error;
-        } else if (data?.details) {
-          errorMessage = data.details;
-        } else if (typeof data === 'string') {
-          errorMessage = data;
+        if (responseData?.message) {
+          errorMessage = responseData.message;
+        } else if (responseData?.error) {
+          errorMessage = responseData.error;
+        } else if (responseData?.details) {
+          errorMessage = responseData.details;
+        } else if (typeof responseData === 'string') {
+          errorMessage = responseData;
         }
         
         throw new Error(errorMessage);
       }
 
       // Check if the API response indicates failure
-      if (data?.success === false) {
-        const errorMessage = data?.message || data?.error || 'Task creation failed';
+      if (responseData?.success === false) {
+        const errorMessage = responseData?.message || responseData?.error || 'Task creation failed';
         throw new Error(errorMessage);
       }
 
       // Check for common error patterns in the response
-      if (data?.message && (
-        data.message.toLowerCase().includes('invalid') ||
-        data.message.toLowerCase().includes('error') ||
-        data.message.toLowerCase().includes('failed') ||
-        data.message.toLowerCase().includes('validation')
+      if (responseData?.message && (
+        responseData.message.toLowerCase().includes('invalid') ||
+        responseData.message.toLowerCase().includes('error') ||
+        responseData.message.toLowerCase().includes('failed') ||
+        responseData.message.toLowerCase().includes('validation')
       )) {
-        throw new Error(data.message);
+        throw new Error(responseData.message);
       }
+      
+      // Extract case_id from response (handle both object and array formats)
+      const caseId = responseData?.case_id || responseData?.id || (Array.isArray(data) && data[0]?.case_id) || null;
+      
+      console.log('Extracted case_id from response:', caseId);
       
       return {
         success: true,
-        message: data?.message || 'Task created successfully',
-        case_id: data?.case_id || data?.id || `TASK-${Date.now()}`
+        message: responseData?.message || 'Task created successfully',
+        case_id: caseId || `TASK-${Date.now()}`
       };
     } catch (error: any) {
       console.error('Error creating task:', error);
