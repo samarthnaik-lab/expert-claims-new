@@ -353,8 +353,8 @@ const Register = () => {
         };
       }
 
-      // Use the new_user_creation API for all roles
-      const apiUrl = 'https://n8n.srv952553.hstgr.cloud/webhook-test/new_user_creation';
+      // Use the createuser API for all roles
+      const apiUrl = 'http://localhost:3000/admin/createuser';
 
       // Base request body structure matching the curl command
       let requestBody: any = {
@@ -436,10 +436,8 @@ const Register = () => {
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
           'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
           'content-type': 'application/json',
-          'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiAiLCJwYXNzd29yZCI6IiIsImlhdCI6MTc2MDY5NzIyOX0.mOiaZvTksEEYeiH0Wwb8UyiAyMSivXZz03It8RG7dgo',
-          'origin': 'https://expert-claims-g8p9.vercel.app',
-          'referer': 'https://expert-claims-g8p9.vercel.app/',
-          'session_id': sessionId || '0f79993c-dc64-4c30-b522-9bdabba91d03'
+          'jwt_token': jwtToken || '',
+          'session_id': sessionId || ''
         },
         body: JSON.stringify(requestBody)
       });

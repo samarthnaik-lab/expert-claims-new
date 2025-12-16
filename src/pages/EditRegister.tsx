@@ -136,7 +136,7 @@ const EditRegister = () => {
         type: 'edit'
       });
       
-      const url = `https://n8n.srv952553.hstgr.cloud/webhook/getusers?${params.toString()}`;
+      const url = `http://localhost:3000/admin/getusers?${params.toString()}`;
       
       console.log('Calling getusers API with URL:', url);
       console.log('Query parameters:', { id: userId, type: 'edit' });
@@ -513,13 +513,13 @@ const EditRegister = () => {
         console.log('Sending partner update payload:', partnerPayload);
         console.log('=====================');
 
-        response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/updateempuser', {
+        response = await fetch('http://localhost:3000/admin/updateuser', {
           method: 'PATCH',
           headers: {
             'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
             'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
-            'session_id': 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2',
-            'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k',
+            'session_id': sessionId,
+            'jwt_token': jwtToken,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(partnerPayload)
@@ -571,13 +571,13 @@ const EditRegister = () => {
         console.log('Sending admin update payload:', adminPayload);
         console.log('==================');
 
-        response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/updateempuser', {
+        response = await fetch('http://localhost:3000/admin/updateuser', {
           method: 'PATCH',
           headers: {
             'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
             'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
-            'session_id': 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2',
-            'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k',
+            'session_id': sessionId,
+            'jwt_token': jwtToken,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(adminPayload)
@@ -637,13 +637,13 @@ const EditRegister = () => {
         console.log('Sending employee update payload:', employeePayload);
         console.log('====================');
 
-        response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/updateempuser', {
+        response = await fetch('http://localhost:3000/admin/updateuser', {
           method: 'PATCH',
           headers: {
             'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
             'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
-            'session_id': 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2',
-            'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k',
+            'session_id': sessionId,
+            'jwt_token': jwtToken,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(employeePayload)
@@ -710,13 +710,13 @@ const EditRegister = () => {
         console.log('Sending customer update payload:', customerPayload);
         console.log('====================');
 
-        response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/updateempuser', {
+        response = await fetch('http://localhost:3000/admin/updateuser', {
           method: 'PATCH',
           headers: {
             'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
             'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
-            'session_id': 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2',
-            'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k',
+            'session_id': sessionId,
+            'jwt_token': jwtToken,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(customerPayload)

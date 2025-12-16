@@ -51,6 +51,7 @@ const AdminDashboard = () => {
   const [loadingAllLeaves, setLoadingAllLeaves] = useState(false);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]); // All users for cards (no pagination)
+  const [allUsersForSearch, setAllUsersForSearch] = useState<AdminUser[]>([]); // All users with full details for searching
   const [usersLoading, setUsersLoading] = useState(false);
   const [loadingAllUsers, setLoadingAllUsers] = useState(false);
   const [allFetchedUsers, setAllFetchedUsers] = useState<AdminUser[]>([]); // Accumulated users when filtering by partner type
@@ -387,27 +388,39 @@ const AdminDashboard = () => {
   }, [users]);
 
   // Filter users based on search term, status, and partner type
-  // When filtering by partner type, use accumulated users; otherwise use current page users
-  const usersToFilter = userPartnerTypeFilter !== 'all' ? allFetchedUsers : users;
+  // When searching or filtering, use all users; otherwise use current page users for display
+  const isSearchingOrFiltering = userSearchTerm || userStatusFilter !== 'all' || userPartnerTypeFilter !== 'all';
+  
+  // Determine which user set to filter from
+  const usersToFilter = isSearchingOrFiltering
+    ? (userPartnerTypeFilter !== 'all' ? allFetchedUsers : allUsersForSearch.length > 0 ? allUsersForSearch : users)
+    : (userPartnerTypeFilter !== 'all' ? allFetchedUsers : users);
+  
+  // Apply filters
   const allFilteredUsers = usersToFilter.filter(user => {
     const searchLower = userSearchTerm.toLowerCase();
-    const matchesSearch =
+    const matchesSearch = !userSearchTerm || (
       (user.id && user.id.toLowerCase().includes(searchLower)) ||
       (user.name && user.name.toLowerCase().includes(searchLower)) ||
       (user.role && user.role.toLowerCase().includes(searchLower)) ||
-      (user.status && user.status.toLowerCase().includes(searchLower));
+      (user.status && user.status.toLowerCase().includes(searchLower)) ||
+      (user.email && user.email.toLowerCase().includes(searchLower))
+    );
     const matchesStatus = userStatusFilter === 'all' || (user.status && user.status === userStatusFilter);
     const matchesPartnerType = userPartnerTypeFilter === 'all' || ((user as any).partner_type && (user as any).partner_type === userPartnerTypeFilter);
     return matchesSearch && matchesStatus && matchesPartnerType;
   });
 
-  // Paginate filtered users - show 10 per page (only when filtering by partner type)
+  // Paginate filtered users
+  // When searching/filtering: use client-side pagination on filtered results
+  // When NOT searching/filtering: use API pagination (users already paginated from API)
   const pageLimit = parseInt(userPageLimit);
   const startIndex = (userCurrentPage - 1) * pageLimit;
   const endIndex = startIndex + pageLimit;
-  const filteredUsers = userPartnerTypeFilter !== 'all' 
-    ? allFilteredUsers.slice(startIndex, endIndex) 
-    : allFilteredUsers;
+  
+  const filteredUsers = isSearchingOrFiltering
+    ? allFilteredUsers.slice(startIndex, endIndex) // Client-side pagination for search/filter results
+    : allFilteredUsers; // API pagination - users are already paginated
 
   // Initialize active tab from URL parameters
   useEffect(() => {
@@ -464,9 +477,23 @@ const AdminDashboard = () => {
     }
   }, [userPartnerTypeFilter]);
 
-  // Refetch users when pagination parameters change
+  // Fetch all users for searching when users tab is active
   useEffect(() => {
-    if (activeTab === 'users') {
+    if (activeTab === 'users' && allUsersForSearch.length === 0) {
+      fetchAllUsers();
+    }
+  }, [activeTab]);
+
+  // Reset to page 1 when search term or filters change
+  useEffect(() => {
+    if (activeTab === 'users' && (userSearchTerm || userStatusFilter !== 'all' || userPartnerTypeFilter !== 'all')) {
+      setUserCurrentPage(1);
+    }
+  }, [userSearchTerm, userStatusFilter, userPartnerTypeFilter, activeTab]);
+
+  // Refetch users when pagination parameters change (only if not searching/filtering)
+  useEffect(() => {
+    if (activeTab === 'users' && !userSearchTerm && userStatusFilter === 'all' && userPartnerTypeFilter === 'all') {
       fetchUsers();
     }
   }, [userCurrentPage, userPageLimit]);
@@ -502,7 +529,7 @@ const AdminDashboard = () => {
 
       console.log('Fetching admin dashboard data...');
 
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/admindashboard', {
+      const response = await fetch('http://localhost:3000/admin/admindashboard', {
         method: 'GET',
         headers: {
           'Content-Profile': 'expc',
@@ -541,7 +568,7 @@ const AdminDashboard = () => {
     }
   };
 
-  // Fetch ALL users for cards (no pagination)
+  // Fetch ALL users for cards (no pagination) and for searching
   const fetchAllUsers = async () => {
     setLoadingAllUsers(true);
     try {
@@ -559,7 +586,7 @@ const AdminDashboard = () => {
       jwtToken = jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjM0IiwiaWF0IjoxNzU2NTUwODUwfQ.Kmh5wQS9CXpRK0TmBXlJJhGlfr9ulMx8ou5nCk7th8g';
 
       // Fetch all users with a large size limit
-      const response = await fetch(`https://n8n.srv952553.hstgr.cloud/webhook/getusers?page=1&size=10000`, {
+      const response = await fetch(`http://localhost:3000/admin/getusers?page=1&size=10000`, {
         method: 'GET',
         headers: {
           'accept': '*/*',
@@ -578,14 +605,39 @@ const AdminDashboard = () => {
         if (Array.isArray(result) && result.length > 0) {
           const firstResult = result[0];
           if (firstResult.status === 'success' && firstResult.data) {
-            const transformedUsers = firstResult.data.map((user: any) => ({
+            // Minimal data for cards
+            const transformedUsersForCards = firstResult.data.map((user: any) => ({
               id: user.user_id.toString(),
               name: user.employees ? `${user.employees.first_name || ''} ${user.employees.last_name || ''}`.trim() : user.username,
               role: user.role,
               status: user.status,
               designation: user.role,
             }));
-            setAllUsers(transformedUsers);
+            setAllUsers(transformedUsersForCards);
+
+            // Full data for searching
+            const transformedUsersForSearch = firstResult.data.map((user: any) => ({
+              id: user.user_id.toString(),
+              name: user.employees ? `${user.employees.first_name || ''} ${user.employees.last_name || ''}`.trim() : user.username,
+              role: user.role,
+              status: user.status,
+              email: user.email,
+              department: user.role === 'employee' && user.employees ? user.employees.department : 
+                         user.role === 'partner' && user.partners ? user.partners.department :
+                         user.role === 'customer' && user.customers ? user.customers.department : 'N/A',
+              mobile_number: user.employees ? user.employees.mobile_number : 
+                           user.partners ? user.partners.mobile_number :
+                           user.customers ? user.customers.mobile_number : null,
+              entity: user.partners ? (user.partners["name of entity"] || user.partners.entity_name || 'N/A') :
+                     user.employees ? (user.employees.entity_name || user.employees["name of entity"] || 'N/A') :
+                     user.customers ? (user.customers.entity_name || user.customers["name of entity"] || 'N/A') : 'N/A',
+              partner_type: user.partners ? (user.partners.partner_type || 'N/A') : 'N/A',
+              created_time: user.created_time,
+              employees: user.employees,
+              partners: user.partners,
+              customers: user.customers
+            }));
+            setAllUsersForSearch(transformedUsersForSearch);
           }
         }
       }
@@ -618,7 +670,7 @@ const AdminDashboard = () => {
       console.log('Using session ID:', sessionId);
       console.log('Using JWT token:', jwtToken);
 
-      const response = await fetch(`https://n8n.srv952553.hstgr.cloud/webhook/getusers?page=${userCurrentPage}&size=${parseInt(userPageLimit)}`, {
+      const response = await fetch(`http://localhost:3000/admin/getusers?page=${userCurrentPage}&size=${parseInt(userPageLimit)}`, {
         method: 'GET',
         headers: {
           'accept': '*/*',
@@ -1337,7 +1389,7 @@ Created Time: ${report.created_time}
         type: 'edit'
       });
       
-      const url = `https://n8n.srv952553.hstgr.cloud/webhook/getusers?${params.toString()}`;
+      const url = `http://localhost:3000/admin/getusers?${params.toString()}`;
       
       console.log('Calling getusers API with URL:', url);
       console.log('Query parameters:', { id: userId, type: 'edit' });
@@ -1474,6 +1526,10 @@ Created Time: ${report.created_time}
       if (result.success) {
         // Remove user from local state
         setUsers(prevUsers => prevUsers.filter(u => u.id !== userToDelete.id));
+        // Also remove from allUsersForSearch for search functionality
+        setAllUsersForSearch(prevUsers => prevUsers.filter(u => u.id !== userToDelete.id));
+        // Also remove from allUsers for cards
+        setAllUsers(prevUsers => prevUsers.filter(u => u.id !== userToDelete.id));
         
         toast({
           title: "Success",
@@ -2558,7 +2614,11 @@ Created Time: ${report.created_time}
             {/* Pagination Controls */}
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-700">
-                Showing {filteredUsers.length} {userPartnerTypeFilter !== 'all' ? `of ${allFilteredUsers.length} ` : ''}users
+                {isSearchingOrFiltering ? (
+                  <>Showing {filteredUsers.length} of {allFilteredUsers.length} filtered users</>
+                ) : (
+                  <>Showing {filteredUsers.length} users</>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <Button
@@ -2588,9 +2648,11 @@ Created Time: ${report.created_time}
                     }
                   }}
                   disabled={
-                    userPartnerTypeFilter !== 'all'
-                      ? (endIndex >= allFilteredUsers.length && !hasMoreUsers) // No more filtered users AND no more API pages
-                      : filteredUsers.length < parseInt(userPageLimit) // Normal pagination check
+                    isSearchingOrFiltering
+                      ? (endIndex >= allFilteredUsers.length) // No more filtered users when searching/filtering
+                      : (userPartnerTypeFilter !== 'all'
+                          ? (endIndex >= allFilteredUsers.length && !hasMoreUsers) // No more filtered users AND no more API pages
+                          : !hasMoreUsers) // Normal pagination: disabled when no more pages from API
                   }
                   className="border-2 border-gray-300 hover:border-primary-500"
                 >
