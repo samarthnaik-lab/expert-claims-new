@@ -212,15 +212,28 @@ const AdminBacklogDetail = () => {
     try {
       console.log('Fetching technical consultants from API...');
       
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/gettechnicalconsultant', {
+      // Get session_id and jwt_token from localStorage
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+      
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (e) {
+          console.error('Error parsing session:', e);
+        }
+      }
+      
+      const response = await fetch('http://localhost:3000/admin/gettechnicalconsultant', {
         method: 'GET',
         headers: {
           'accept': 'application/json',
-          'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
           'content-type': 'application/json',
-          'session_id': '0276776c-99fa-4b79-a5a2-70f3a428a0c7',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-          'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o'
+          'session_id': sessionId,
+          'jwt_token': jwtToken
         }
       });
 
@@ -260,29 +273,28 @@ const AdminBacklogDetail = () => {
     setIsLoading(true);
     try {
       const sessionStr = localStorage.getItem('expertclaims_session');
-      let sessionId = '17e7ab32-86ad-411e-8ee3-c4a09e6780f7';
+      let sessionId = '';
+      let jwtToken = '';
+      
       if (sessionStr) {
         try {
           const session = JSON.parse(sessionStr);
-          sessionId = session.sessionId || '17e7ab32-86ad-411e-8ee3-c4a09e6780f7';
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
         } catch (e) {
           console.error('Error parsing session:', e);
         }
       }
-
-      const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
       
       const response = await fetch(
-        `https://n8n.srv952553.hstgr.cloud/webhook/backlog_id?backlog_id=${id}`,
+        `http://localhost:3000/admin/backlog_id?backlog_id=${id}`,
         {
           method: "GET",
           headers: {
-            "Content-Profile": "expc",
-            apikey: API_KEY,
-            "Accept-Profile": "expc",
-            session_id: sessionId,
-            Authorization: `Bearer ${API_KEY}`,
-            "Content-Type": "application/json",
+            'accept': '*/*',
+            'content-type': 'application/json',
+            'session_id': sessionId,
+            'jwt_token': jwtToken
           },
         }
       );
@@ -368,16 +380,13 @@ const AdminBacklogDetail = () => {
         document_id: documentId
       };
       
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/partnerdocumentview', {
+      const response = await fetch('http://localhost:3000/admin/documentview', {
         method: 'POST',
         headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Content-Profile': 'expc',
-          'Accept-Profile': 'expc',
-          'session_id': sessionId || 'a9bfe0a4-1e6c-4c69-860f-ec50846a7da6',
-          'jwt_token': jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc',
-          'Content-Type': 'application/json'
+          'accept': 'application/json',
+          'content-type': 'application/json',
+          'session_id': sessionId,
+          'jwt_token': jwtToken
         },
         body: JSON.stringify(requestBody)
       });
@@ -480,19 +489,27 @@ const AdminBacklogDetail = () => {
         }
       }
 
-      const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
+      // Get jwt_token from localStorage
+      const sessionStrForJwt = localStorage.getItem('expertclaims_session');
+      let jwtToken = '';
+      if (sessionStrForJwt) {
+        try {
+          const session = JSON.parse(sessionStrForJwt);
+          jwtToken = session.jwtToken || '';
+        } catch (e) {
+          console.error('Error parsing session:', e);
+        }
+      }
       
       const response = await fetch(
-        "https://n8n.srv952553.hstgr.cloud/webhook/comments_insert",
+        "http://localhost:3000/admin/comments_insert",
         {
           method: "POST",
           headers: {
-            "Content-Profile": "expc",
-            apikey: API_KEY,
-            "Accept-Profile": "expc",
-            session_id: sessionId,
-            Authorization: `Bearer ${API_KEY}`,
-            "Content-Type": "application/json",
+            'accept': 'application/json',
+            'content-type': 'application/json',
+            'session_id': sessionId,
+            'jwt_token': jwtToken
           },
           body: JSON.stringify({
             backlog_id: backlogDetail.backlog_id,
@@ -594,17 +611,18 @@ const AdminBacklogDetail = () => {
       }
 
       const sessionStr = localStorage.getItem('expertclaims_session');
-      let sessionId = '0276776c-99fa-4b79-a5a2-70f3a428a0c7';
+      let sessionId = '';
+      let jwtToken = '';
+      
       if (sessionStr) {
         try {
           const session = JSON.parse(sessionStr);
-          sessionId = session.sessionId || '0276776c-99fa-4b79-a5a2-70f3a428a0c7';
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
         } catch (e) {
           console.error('Error parsing session:', e);
         }
       }
-
-      const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
       
       const requestBody = {
         backlog_id: backlogDetail.backlog_id,
@@ -614,14 +632,13 @@ const AdminBacklogDetail = () => {
         user_id: currentUser.employee_id
       };
 
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/updatecunsultantpolicy', {
+      const response = await fetch('http://localhost:3000/admin/updatecunsultantpolicy', {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
           'accept': 'application/json',
+          'content-type': 'application/json',
           'session_id': sessionId,
-          'apikey': API_KEY,
-          'authorization': `Bearer ${API_KEY}`
+          'jwt_token': jwtToken
         },
         body: JSON.stringify(requestBody)
       });
@@ -675,17 +692,18 @@ const AdminBacklogDetail = () => {
       }
 
       const sessionStr = localStorage.getItem('expertclaims_session');
-      let sessionId = '17e7ab32-86ad-411e-8ee3-c4a09e6780f7';
+      let sessionId = '';
+      let jwtToken = '';
+      
       if (sessionStr) {
         try {
           const session = JSON.parse(sessionStr);
-          sessionId = session.sessionId || '17e7ab32-86ad-411e-8ee3-c4a09e6780f7';
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
         } catch (e) {
           console.error('Error parsing session:', e);
         }
       }
-
-      const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
       
       const statusDisplay = selectedStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       const requestBody = {
@@ -695,15 +713,13 @@ const AdminBacklogDetail = () => {
         user_id: currentUser.employee_id
       };
 
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/updatestatustechnicalconsultant', {
+      const response = await fetch('http://localhost:3000/admin/updatestatustechnicalconsultant', {
         method: 'PATCH',
         headers: {
-          'Content-Profile': 'expc',
-          apikey: API_KEY,
-          'Accept-Profile': 'expc',
-          session_id: sessionId,
-          Authorization: `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json',
+          'accept': 'application/json',
+          'content-type': 'application/json',
+          'session_id': sessionId,
+          'jwt_token': jwtToken
         },
         body: JSON.stringify(requestBody)
       });
@@ -786,15 +802,13 @@ const AdminBacklogDetail = () => {
         case_type_id: parseInt(selectedCaseType)
       };
 
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/update_backlog', {
+      const response = await fetch('http://localhost:3000/admin/update_backlog', {
         method: 'PATCH',
         headers: {
           'accept': '*/*',
-          'apikey': API_KEY,
-          'authorization': `Bearer ${API_KEY}`,
+          'content-type': 'application/json',
           'session_id': sessionId,
-          'jwt_token': jwtToken,
-          'Content-Type': 'application/json'
+          'jwt_token': jwtToken
         },
         body: JSON.stringify(requestBody)
       });
@@ -856,15 +870,13 @@ const AdminBacklogDetail = () => {
       }
 
       // Call the API to update status with expert_description
-      const response = await fetch("https://n8n.srv952553.hstgr.cloud/webhook/updatestatustechnicalconsultant", {
+      const response = await fetch("http://localhost:3000/admin/updatestatustechnicalconsultant", {
         method: "PATCH",
         headers: {
-          "Content-Profile": "expc",
-          apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-          "Accept-Profile": "expc",
-          session_id: sessionId,
-          Authorization: `Bearer ${jwtToken}`,
-          "Content-Type": "application/json",
+          'accept': 'application/json',
+          'content-type': 'application/json',
+          'session_id': sessionId,
+          'jwt_token': jwtToken
         },
         body: JSON.stringify({
           backlog_id: backlogDetail?.backlog_id,
@@ -1142,26 +1154,26 @@ const AdminBacklogDetail = () => {
         };
 
         const sessionStr = localStorage.getItem('expertclaims_session');
-        let sessionId = '17e7ab32-86ad-411e-8ee3-c4a09e6780f7';
+        let sessionId = '';
+        let jwtToken = '';
+        
         if (sessionStr) {
           try {
             const session = JSON.parse(sessionStr);
-            sessionId = session.sessionId || '17e7ab32-86ad-411e-8ee3-c4a09e6780f7';
+            sessionId = session.sessionId || '';
+            jwtToken = session.jwtToken || '';
           } catch (e) {
             console.error('Error parsing session:', e);
           }
         }
 
-        const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
-
-        const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/updatestatustechnicalconsultant', {
+        const response = await fetch('http://localhost:3000/admin/updatestatustechnicalconsultant', {
           method: 'PATCH',
           headers: {
-            'Content-Type': 'application/json',
             'accept': 'application/json',
+            'content-type': 'application/json',
             'session_id': sessionId,
-            'apikey': API_KEY,
-            'authorization': `Bearer ${API_KEY}`
+            'jwt_token': jwtToken
           },
           body: JSON.stringify(requestBody)
         });
