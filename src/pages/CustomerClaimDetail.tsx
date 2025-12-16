@@ -227,7 +227,8 @@ const CustomerClaimDetail = () => {
           console.log('Found case:', foundClaim);
           setClaim(foundClaim);
           
-          fetchDocuments(Number(searchCaseId));
+            // Pass case_id as string (e.g., "ECSI-25-001"), NOT as number
+            fetchDocuments(searchCaseId);
         } else {
           console.error('Case not found with ID:', case_id);
           console.log('Available case IDs:', data.map((item: any) => item.case_id));
@@ -246,7 +247,7 @@ const CustomerClaimDetail = () => {
     fetchClaimDetails();
   }, [case_id]);
 
-  const fetchDocuments = async (caseId: number) => {
+  const fetchDocuments = async (caseId: string) => {
     try {
       setDocumentsLoading(true);
       
@@ -269,23 +270,33 @@ const CustomerClaimDetail = () => {
         return;
       }
 
-      // Build FormData payload
-      const formData = new FormData();
-      formData.append('case_id', caseId.toString());
+      // Get session_id and jwt_token from localStorage
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
 
       const response = await fetch(
-        'https://n8n.srv952553.hstgr.cloud/webhook/list-documents',
+        'http://localhost:3000/support/list-documents',
         {
           method: 'POST',
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-            'session_id': 'd012f756-cb15-4ca2-abe2-57305d399f08',
-            'Accept-Profile': 'expc',
-            'Content-Profile': 'expc',
-            'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NDcyNzQwfQ.i7Vu6E-r1iaEvsnCUcD8DAy4SP6_enoRrGRviGdi1p8',
+            'accept': '*/*',
+            'content-type': 'application/json',
+            'jwt_token': jwtToken,
+            'session_id': sessionId,
           },
-          body: formData,
+          body: JSON.stringify({
+            case_id: caseId
+          }),
         }
       );
 
@@ -788,7 +799,7 @@ const CustomerClaimDetail = () => {
                           <FileText className="h-8 w-8 text-primary-500" />
                           <div>
                             <p className="font-medium text-gray-900">
-                              {doc.file_path ? doc.file_path.split('/').pop()?.replace(/_upload_v1_.*$/, '') || 'Document' : `Document ${index + 1}`}
+                              Document 
                             </p>
                             <p className="text-sm text-gray-500">
                               Document ID: {doc.document_id}

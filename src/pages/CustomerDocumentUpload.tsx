@@ -509,21 +509,32 @@ const CustomerDocumentUpload = () => {
       try {
         setLoading(true);
 
-        const response = await fetch(
-          "https://n8n.srv952553.hstgr.cloud/webhook/getdocumentcatagories",
+        // Get session_id and jwt_token from localStorage
+     const sessionStr = localStorage.getItem('expertclaims_session');
+     let sessionId = '';
+     let jwtToken = '';
+     if (sessionStr) {
+       try {
+         const session = JSON.parse(sessionStr);
+         sessionId = session.sessionId || '';
+         jwtToken = session.jwtToken || '';
+       } catch (error) {
+         console.error('Error parsing session:', error);
+       }
+     }
+
+     const response = await fetch(
+          "http://localhost:3000/customer/getdocumentcatagories",
           {
-            method: "GET", // default since curl has no --data
+            method: "GET",
             headers: {
-              apikey:
-                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-              Authorization:
-                "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-              "Content-Profile": "expc",
-              "Accept-Profile": "expc",
-              session_id: "a9bfe0a4-1e6c-4c69-860f-ec50846a7da6",
-              jwt_token:
-                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc",
-              "Content-Type": "application/json",
+              'accept': '*/*',
+              'accept-language': 'en-US,en;q=0.9',
+              'content-type': 'application/json',
+              'jwt_token': jwtToken,
+              'session_id': sessionId,
+              'origin': 'http://localhost:8080',
+              'referer': 'http://localhost:8080/',
             },
           }
         );
