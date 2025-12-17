@@ -845,20 +845,25 @@ const AdminDashboard = () => {
         jwtToken = session.jwtToken || '';
       }
 
-      // Fetch all tasks with a large size limit
-      const url = `https://n8n.srv952553.hstgr.cloud/webhook/gettasks?page=1&size=10000`;
+      // Fetch all tasks with a large size limit from admin backend
+      const url = `http://localhost:3000/admin/gettasks?page=1&size=10000`;
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
+          'Connection': 'keep-alive',
+          'Origin': 'http://localhost:8080',
+          'Prefer': 'count=exact',
+          'Range': '0-100',
+          'Referer': 'http://localhost:8080/',
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
-          'accept-profile': 'srtms',
+          'accept-profile': 'expc',
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
           'authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
           'content-type': 'application/json',
-          'jwt_token': jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjM0IiwiaWF0IjoxNzU2NTUwODUwfQ.Kmh5wQS9CXpRK0TmBXlJJhGlfr9ulMx8ou5nCk7th8g',
-          'session_id': sessionId || 'efd005c8-d9a1-4cfa-adeb-1ca2a7f13775',
+          'jwt_token': jwtToken || 'token_1765952455523_ukhols79v',
+          'session_id': sessionId || 'sess_1765952455523_cceyku19o',
         }
       });
 
@@ -900,25 +905,26 @@ const AdminDashboard = () => {
 
       console.log('Fetching task management data...');
 
-      const url = `https://n8n.srv952553.hstgr.cloud/webhook/gettasks?page=${taskCurrentPage}&size=${parseInt(taskPageLimit)}`;
+      // Use admin backend URL for paginated task list in Task Management tab
+      const url = `http://localhost:3000/admin/gettasks?page=${taskCurrentPage}&size=${parseInt(taskPageLimit)}`;
       console.log('Fetching tasks with URL:', url);
 
       const response = await fetch(url, {
         method: 'GET',
         headers: {
+          'Connection': 'keep-alive',
+          'Origin': 'http://localhost:8080',
+          'Prefer': 'count=exact',
+          'Range': '0-100',
+          'Referer': 'http://localhost:8080/',
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
-          'accept-profile': 'srtms',
+          'accept-profile': 'expc',
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
           'authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
           'content-type': 'application/json',
-          'jwt_token': jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjM0IiwiaWF0IjoxNzU2NTUwODUwfQ.Kmh5wQS9CXpRK0TmBXlJJhGlfr9ulMx8ou5nCk7th8g',
-          'origin': 'http://localhost:8080',
-          'priority': 'u=1, i',
-          'referer': 'http://localhost:8080/',
-          'session_id': sessionId || 'efd005c8-d9a1-4cfa-adeb-1ca2a7f13775',
-          'Range': '5-10',
-          'Prefer': 'count=exact'
+          'jwt_token': jwtToken || 'token_1765952455523_ukhols79v',
+          'session_id': sessionId || 'sess_1765952455523_cceyku19o',
         }
       });
 
