@@ -1592,25 +1592,10 @@ const EditTask = () => {
                     formDataToSend.append("data", file);
                     formDataToSend.append("case_id", caseId.toString());
                     formDataToSend.append("category_id", categoryId.toString());
-                    formDataToSend.append("emp_id", employeeId.toString());
-
-                    // Get session_id and jwt_token from localStorage
-                    const sessionData = localStorage.getItem('expertclaims_session');
-                    let sessionId = 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2'; // Default fallback
-                    let jwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc'; // Default fallback
-                    
-                    if (sessionData) {
-                        try {
-                            const session = JSON.parse(sessionData);
-                            sessionId = session.sessionId || session.session_id || sessionId;
-                            jwtToken = session.jwtToken || session.jwt_token || jwtToken;
-                        } catch (error) {
-                            console.error('Error parsing session data:', error);
-                        }
-                    }
+                    formDataToSend.append("is_customer_visible", "false"); // Admin/employee uploads are not customer visible by default
 
                     const uploadPromise = fetch(
-                        "http://localhost:3000/support/upload",
+                        "http://localhost:3000/api/upload",
                         {
                             method: "POST",
                             headers: {
@@ -1618,10 +1603,7 @@ const EditTask = () => {
                                     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
                                 Authorization:
                                     "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-                                session_id: sessionId,
-                                jwt_token: jwtToken,
-                                "Accept-Profile": "expc",
-                                "Content-Profile": "expc",
+                                // Don't set Content-Type for FormData - browser will set it automatically with boundary
                             },
                             body: formDataToSend,
                         }

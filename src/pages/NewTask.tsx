@@ -1862,47 +1862,16 @@ const NewTask = () => {
           formData.append("data", file);
           formData.append("case_id", caseId);
           formData.append("category_id", categoryId.toString());
-          formData.append("emp_id", employeeId);
-
-          // Get session data for authentication
-          const sessionId =
-            effectiveSession?.sessionId || 
-            (() => {
-              const sessionStr = localStorage.getItem("expertclaims_session");
-              if (sessionStr) {
-                try {
-                  const session = JSON.parse(sessionStr);
-                  return session.sessionId || "";
-                } catch (e) {
-                  return "";
-                }
-              }
-              return "";
-            })();
-          
-          const jwtToken =
-            effectiveSession?.jwtToken ||
-            (() => {
-              const sessionStr = localStorage.getItem("expertclaims_session");
-              if (sessionStr) {
-                try {
-                  const session = JSON.parse(sessionStr);
-                  return session.jwtToken || "";
-                } catch (e) {
-                  return "";
-                }
-              }
-              return "";
-            })();
+          formData.append("is_customer_visible", "false"); // Admin/employee uploads are not customer visible by default
 
           const uploadPromise = fetch(
-            "http://localhost:3000/support/upload",
+            "http://localhost:3000/api/upload",
             {
               method: "POST",
               headers: {
-                accept: "*/*",
-                ...(sessionId && { session_id: sessionId }),
-                ...(jwtToken && { jwt_token: jwtToken }),
+                apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
+                Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
+                // Don't set Content-Type for FormData - browser will set it automatically with boundary
               },
               body: formData,
             }
