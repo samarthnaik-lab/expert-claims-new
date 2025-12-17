@@ -1160,18 +1160,15 @@ const AdminDashboard = () => {
         jwtToken = session.jwtToken || '';
       }
 
-      // Fetch all leave requests with a large size limit
-      const url = `https://n8n.srv952553.hstgr.cloud/webhook/getleaves?page=1&size=10000`;
+      // Fetch all leave requests with a large size limit from backend
+      const url = `http://localhost:3000/admin/getleaves?page=1&size=10000`;
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Content-Profile': 'expc',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-          'Accept-Profile': 'expc',
-          'session_id': sessionId || '17e7ab32-86ad-411e-8ee3-c4a09e6780f7',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'session_id': sessionId || '',
+          'jwt_token': jwtToken || ''
         }
       });
 
@@ -1209,18 +1206,16 @@ const AdminDashboard = () => {
 
       console.log('Fetching leave requests data...');
 
-      const url = `https://n8n.srv952553.hstgr.cloud/webhook/getleaves?page=${leaveCurrentPage}&size=${parseInt(leavePageLimit)}`;
+      // Use backend endpoint instead of n8n webhook
+      const url = `http://localhost:3000/admin/getleaves?page=${leaveCurrentPage}&size=${parseInt(leavePageLimit)}`;
       console.log('Fetching leave requests with URL:', url);
 
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Content-Profile': 'expc',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-          'Accept-Profile': 'expc',
-          'session_id': sessionId || '17e7ab32-86ad-411e-8ee3-c4a09e6780f7',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'session_id': sessionId || '',
+          'jwt_token': jwtToken || ''
         }
       });
 
@@ -1257,9 +1252,10 @@ const AdminDashboard = () => {
         }
       } else {
         console.error('Failed to fetch leave requests:', response.status);
+        const errorData = await response.json().catch(() => ({}));
         toast({
           title: "Error",
-          description: "Failed to fetch leave requests",
+          description: errorData.message || "Failed to fetch leave requests",
           variant: "destructive",
         });
       }
@@ -1565,53 +1561,74 @@ Created Time: ${report.created_time}
         userId = details.userid ?? '';
       }
 
+      // Get session from localStorage if userDetails doesn't have it
+      if (!sessionId || !jwtToken) {
+        const sessionStr = localStorage.getItem('expertclaims_session');
+        if (sessionStr) {
+          const session = JSON.parse(sessionStr);
+          sessionId = sessionId || session.sessionId || '';
+          jwtToken = jwtToken || session.jwtToken || '';
+        }
+      }
+
       // Current date as YYYY-MM-DD
       const approvedDate = new Date().toISOString().slice(0, 10);
 
-      // Build query params
-      const params = new URLSearchParams({
-        approved_id: leaveId,
-        status: action,
-        approved_by: String(userId),
-        approved_date: approvedDate,
-      });
-
       console.log(`Updating leave request ${leaveId} to ${action} by user ${userId} on ${approvedDate}...`);
 
-      const response = await fetch(
-        `https://n8n.srv952553.hstgr.cloud/webhook/getstatusleave?${params.toString()}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Profile': 'expc',
-            'Accept-Profile': 'expc',
-            'session_id': sessionId || '0276776c-99fa-4b79-a5a2-70f3a428a0c7',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-        }
-      );
+      // Use backend endpoint instead of n8n webhook
+      const response = await fetch('http://localhost:3000/admin/updateleavestatus', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'session_id': sessionId || '',
+          'jwt_token': jwtToken || ''
+        },
+        body: JSON.stringify({
+          application_id: leaveId,
+          status: action,
+          approved_by: userId ? String(userId) : null,
+          approved_date: approvedDate,
+          rejection_reason: action === 'rejected' ? null : undefined // Optional, can be set if needed
+        })
+      });
 
       if (response.ok) {
         const result = await response.json();
+        console.log('Leave status update response:', result);
 
-        // Reflect the change locally
-        const updatedRequests = leaveRequests.map(req =>
-          req.application_id === leaveId ? { ...req, status: action } : req
-        );
-        setLeaveRequests(updatedRequests);
+        // Handle array response structure
+        let responseData = result;
+        if (Array.isArray(result) && result.length > 0) {
+          responseData = result[0];
+        }
 
-        toast({
-          title: 'Success',
-          description: `Leave request ${action} successfully`,
-        });
+        if (responseData.status === 'success') {
+          // Reflect the change locally
+          const updatedRequests = leaveRequests.map(req =>
+            req.application_id === leaveId ? { ...req, status: action } : req
+          );
+          setLeaveRequests(updatedRequests);
+
+          // Also update allLeaveRequests for the cards
+          const updatedAllRequests = allLeaveRequests.map(req =>
+            req.application_id === leaveId ? { ...req, status: action } : req
+          );
+          setAllLeaveRequests(updatedAllRequests);
+
+          toast({
+            title: 'Success',
+            description: `Leave request ${action} successfully`,
+          });
+        } else {
+          throw new Error(responseData.message || 'Failed to update leave request');
+        }
       } else {
-        console.error('Failed to update leave request:', response.status);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to update leave request:', response.status, errorData);
         toast({
           title: 'Error',
-          description: `Failed to ${action} leave request`,
+          description: errorData.message || `Failed to ${action} leave request`,
           variant: 'destructive',
         });
       }
