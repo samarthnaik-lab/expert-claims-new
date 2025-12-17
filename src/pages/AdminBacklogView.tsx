@@ -160,29 +160,28 @@ const AdminBacklogView = () => {
     setIsLoading(true);
     try {
       const sessionStr = localStorage.getItem('expertclaims_session');
-      let sessionId = '17e7ab32-86ad-411e-8ee3-c4a09e6780f7';
+      let sessionId = '';
+      let jwtToken = '';
+      
       if (sessionStr) {
         try {
           const session = JSON.parse(sessionStr);
-          sessionId = session.sessionId || '17e7ab32-86ad-411e-8ee3-c4a09e6780f7';
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
         } catch (e) {
           console.error('Error parsing session:', e);
         }
       }
-
-      const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
       
       const response = await fetch(
-        `https://n8n.srv952553.hstgr.cloud/webhook/backlog_id?backlog_id=${id}`,
+        `http://localhost:3000/admin/backlog_id?backlog_id=${id}`,
         {
           method: "GET",
           headers: {
-            "Content-Profile": "expc",
-            apikey: API_KEY,
-            "Accept-Profile": "expc",
-            session_id: sessionId,
-            Authorization: `Bearer ${API_KEY}`,
-            "Content-Type": "application/json",
+            'accept': '*/*',
+            'content-type': 'application/json',
+            'session_id': sessionId,
+            'jwt_token': jwtToken
           },
         }
       );

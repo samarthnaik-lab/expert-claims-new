@@ -1684,11 +1684,14 @@ Created Time: ${report.created_time}
     setLoadingAllCases(true);
     try {
       const sessionStr = localStorage.getItem('expertclaims_session');
-      let sessionId = '0276776c-99fa-4b79-a5a2-70f3a428a0c7';
+      let sessionId = '';
+      let jwtToken = '';
+      
       if (sessionStr) {
         try {
           const session = JSON.parse(sessionStr);
-          sessionId = session.sessionId || '0276776c-99fa-4b79-a5a2-70f3a428a0c7';
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
         } catch (e) {
           console.error('Error parsing session:', e);
         }
@@ -1696,8 +1699,8 @@ Created Time: ${report.created_time}
       
       const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
       
-      // Fetch all cases
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/get_all_backlog_data?employee_id=0', {
+      // Fetch all cases for gap analysis (employee_id=0)
+      const response = await fetch('http://localhost:3000/admin/gapanalysis?employee_id=0', {
         method: 'GET',
         headers: {
           'accept': 'application/json',
@@ -1705,7 +1708,8 @@ Created Time: ${report.created_time}
           'apikey': API_KEY,
           'authorization': `Bearer ${API_KEY}`,
           'content-type': 'application/json',
-          'session_id': sessionId
+          'session_id': sessionId,
+          'jwt_token': jwtToken
         }
       });
 
@@ -1728,13 +1732,16 @@ Created Time: ${report.created_time}
     try {
       console.log('Fetching cases data from API...');
       
-      // Get session_id from localStorage
+      // Get session_id and jwt_token from localStorage
       const sessionStr = localStorage.getItem('expertclaims_session');
-      let sessionId = '0276776c-99fa-4b79-a5a2-70f3a428a0c7';
+      let sessionId = '';
+      let jwtToken = '';
+      
       if (sessionStr) {
         try {
           const session = JSON.parse(sessionStr);
-          sessionId = session.sessionId || '0276776c-99fa-4b79-a5a2-70f3a428a0c7';
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
         } catch (e) {
           console.error('Error parsing session:', e);
         }
@@ -1742,7 +1749,8 @@ Created Time: ${report.created_time}
       
       const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
       
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/get_all_backlog_data?employee_id=0', {
+      // Fetch all cases for gap analysis (employee_id=0)
+      const response = await fetch('http://localhost:3000/admin/gapanalysis?employee_id=0', {
         method: 'GET',
         headers: {
           'accept': 'application/json',
@@ -1750,7 +1758,8 @@ Created Time: ${report.created_time}
           'apikey': API_KEY,
           'authorization': `Bearer ${API_KEY}`,
           'content-type': 'application/json',
-          'session_id': sessionId
+          'session_id': sessionId,
+          'jwt_token': jwtToken
         }
       });
 
@@ -1802,15 +1811,28 @@ Created Time: ${report.created_time}
     try {
       console.log('Fetching detailed backlog information for:', item.backlog_id);
       
-      const response = await fetch(`https://n8n.srv952553.hstgr.cloud/webhook/backlog_id?backlog_id=${item.backlog_id}`, {
+      // Get session_id and jwt_token from localStorage
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+      
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (e) {
+          console.error('Error parsing session:', e);
+        }
+      }
+      
+      const response = await fetch(`http://localhost:3000/admin/backlog_id?backlog_id=${item.backlog_id}`, {
         method: 'GET',
         headers: {
-          'accept': 'application/json',
-          'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+          'accept': '*/*',
           'content-type': 'application/json',
-          'session_id': '0276776c-99fa-4b79-a5a2-70f3a428a0c7',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-          'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o'
+          'session_id': sessionId,
+          'jwt_token': jwtToken
         }
       });
 
@@ -1869,16 +1891,13 @@ Created Time: ${report.created_time}
         }
       }
 
-      const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
-
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/Delete', {
-        method: 'PATCH',
+      const response = await fetch('http://localhost:3000/admin/deletecase', {
+        method: 'DELETE',
         headers: {
-          'apikey': API_KEY,
-          'Authorization': `Bearer ${API_KEY}`,
+          'accept': 'application/json',
+          'content-type': 'application/json',
           'session_id': sessionId,
-          'jwt_token': jwtToken,
-          'Content-Type': 'application/json'
+          'jwt_token': jwtToken
         },
         body: JSON.stringify({
           backlog_id: caseToDelete.backlog_id
