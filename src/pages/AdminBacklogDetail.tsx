@@ -98,6 +98,9 @@ const AdminBacklogDetail = () => {
   // Comment states
   const [newComment, setNewComment] = useState<string>("");
   const [isAddingComment, setIsAddingComment] = useState(false);
+  
+  // Summary submission state
+  const [isAddingSummary, setIsAddingSummary] = useState(false);
   const [showAddComment, setShowAddComment] = useState(false);
 
   // Expert summary and report generation
@@ -841,6 +844,124 @@ const AdminBacklogDetail = () => {
     }
   };
 
+  const handleAddSummary = async () => {
+    if (!expertSummary.trim()) {
+      toast({
+        title: "Expert Summary Required",
+        description: "Please enter an expert summary before adding it",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAddingSummary(true);
+    try {
+      // Get session data
+      const sessionStr = localStorage.getItem("expertclaims_session");
+      const session = sessionStr ? JSON.parse(sessionStr) : {};
+      const sessionId = session.sessionId || "";
+      const jwtToken = session.jwtToken || "";
+
+      // Get userid from expertclaims_user_details localStorage
+      let userId = "";
+      let userEmail = "";
+      let userName = "";
+      
+      const userDetailsStr = localStorage.getItem("expertclaims_user_details");
+      if (userDetailsStr) {
+        try {
+          const userDetailsData = JSON.parse(userDetailsStr);
+          // Handle both array and object formats
+          const userDetails = Array.isArray(userDetailsData) ? userDetailsData[0] : userDetailsData;
+          
+          // Get userid from the data object
+          userId = userDetails.userid || userDetails.user_id || userDetails.employee_id || userDetails.id || "";
+          
+          // Also get email and name for reference
+          userEmail = userDetails.email || "";
+          userName = userDetails.employee_name || userDetails.name || userDetails.full_name || userDetails.email || "";
+          
+          console.log('User details from localStorage:', userDetails);
+        } catch (e) {
+          console.error('Error parsing user details:', e);
+        }
+      }
+      
+      // If userid not found, log warning
+      if (!userId) {
+        console.warn('userid not found in expertclaims_user_details, using empty string');
+      }
+      
+      // Log for debugging
+      console.log('Add Summary - User ID:', userId, 'User Name:', userName, 'Email:', userEmail);
+
+      // Call the API to add summary
+      const response = await fetch("http://localhost:3000/admin/addsummary", {
+        method: "POST",
+        headers: {
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Connection': 'keep-alive',
+          'Origin': 'http://localhost:8080',
+          'Referer': 'http://localhost:8080/',
+          'accept': 'application/json',
+          'content-type': 'application/json',
+          'jwt_token': jwtToken,
+          'session_id': sessionId
+        },
+        body: JSON.stringify({
+          backlog_id: backlogDetail?.backlog_id,
+          expert_description: expertSummary,
+          // created_by: userId, // userid from expertclaims_user_details
+          updated_by: userName, // userid from expertclaims_user_details
+          user_id: userId // userid from expertclaims_user_details
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // Handle array response structure
+        let responseData = result;
+        if (Array.isArray(result) && result.length > 0) {
+          responseData = result[0];
+        }
+
+        if (responseData.status === 'success') {
+          const successMessage = responseData.message || "Summary added successfully";
+          toast({
+            title: "Success",
+            description: successMessage,
+          });
+          // Refresh the backlog detail to get updated data
+          fetchBacklogDetail(backlogId!);
+        } else {
+          const errorMessage = responseData.message || responseData.error || "Failed to add summary";
+          toast({
+            title: "Error",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        }
+      } else {
+        const errorMessage = result?.message || result?.error || `Failed to add summary (Status: ${response.status})`;
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error adding summary:", error);
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to add summary",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingSummary(false);
+    }
+  };
+
   const handleAddTask = async () => {
     if (!expertSummary.trim()) {
       toast({
@@ -887,24 +1008,43 @@ const AdminBacklogDetail = () => {
         }),
       });
 
+      const result = await response.json();
+
       if (response.ok) {
-        toast({
-          title: "Task Added Successfully",
-          description: "Task has been added with expert description",
-        });
-        fetchBacklogDetail(backlogId!);
+        // Handle array response structure
+        let responseData = result;
+        if (Array.isArray(result) && result.length > 0) {
+          responseData = result[0];
+        }
+
+        if (responseData.status === 'success') {
+          const successMessage = responseData.message || "Task added successfully";
+          toast({
+            title: "Success",
+            description: successMessage,
+          });
+          fetchBacklogDetail(backlogId!);
+        } else {
+          const errorMessage = responseData.message || responseData.error || "Failed to add task";
+          toast({
+            title: "Error",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        }
       } else {
+        const errorMessage = result?.message || result?.error || `Failed to add task (Status: ${response.status})`;
         toast({
           title: "Error",
-          description: "Failed to add task",
+          description: errorMessage,
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding task:", error);
       toast({
         title: "Error",
-        description: "Failed to add task",
+        description: error?.message || "Failed to add task",
         variant: "destructive",
       });
     }
@@ -1343,15 +1483,32 @@ const AdminBacklogDetail = () => {
                   />
                 </div>
 
-                {/* Generate Report and Add Task Buttons */}
-                <div className="flex justify-between">
+                {/* Generate Report, Add Summary, and Add Task Buttons */}
+                <div className="flex justify-between gap-3">
+                  <Button
+                    onClick={handleAddSummary}
+                    disabled={!expertSummary.trim() || isAddingSummary}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2"
+                  >
+                    {isAddingSummary ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Adding Summary...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Add Summary
+                      </>
+                    )}
+                  </Button>
                   <Button
                     onClick={handleAddTask}
                     disabled={!expertSummary.trim()}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
                   >
                     <Users className="h-4 w-4 mr-2" />
-                    Add Summary
+                    Add Task
                   </Button>
                   <Button
                     onClick={generateExportReport}
