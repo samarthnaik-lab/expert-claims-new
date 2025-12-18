@@ -98,14 +98,16 @@ const LeaveManagement = () => {
           ? userDetails[0]
           : userDetails;
         setDesignation(details?.designation || null);
+        setUserRole(details?.role || details?.designation || null);
       } catch (error) {
         console.error("Error parsing user details:", error);
       }
     }
   }, []);
 
-  // derive HR check
-  const isHR = designation?.toLowerCase() === "hr";
+  // derive HR and Admin check
+  const isHR = designation?.toLowerCase() === "hr" || designation?.toLowerCase() === "HR";
+  const isAdmin = designation?.toLowerCase() === "admin" || designation?.toLowerCase() === "Admin" || userRole?.toLowerCase() === "admin" || userRole?.toLowerCase() === "Admin";
 
   type ApiLeave = {
     id?: string;
@@ -1273,7 +1275,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
                 </div>
 
                 {/* Action Buttons */}
-                {selectedLeave.status === "pending" && isHR && (
+                {(isAdmin || isHR) && (
                   <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
                     <Button
                       variant="outline"
@@ -1285,19 +1287,24 @@ const role = details?.role || "employee"; // fallback to employee if not set
                     </Button>
                     <Button
                       variant="outline"
-                      className="border-2 border-red-300 hover:border-red-400 text-red-600 hover:text-red-700 rounded-xl transition-all duration-300"
+                      className="border-2 border-red-300 hover:border-red-400 text-red-600 hover:text-red-700 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => handleRejectLeave()}
-                      disabled={isProcessing}
+                      disabled={isProcessing || selectedLeave.status === "rejected"}
                     >
                       {isProcessing ? "Processing..." : "Reject Leave"}
                     </Button>
                     <Button
-                      className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
+                      className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => handleApproveLeave()}
-                      disabled={isProcessing}
+                      disabled={isProcessing || selectedLeave.status === "approved"}
                     >
                       {isProcessing ? "Processing..." : "Approve Leave"}
                     </Button>
+                    {selectedLeave.status !== "pending" && (
+                      <span className="text-sm text-gray-500 self-center">
+                        (Status: {selectedLeave.status})
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -1430,9 +1437,8 @@ const role = details?.role || "employee"; // fallback to employee if not set
                       handleFormChange("end_date", e.target.value)
                     }
                     className="w-full"
-                    min={applyLeaveForm.start_date}
+                    min={applyLeaveForm.start_date || new Date().toISOString().split("T")[0]}
                     required
-                    min={new Date().toISOString().split("T")[0]}
                   />
                 </div>
               </div>

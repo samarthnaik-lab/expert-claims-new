@@ -209,6 +209,7 @@ const EditTask = () => {
         phase_amount: 0
     });
     const [calendarOpen, setCalendarOpen] = useState(false);
+    const [paymentDateCalendarOpenIndex, setPaymentDateCalendarOpenIndex] = useState<number | null>(null);
     const [phaseNameComboboxOpen, setPhaseNameComboboxOpen] = useState(false);
     const [phaseNameComboboxOpenIndex, setPhaseNameComboboxOpenIndex] = useState<number | null>(null);
     const navigate = useNavigate();
@@ -497,6 +498,7 @@ const EditTask = () => {
             const editableStages = transformedPaymentStages.map((payment: any) => ({
                 phase_name: payment.phase_name,
                 due_date: payment.due_date,
+                payment_date: payment.payment_date || '', // Include payment_date from API
                 phase_amount: payment.phase_amount,
                 created_by: payment.created_by || 1 // Default to 1 if not available
             }));
@@ -2197,7 +2199,7 @@ const EditTask = () => {
             if (!phase.phase_name || !phase.due_date || !phase.phase_amount || phase.phase_amount <= 0) {
                 toast({
                     title: "Error",
-                    description: "Please fill in Phase Name, Due Date, and Phase Amount (must be greater than 0)",
+                    description: "Please fill in Phase Name, Assign Date, and Phase Amount (must be greater than 0)",
                     variant: "destructive",
                 });
                 return;
@@ -2281,9 +2283,18 @@ const EditTask = () => {
                 ...updatedPaymentStages[phaseIndex],
                 phase_name: phase.phase_name,
                 due_date: phase.due_date,
+                payment_date: phase.payment_date || null, // Update payment_date in local state
                 phase_amount: phase.phase_amount
             };
             setPaymentStages(updatedPaymentStages);
+            
+            // Also update editablePaymentStages to reflect the change
+            const updatedEditableStages = [...editablePaymentStages];
+            updatedEditableStages[phaseIndex] = {
+                ...updatedEditableStages[phaseIndex],
+                payment_date: phase.payment_date || ''
+            };
+            setEditablePaymentStages(updatedEditableStages);
 
             toast({
                 title: "Success",
@@ -2334,7 +2345,7 @@ const EditTask = () => {
         if (!paymentPhaseForm.phase_name || !paymentPhaseForm.due_date || !paymentPhaseForm.phase_amount || paymentPhaseForm.phase_amount <= 0) {
             toast({
                 title: "Error",
-                description: "Please fill in Phase Name, Due Date, and Phase Amount (must be greater than 0)",
+                description: "Please fill in Phase Name, Assign Date, and Phase Amount (must be greater than 0)",
                 variant: "destructive",
             });
             return;
@@ -2478,7 +2489,7 @@ const EditTask = () => {
             if (!formData.due_date) {
                 toast({
                     title: "Error",
-                    description: "Due date is required",
+                    description: "Assign date is required",
                     variant: "destructive",
                 });
                 setIsSubmitting(false);
@@ -3356,10 +3367,32 @@ const EditTask = () => {
                                 </div>
                             </div>
                             <div>
-                                <Label>Due Date *</Label>
+                                <Label>Assign Date *</Label>
                                 <Input
                                     type="date"
-                                    value={formData.due_date}
+                                    value={formData.due_date ? (() => {
+                                        // Ensure due_date is in YYYY-MM-DD format for date input
+                                        try {
+                                            const dateStr = formData.due_date;
+                                            if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                // Already in correct format
+                                                return dateStr;
+                                            } else if (dateStr.includes('T')) {
+                                                // ISO format with time
+                                                return dateStr.split('T')[0];
+                                            } else {
+                                                // Try to parse and format
+                                                const date = new Date(dateStr);
+                                                if (!isNaN(date.getTime())) {
+                                                    return date.toISOString().split('T')[0];
+                                                }
+                                            }
+                                            return dateStr;
+                                        } catch (error) {
+                                            console.error('Error formatting due_date:', error);
+                                            return formData.due_date;
+                                        }
+                                    })() : ''}
                                     min={(() => {
                                         const twoMonthsAgo = new Date();
                                         twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
@@ -3658,12 +3691,77 @@ const EditTask = () => {
                                                     </div>
                                                     <div>
                                                         <Label>Payment Date</Label>
-                                                            <Input
-                                                            type="date"
-                                                            value={phase.due_date}
-                                                            onChange={(e) => handlePaymentStageChange(index, 'due_date', e.target.value)}
-                                                            className="mt-1"
-                                                        />
+                                                        <Popover open={paymentDateCalendarOpenIndex === index} onOpenChange={(open) => setPaymentDateCalendarOpenIndex(open ? index : null)}>
+                                                            <PopoverTrigger asChild>
+                                                                <div className="relative">
+                                                                    <Input
+                                                                        type="text"
+                                                                        readOnly
+                                                                        value={phase.payment_date ? (() => {
+                                                                            try {
+                                                                                // Format date to dd/mm/yyyy
+                                                                                const dateStr = phase.payment_date;
+                                                                                let date: Date;
+                                                                                
+                                                                                if (dateStr.includes('T')) {
+                                                                                    date = new Date(dateStr);
+                                                                                } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                                                    date = new Date(dateStr + 'T00:00:00');
+                                                                                } else {
+                                                                                    date = new Date(dateStr);
+                                                                                }
+                                                                                
+                                                                                if (!isNaN(date.getTime())) {
+                                                                                    const day = String(date.getDate()).padStart(2, '0');
+                                                                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                                                    const year = date.getFullYear();
+                                                                                    return `${day}/${month}/${year}`;
+                                                                                }
+                                                                                return '';
+                                                                            } catch (error) {
+                                                                                console.error('Error parsing payment_date:', error);
+                                                                                return '';
+                                                                            }
+                                                                        })() : ''}
+                                                                        placeholder="dd/mm/yyyy"
+                                                                        onClick={() => setPaymentDateCalendarOpenIndex(index)}
+                                                                        className="mt-1 cursor-pointer pr-10"
+                                                                    />
+                                                                    <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                                                </div>
+                                                            </PopoverTrigger>
+                                                            <PopoverContent className="w-auto p-0" align="start">
+                                                                <Calendar
+                                                                    mode="single"
+                                                                    selected={phase.payment_date ? (() => {
+                                                                        try {
+                                                                            const dateStr = phase.payment_date;
+                                                                            let date: Date;
+                                                                            
+                                                                            if (dateStr.includes('T')) {
+                                                                                date = new Date(dateStr);
+                                                                            } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                                                date = new Date(dateStr + 'T00:00:00');
+                                                                            } else {
+                                                                                date = new Date(dateStr);
+                                                                            }
+                                                                            
+                                                                            return !isNaN(date.getTime()) ? date : undefined;
+                                                                        } catch {
+                                                                            return undefined;
+                                                                        }
+                                                                    })() : undefined}
+                                                                    onSelect={(date) => {
+                                                                        if (date) {
+                                                                            // Convert to ISO format (YYYY-MM-DD) for storage
+                                                                            handlePaymentStageChange(index, 'payment_date', date.toISOString().split('T')[0]);
+                                                                            setPaymentDateCalendarOpenIndex(null);
+                                                                        }
+                                                                    }}
+                                                                    initialFocus
+                                                                />
+                                                            </PopoverContent>
+                                                        </Popover>
                                                     </div>
                                                     <div>
                                                         <Label>Phase Amount (₹)</Label>
@@ -3682,7 +3780,30 @@ const EditTask = () => {
                                                     <div className="text-sm text-gray-600">
                                                         {phase.due_date && (
                                                             <span className="text-red-500">
-                                                                Due: {new Date(phase.due_date).toLocaleDateString()}
+                                                                Assign Date: {(() => {
+                                                                    try {
+                                                                        const dateStr = phase.due_date;
+                                                                        let date: Date;
+                                                                        
+                                                                        if (dateStr.includes('T')) {
+                                                                            date = new Date(dateStr);
+                                                                        } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                                            date = new Date(dateStr + 'T00:00:00');
+                                                                        } else {
+                                                                            date = new Date(dateStr);
+                                                                        }
+                                                                        
+                                                                        if (!isNaN(date.getTime())) {
+                                                                            const day = String(date.getDate()).padStart(2, '0');
+                                                                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                                            const year = date.getFullYear();
+                                                                            return `${day}/${month}/${year}`;
+                                                                        }
+                                                                        return new Date(phase.due_date).toLocaleDateString();
+                                                                    } catch (error) {
+                                                                        return new Date(phase.due_date).toLocaleDateString();
+                                                                    }
+                                                                })()}
                                                             </span>
                                                         )}
                                                     </div>

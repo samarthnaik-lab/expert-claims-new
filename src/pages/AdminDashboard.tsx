@@ -19,7 +19,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  const { userDetails, logout } = useAuth();
+  const { userDetails, logout, session } = useAuth();
 
   // Helper function to format partner type: replace underscores with spaces and capitalize words
   const formatPartnerType = (type: string | null | undefined): string => {
@@ -2918,29 +2918,47 @@ Created Time: ${report.created_time}
                               {new Date(request.applied_date).toLocaleDateString()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
-                              {request.status === 'pending' && (
-                                <>
-                                  <button
-                                    className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50"
-                                    onClick={() => handleLeaveAction(request.application_id, 'approved')}
-                                    title="Approve"
-                                  >
-                                    <CheckCircle className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
-                                    onClick={() => handleLeaveAction(request.application_id, 'rejected')}
-                                    title="Reject"
-                                  >
-                                    <XCircle className="h-4 w-4" />
-                                  </button>
-                                </>
-                              )}
-                              {request.status !== 'pending' && (
-                                <span className="text-gray-400 text-xs">
-                                  {request.status === 'approved' ? 'Approved' : 'Rejected'}
-                                </span>
-                              )}
+                              {(() => {
+                                // Get current user role from session or userDetails
+                                const currentUserRole = session?.userRole || userDetails?.role || userDetails?.designation || '';
+                                const isAdmin = currentUserRole?.toLowerCase() === 'admin';
+                                
+                                // Show action buttons for admin role OR for pending status
+                                if (isAdmin || request.status === 'pending') {
+                                  return (
+                                    <>
+                                      <button
+                                        className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        onClick={() => handleLeaveAction(request.application_id, 'approved')}
+                                        title="Approve"
+                                        disabled={request.status === 'approved'}
+                                      >
+                                        <CheckCircle className="h-4 w-4" />
+                                      </button>
+                                      <button
+                                        className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        onClick={() => handleLeaveAction(request.application_id, 'rejected')}
+                                        title="Reject"
+                                        disabled={request.status === 'rejected'}
+                                      >
+                                        <XCircle className="h-4 w-4" />
+                                      </button>
+                                      {request.status !== 'pending' && (
+                                        <span className="text-gray-400 text-xs ml-2">
+                                          ({request.status === 'approved' ? 'Approved' : 'Rejected'})
+                                        </span>
+                                      )}
+                                    </>
+                                  );
+                                }
+                                
+                                // For non-admin and non-pending, just show status
+                                return (
+                                  <span className="text-gray-400 text-xs">
+                                    {request.status === 'approved' ? 'Approved' : 'Rejected'}
+                                  </span>
+                                );
+                              })()}
                             </td>
                           </tr>
                         ))}
