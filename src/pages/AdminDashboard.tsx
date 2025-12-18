@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Users, FileText, Settings, TrendingUp, LogOut, Plus, Eye, Edit, Trash, UserPlus, ArrowLeft, List, Calendar, CheckCircle, XCircle, Search, Filter, X, AlertTriangle, RefreshCw, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Users, FileText, Settings, TrendingUp, LogOut, Plus, Eye, Edit, Trash, UserPlus, ArrowLeft, List, Calendar, CheckCircle, XCircle, Search, Filter, X, AlertTriangle, RefreshCw, ZoomIn, ZoomOut, RotateCcw, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,7 +18,8 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  const { userDetails, logout } = useAuth();
+  const { userDetails, logout, session, getSessionExpiry } = useAuth();
+  const [sessionExpiry, setSessionExpiry] = useState<{ formatted: string; expiresIn: number; expiresAt: number } | null>(null);
 
   // Helper function to format partner type: replace underscores with spaces and capitalize words
   const formatPartnerType = (type: string | null | undefined): string => {
@@ -104,6 +105,36 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Error extracting admin name:', error);
       setAdminName('Admin');
+    }
+  };
+
+  // Update session expiry display every second
+  useEffect(() => {
+    const updateExpiry = () => {
+      const expiry = getSessionExpiry();
+      setSessionExpiry(expiry);
+    };
+
+    updateExpiry(); // Initial update
+    const interval = setInterval(updateExpiry, 1000); // Update every second
+
+    return () => clearInterval(interval);
+  }, [session, getSessionExpiry]);
+
+  // Format time remaining for display
+  const formatTimeRemaining = (seconds: number): string => {
+    if (seconds <= 0) return 'Expired';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
     }
   };
 
@@ -2176,13 +2207,23 @@ Created Time: ${report.created_time}
               </p>
             </div>
             <div className="flex items-center space-x-3">
+              {/* Session Expiry Display */}
+              {sessionExpiry && (
+                <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/20">
+                  <Clock className="h-4 w-4 text-white" />
+                  <div className="text-white text-sm">
+                    <div className="font-semibold">Session expires in: {formatTimeRemaining(sessionExpiry.expiresIn)}</div>
+                    <div className="text-xs text-white/80">Expires: {sessionExpiry.formatted}</div>
+                  </div>
+                </div>
+              )}
               <Button
                 variant="outline"
                 onClick={() => {
                   logout();
                   navigate('/login');
                 }}
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 border-white/20 text-white"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Logout</span>

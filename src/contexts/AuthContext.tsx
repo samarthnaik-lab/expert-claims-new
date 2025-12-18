@@ -9,6 +9,8 @@ interface Session {
   userId: string;
   userRole: string;
   expiresAt: number;
+  expiresAtFormatted?: string; // Human-readable format
+  expiresIn?: number; // Seconds until expiry
 }
 
 interface AuthContextType {
@@ -21,6 +23,7 @@ interface AuthContextType {
   getAuthHeaders: () => { [key: string]: string };
   refreshUserDetails: () => Promise<void>;
   updateSessionRole: (newRole: string) => void;
+  getSessionExpiry: () => { formatted: string; expiresIn: number; expiresAt: number } | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -159,7 +162,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           jwtToken: result.jwtToken,
           userId: result.userId,
           userRole: result.userRole,
-          expiresAt: result.expiresAt || (Date.now() + (365 * 24 * 60 * 60 * 1000)) // 365 days
+          expiresAt: result.expiresAt || (Date.now() + (365 * 24 * 60 * 60 * 1000)), // 365 days
+          expiresAtFormatted: result.expiresAtFormatted || new Date(result.expiresAt || Date.now() + (365 * 24 * 60 * 60 * 1000)).toLocaleString(),
+          expiresIn: result.expiresIn || Math.floor(((result.expiresAt || Date.now() + (365 * 24 * 60 * 60 * 1000)) - Date.now()) / 1000)
         };
         
         setSession(session);
@@ -302,6 +307,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('Session role updated to:', newRole);
   };
 
+  const getSessionExpiry = (): { formatted: string; expiresIn: number; expiresAt: number } | null => {
+    if (!session) {
+      return null;
+    }
+
+    const now = Date.now();
+    const expiresAt = session.expiresAt;
+    const expiresIn = Math.max(0, Math.floor((expiresAt - now) / 1000)); // Seconds until expiry
+    
+    return {
+      formatted: session.expiresAtFormatted || new Date(expiresAt).toLocaleString(),
+      expiresIn,
+      expiresAt
+    };
+  };
+
   const value: AuthContextType = {
     isAuthenticated,
     isLoading,
@@ -311,7 +332,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     getAuthHeaders,
     refreshUserDetails,
-    updateSessionRole
+    updateSessionRole,
+    getSessionExpiry
   };
 
   return (

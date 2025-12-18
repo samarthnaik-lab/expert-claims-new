@@ -365,6 +365,11 @@ export class AuthService {
           }
         }
 
+        // Extract expiry information from sessionData
+        const expiresAtTimestamp = sessionData?.expiresAt || (sessionData?.expiry ? new Date(sessionData.expiry).getTime() : Date.now() + (3 * 60 * 60 * 1000)); // Default 3 hours
+        const expiresAtFormatted = sessionData?.expiresAtFormatted || new Date(expiresAtTimestamp).toLocaleString();
+        const expiresIn = sessionData?.expiresIn || Math.floor((expiresAtTimestamp - Date.now()) / 1000);
+
         // Return login response with session data
         return {
           success: true,
@@ -373,7 +378,9 @@ export class AuthService {
           jwtToken: jwtToken,
           userId: sessionData?.user_id?.toString() || sessionData?.userId || '',
           userRole: role || 'customer',
-          expiresAt: sessionData?.expiry ? new Date(sessionData.expiry).getTime() : Date.now() + (24 * 60 * 60 * 1000),
+          expiresAt: expiresAtTimestamp,
+          expiresAtFormatted: expiresAtFormatted,
+          expiresIn: expiresIn,
           statusCode: 200
         };
       }
