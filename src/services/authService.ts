@@ -17,6 +17,8 @@ export interface LoginResponse {
   userId?: string;
   userRole?: string;
   expiresAt?: number;
+  expiresAtFormatted?: string;
+  expiresIn?: number;
   statusCode?: number;
 }
 
