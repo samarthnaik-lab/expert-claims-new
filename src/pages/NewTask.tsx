@@ -1206,12 +1206,25 @@ const NewTask = () => {
     }
 
     // Transform payment stages data - send all payments as an array with only required fields
-    const taskPayments = paymentStages.map((payment) => ({
-      phase_name: payment.phase_name,
-      due_date: payment.due_date,
-      phase_amount: payment.phase_amount,
-      created_by: employeeId,
-    }));
+    const taskPayments = paymentStages.map((payment) => {
+      // Build payment object with required fields
+      const paymentObj: any = {
+        phase_name: payment.phase_name,
+        due_date: payment.due_date,
+        phase_amount: payment.phase_amount,
+        created_by: employeeId,
+      };
+      
+      // Only include payment_date if it exists and is different from due_date
+      if (payment.payment_date && payment.payment_date !== payment.due_date) {
+        paymentObj.payment_date = payment.payment_date;
+      } else {
+        // Include payment_date as null if it doesn't exist or equals due_date
+        paymentObj.payment_date = null;
+      }
+      
+      return paymentObj;
+    });
 
     console.log("Payment data to be sent:", taskPayments);
 
@@ -1698,8 +1711,15 @@ const NewTask = () => {
   };
 
   const uploadDocuments = async (caseId: string) => {
+    console.log("🚀 uploadDocuments function called with caseId:", caseId);
+    
     if (!caseId) {
-      console.error("No case ID available for document upload");
+      console.error("❌ No case ID available for document upload");
+      toast({
+        title: "Error",
+        description: "Case ID is missing. Cannot upload documents.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -1723,13 +1743,8 @@ const NewTask = () => {
     }
 
     if (!employeeId) {
-      console.error("No employee ID found in localStorage");
-      toast({
-        title: "Error",
-        description: "Employee ID not found. Cannot upload documents.",
-        variant: "destructive",
-      });
-      return;
+      console.warn("⚠️ No employee ID found in localStorage, but continuing with upload");
+      // Don't return - continue with upload even without employee ID
     }
 
     setIsUploadingDocuments(true);
@@ -1737,12 +1752,42 @@ const NewTask = () => {
     let uploadCount = 0;
 
     try {
+      console.log("=== UPLOAD DOCUMENTS FUNCTION ===");
+      console.log("Case ID:", caseId);
+      console.log("Employee ID:", employeeId);
       console.log("Selected documents:", formData.selectedDocuments);
       console.log("Available document categories:", documentCategories);
       console.log("Document uploads:", documentUploads);
+      console.log("Document uploads keys:", Object.keys(documentUploads));
 
-      // Upload each selected document
-      for (const documentName of formData.selectedDocuments) {
+      // Get all documents that have files - prioritize selectedDocuments, but also include any documents with files
+      const allDocumentsWithFiles = new Set<string>();
+      
+      // Add documents from selectedDocuments that have files
+      formData.selectedDocuments.forEach(docName => {
+        if (documentUploads[docName]?.file) {
+          allDocumentsWithFiles.add(docName);
+        }
+      });
+      
+      // Also add any documents from documentUploads that have files (in case files were uploaded without checkbox)
+      Object.keys(documentUploads).forEach(docName => {
+        if (documentUploads[docName]?.file) {
+          allDocumentsWithFiles.add(docName);
+        }
+      });
+
+      const documentsToProcess = Array.from(allDocumentsWithFiles);
+      console.log("Documents to process for upload:", documentsToProcess);
+
+      if (documentsToProcess.length === 0) {
+        console.log("No documents with files found to upload");
+        setIsUploadingDocuments(false);
+        return;
+      }
+
+      // Upload each document that has a file
+      for (const documentName of documentsToProcess) {
         const file = documentUploads[documentName]?.file;
         console.log(`Processing document: ${documentName}, File:`, file);
 
@@ -1858,22 +1903,34 @@ const NewTask = () => {
             `Uploading document: ${actualDocumentName}, Category ID: ${categoryId}, Case ID: ${caseId}, Employee ID: ${employeeId}`
           );
 
-          const formData = new FormData();
-          formData.append("data", file);
-          formData.append("case_id", caseId);
-          formData.append("category_id", categoryId.toString());
-          formData.append("is_customer_visible", "false"); // Admin/employee uploads are not customer visible by default
+          const formDataToSend = new FormData();
+          formDataToSend.append("data", file);
+          formDataToSend.append("case_id", caseId);
+          formDataToSend.append("category_id", categoryId.toString());
+          formDataToSend.append("is_customer_visible", "true");
+
+          console.log(`Calling upload API for document: ${actualDocumentName}`);
+          console.log(`FormData contents:`, {
+            case_id: caseId,
+            category_id: categoryId.toString(),
+            is_customer_visible: "true",
+            filename: file.name,
+            fileSize: file.size,
+            fileType: file.type
+          });
 
           const uploadPromise = fetch(
             "http://localhost:3000/api/upload",
             {
               method: "POST",
               headers: {
-                apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-                Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
+                'Accept': '*/*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'apikey': "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
+                'Authorization': "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
                 // Don't set Content-Type for FormData - browser will set it automatically with boundary
               },
-              body: formData,
+              body: formDataToSend,
             }
           )
             .then(async (response) => {
@@ -1999,6 +2056,15 @@ const NewTask = () => {
       }
 
       console.log("Starting task creation...");
+      console.log("Current document uploads state:", documentUploads);
+      console.log("Current selected documents:", formData.selectedDocuments);
+      
+      // Check for files before creating task
+      const filesBeforeTaskCreation = Object.keys(documentUploads).filter(docName => {
+        const file = documentUploads[docName]?.file;
+        return file !== null && file !== undefined;
+      });
+      console.log("Files detected before task creation:", filesBeforeTaskCreation);
 
       // Create task data for API
       const taskData = createTaskData();
@@ -2076,15 +2142,76 @@ const NewTask = () => {
           description: `Task created successfully! Case ID: ${caseId}`,
         });
 
-        // Upload documents if any are selected and case ID is available
-        if (formData.selectedDocuments.length > 0) {
-          console.log("Starting document upload process with case_id:", caseId);
+        // Upload documents if any files are uploaded
+        // Check all possible sources for files
+        const allDocumentKeys = new Set<string>();
+        
+        // Add all keys from documentUploads
+        Object.keys(documentUploads).forEach(key => allDocumentKeys.add(key));
+        
+        // Add all keys from selectedDocuments
+        formData.selectedDocuments.forEach(key => allDocumentKeys.add(key));
+        
+        // Check if any of these documents have files
+        const documentsWithFiles: string[] = [];
+        allDocumentKeys.forEach(docName => {
+          const file = documentUploads[docName]?.file;
+          if (file !== null && file !== undefined) {
+            documentsWithFiles.push(docName);
+          }
+        });
+
+        console.log("=== DOCUMENT UPLOAD CHECK ===");
+        console.log("Case ID:", caseId);
+        console.log("Document uploads keys:", Object.keys(documentUploads));
+        console.log("Selected documents:", formData.selectedDocuments);
+        console.log("All document keys:", Array.from(allDocumentKeys));
+        console.log("Documents with files:", documentsWithFiles);
+        console.log("Full documentUploads object:", JSON.stringify(documentUploads, null, 2));
+        
+        // Log each document upload entry
+        Object.keys(documentUploads).forEach(key => {
+          const entry = documentUploads[key];
+          console.log(`Document "${key}":`, {
+            hasFile: !!entry?.file,
+            fileName: entry?.file?.name,
+            fileSize: entry?.file?.size,
+            fileType: entry?.file?.type
+          });
+        });
+
+        // Upload if there are any files found
+        // Also check if selectedDocuments has items (user might have selected but files not yet in documentUploads)
+        const hasSelectedDocuments = formData.selectedDocuments.length > 0;
+        const hasFilesInUploads = documentsWithFiles.length > 0;
+        
+        console.log(`Upload decision: hasSelectedDocuments=${hasSelectedDocuments}, hasFilesInUploads=${hasFilesInUploads}`);
+        
+        if (hasFilesInUploads || hasSelectedDocuments) {
+          console.log(`✅ Found ${documentsWithFiles.length} document(s) with files. Starting upload...`);
+          console.log(`Selected documents count: ${formData.selectedDocuments.length}`);
+          
           toast({
             title: "Uploading Documents",
-            description: "Please wait while documents are being uploaded...",
+            description: `Uploading ${documentsWithFiles.length || formData.selectedDocuments.length} document(s)...`,
           });
 
-          await uploadDocuments(caseId);
+          try {
+            // Always call uploadDocuments - it will handle the case where files might not be detected
+            await uploadDocuments(caseId);
+            console.log("✅ Document upload completed successfully");
+          } catch (error) {
+            console.error("❌ Error uploading documents:", error);
+            toast({
+              title: "Error",
+              description: "Failed to upload some documents. Please check the console for details.",
+              variant: "destructive",
+            });
+          }
+        } else {
+          console.log("❌ No documents with files found to upload.");
+          console.log("Document uploads object is empty or contains no files");
+          console.log("This might indicate files weren't properly stored in documentUploads state");
         }
       } else {
         toast({

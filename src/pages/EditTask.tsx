@@ -388,8 +388,14 @@ const EditTask = () => {
             title: taskData.title || '',
             description: taskData.case_description || '',
             task_summary: taskData.case_summary || '',
-            service_amount: taskData.service_amount?.toString() || '',
-            claims_amount: taskData.claims_amount?.toString() || '',
+            service_amount: taskData.service_amount !== null && taskData.service_amount !== undefined 
+                ? String(taskData.service_amount) 
+                : '',
+            claims_amount: (taskData.claims_amount !== null && taskData.claims_amount !== undefined 
+                ? String(taskData.claims_amount) 
+                : (taskData.claim_amount !== null && taskData.claim_amount !== undefined 
+                    ? String(taskData.claim_amount) 
+                    : '')), // Check both claims_amount and claim_amount (API might use singular)
             priority: taskData.priority || 'medium',
             ticket_stage: taskData.ticket_stage || 'analysis',
             current_status: taskData.current_status || 'new',
@@ -402,6 +408,20 @@ const EditTask = () => {
             estimatedDuration: taskData.estimatedDuration || '',
             caseType: taskData.case_types?.case_type_name || '',
             selectedDocuments: [], // Start with empty array - only populate when user checks boxes
+        });
+        
+        console.log('Form data populated:', {
+            service_amount: taskData.service_amount,
+            claims_amount: taskData.claims_amount,
+            claim_amount: taskData.claim_amount, // Check singular form from API
+            service_amount_string: taskData.service_amount !== null && taskData.service_amount !== undefined 
+                ? String(taskData.service_amount) 
+                : '',
+            claims_amount_string: (taskData.claims_amount !== null && taskData.claims_amount !== undefined 
+                ? String(taskData.claims_amount) 
+                : (taskData.claim_amount !== null && taskData.claim_amount !== undefined 
+                    ? String(taskData.claim_amount) 
+                    : ''))
         });
 
         // Populate customer data if available
@@ -473,32 +493,39 @@ const EditTask = () => {
 
         // Populate payment stages if available
         if (taskData.case_payment_phases && Array.isArray(taskData.case_payment_phases)) {
-            const transformedPaymentStages = taskData.case_payment_phases.map((payment: any, index: number) => ({
-                case_phase_id: payment.case_phase_id,
-                phase_name: payment.phase_name,
-                notes: payment.notes,
-                status: payment.status,
-                case_id: payment.case_id,
-                due_date: payment.due_date,
-                created_by: payment.created_by,
-                updated_by: payment.updated_by,
-                paid_amount: payment.paid_amount,
-                case_type_id: payment.case_type_id,
-                created_time: payment.created_time,
-                payment_date: payment.payment_date,
-                phase_amount: payment.phase_amount,
-                updated_time: payment.updated_time,
-                invoice_number: payment.invoice_number,
-                payment_method: payment.payment_method,
-                transaction_reference: payment.transaction_reference
-            }));
+            const transformedPaymentStages = taskData.case_payment_phases.map((payment: any, index: number) => {
+                // Ensure payment_date is only set if it exists and is different from due_date
+                const paymentDate = payment.payment_date && payment.payment_date !== payment.due_date 
+                    ? payment.payment_date 
+                    : (payment.payment_date || null);
+                
+                return {
+                    case_phase_id: payment.case_phase_id,
+                    phase_name: payment.phase_name,
+                    notes: payment.notes,
+                    status: payment.status,
+                    case_id: payment.case_id,
+                    due_date: payment.due_date,
+                    created_by: payment.created_by,
+                    updated_by: payment.updated_by,
+                    paid_amount: payment.paid_amount,
+                    case_type_id: payment.case_type_id,
+                    created_time: payment.created_time,
+                    payment_date: paymentDate, // Only use actual payment_date, not due_date
+                    phase_amount: payment.phase_amount,
+                    updated_time: payment.updated_time,
+                    invoice_number: payment.invoice_number,
+                    payment_method: payment.payment_method,
+                    transaction_reference: payment.transaction_reference
+                };
+            });
             setPaymentStages(transformedPaymentStages);
             
             // Also populate editable payment stages for editing
             const editableStages = transformedPaymentStages.map((payment: any) => ({
                 phase_name: payment.phase_name,
                 due_date: payment.due_date,
-                payment_date: payment.payment_date || '', // Include payment_date from API
+                payment_date: payment.payment_date || null, // Use null instead of empty string, and don't default to due_date
                 phase_amount: payment.phase_amount,
                 created_by: payment.created_by || 1 // Default to 1 if not available
             }));
@@ -1594,7 +1621,7 @@ const EditTask = () => {
                     formDataToSend.append("data", file);
                     formDataToSend.append("case_id", caseId.toString());
                     formDataToSend.append("category_id", categoryId.toString());
-                    formDataToSend.append("is_customer_visible", "false"); // Admin/employee uploads are not customer visible by default
+                    formDataToSend.append("is_customer_visible", "true");
 
                     const uploadPromise = fetch(
                         "http://localhost:3000/api/upload",
@@ -2528,12 +2555,54 @@ const EditTask = () => {
                 is_internal: newComment.isInternal
             } : null;
 
+            // Check if payment phases have been modified
+            // Get employee_id from localStorage for payment data
+            const userDetailsStr = localStorage.getItem("expertclaims_user_details");
+            let employeeId = 1; // Default fallback
+            
+            if (userDetailsStr) {
+                try {
+                    const userDetailsData = JSON.parse(userDetailsStr);
+                    const userDetails = Array.isArray(userDetailsData) ? userDetailsData[0] : userDetailsData;
+                    employeeId = userDetails.employee_id || userDetails.id || 1;
+                } catch (error) {
+                    console.error("Error parsing user details:", error);
+                }
+            }
+
+            // Prepare payments array if payment phases exist and have been modified
+            let paymentsData = null;
+            if (editablePaymentStages && editablePaymentStages.length > 0) {
+                paymentsData = editablePaymentStages.map((phase: any) => {
+                    const paymentObj: any = {
+                        phase_name: phase.phase_name,
+                        due_date: phase.due_date,
+                        phase_amount: phase.phase_amount,
+                        created_by: phase.created_by || employeeId,
+                        updated_by: employeeId
+                    };
+                    
+                    // Only include payment_date if it exists and is different from due_date
+                    if (phase.payment_date && phase.payment_date !== phase.due_date) {
+                        paymentObj.payment_date = phase.payment_date;
+                    } else {
+                        // Include payment_date as null if it doesn't exist or equals due_date
+                        paymentObj.payment_date = null;
+                    }
+                    
+                    return paymentObj;
+                });
+                console.log('Payment phases to be updated:', paymentsData);
+            }
+
             // Create task data for API
-        const taskData = {
+        const taskData: any = {
             case_id: currentTaskData?.case_id?(currentTaskData?.case_id):null,
             case_description: formData.description,
             service_amount: formData.service_amount ? parseFloat(formData.service_amount) : null,
-            claims_amount: formData.claims_amount ? parseFloat(formData.claims_amount) : null,
+            claims_amount: formData.claims_amount && formData.claims_amount.trim() !== '' 
+                ? parseFloat(formData.claims_amount) 
+                : null, // Always include claims_amount (null if empty)
             due_date: formData.due_date,
             partner_id: formData.partner_id,
             case_type: caseTypeId,
@@ -2542,11 +2611,24 @@ const EditTask = () => {
             ticket_stage: formData.ticket_stage,
             reviewer: parseInt(formData.reviewer_id) || 2, // Default to 2 if not set
             "changed reason": `Task updated: ${formData.task_summary}`,
-            ...(stakeholderData && { stakeholder: stakeholderData }),
-            ...(commentData && { comment: commentData })
         };
-
-            console.log('Task update data prepared:', taskData);
+        
+        // Conditionally add optional fields
+        if (stakeholderData) {
+            taskData.stakeholder = stakeholderData;
+        }
+        if (commentData) {
+            taskData.comment = commentData;
+        }
+        if (paymentsData) {
+            taskData.payments = paymentsData; // Include payments if payment phases exist
+        }
+        
+        console.log('Task update data prepared:', taskData);
+        console.log('Claims amount value:', taskData.claims_amount);
+        console.log('Claims amount type:', typeof taskData.claims_amount);
+        console.log('FormData claims_amount:', formData.claims_amount);
+        console.log('Full taskData JSON:', JSON.stringify(taskData, null, 2));
 
             // Call the update API
             const response = await fetch('http://localhost:3000/support/update_Task', {
@@ -2569,6 +2651,23 @@ const EditTask = () => {
                     title: "Success",
                     description: `Task updated successfully!`,
                 });
+
+                // Automatically upload documents if any are selected and files are present
+                const documentsToUpload = formData.selectedDocuments.filter(docName => {
+                    const file = documentUploads[docName]?.file;
+                    return file !== null && file !== undefined;
+                });
+
+                if (documentsToUpload.length > 0) {
+                    console.log("Documents found, starting automatic upload after task update...");
+                    toast({
+                        title: "Uploading Documents",
+                        description: "Please wait while documents are being uploaded...",
+                    });
+                    
+                    // Call handleUploadDocuments automatically
+                    await handleUploadDocuments();
+                }
 
                 // Navigate back to dashboard
                 const dashboardRoute = getDashboardRoute();
@@ -3697,9 +3796,10 @@ const EditTask = () => {
                                                                     <Input
                                                                         type="text"
                                                                         readOnly
-                                                                        value={phase.payment_date ? (() => {
+                                                                        value={phase.payment_date && phase.payment_date !== phase.due_date ? (() => {
                                                                             try {
                                                                                 // Format date to dd/mm/yyyy
+                                                                                // Only show payment_date if it's different from due_date
                                                                                 const dateStr = phase.payment_date;
                                                                                 let date: Date;
                                                                                 
@@ -3777,34 +3877,66 @@ const EditTask = () => {
 
                                                 {/* Individual Action Buttons for each phase */}
                                                 <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                                                    <div className="text-sm text-gray-600">
+                                                    <div className="text-sm text-gray-600 space-y-1">
                                                         {phase.due_date && (
-                                                            <span className="text-red-500">
-                                                                Assign Date: {(() => {
-                                                                    try {
-                                                                        const dateStr = phase.due_date;
-                                                                        let date: Date;
-                                                                        
-                                                                        if (dateStr.includes('T')) {
-                                                                            date = new Date(dateStr);
-                                                                        } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                                                                            date = new Date(dateStr + 'T00:00:00');
-                                                                        } else {
-                                                                            date = new Date(dateStr);
+                                                            <div>
+                                                                <span className="text-red-500">
+                                                                    Assign Date: {(() => {
+                                                                        try {
+                                                                            const dateStr = phase.due_date;
+                                                                            let date: Date;
+                                                                            
+                                                                            if (dateStr.includes('T')) {
+                                                                                date = new Date(dateStr);
+                                                                            } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                                                date = new Date(dateStr + 'T00:00:00');
+                                                                            } else {
+                                                                                date = new Date(dateStr);
+                                                                            }
+                                                                            
+                                                                            if (!isNaN(date.getTime())) {
+                                                                                const day = String(date.getDate()).padStart(2, '0');
+                                                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                                                const year = date.getFullYear();
+                                                                                return `${day}/${month}/${year}`;
+                                                                            }
+                                                                            return new Date(phase.due_date).toLocaleDateString();
+                                                                        } catch (error) {
+                                                                            return new Date(phase.due_date).toLocaleDateString();
                                                                         }
-                                                                        
-                                                                        if (!isNaN(date.getTime())) {
-                                                                            const day = String(date.getDate()).padStart(2, '0');
-                                                                            const month = String(date.getMonth() + 1).padStart(2, '0');
-                                                                            const year = date.getFullYear();
-                                                                            return `${day}/${month}/${year}`;
+                                                                    })()}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {phase.payment_date && phase.payment_date !== phase.due_date && (
+                                                            <div>
+                                                                <span className="text-green-600 font-medium">
+                                                                    Payment Date: {(() => {
+                                                                        try {
+                                                                            const dateStr = phase.payment_date;
+                                                                            let date: Date;
+                                                                            
+                                                                            if (dateStr.includes('T')) {
+                                                                                date = new Date(dateStr);
+                                                                            } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                                                date = new Date(dateStr + 'T00:00:00');
+                                                                            } else {
+                                                                                date = new Date(dateStr);
+                                                                            }
+                                                                            
+                                                                            if (!isNaN(date.getTime())) {
+                                                                                const day = String(date.getDate()).padStart(2, '0');
+                                                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                                                const year = date.getFullYear();
+                                                                                return `${day}/${month}/${year}`;
+                                                                            }
+                                                                            return new Date(phase.payment_date).toLocaleDateString();
+                                                                        } catch (error) {
+                                                                            return new Date(phase.payment_date).toLocaleDateString();
                                                                         }
-                                                                        return new Date(phase.due_date).toLocaleDateString();
-                                                                    } catch (error) {
-                                                                        return new Date(phase.due_date).toLocaleDateString();
-                                                                    }
-                                                                })()}
-                                                            </span>
+                                                                    })()}
+                                                                </span>
+                                                            </div>
                                                         )}
                                                     </div>
                                                     <div className="flex space-x-2">

@@ -2158,12 +2158,23 @@ const TaskDetail = () => {
                                </Badge>
                              </div>
                              
-                             
-                             {phase.status === 'pending' && phase.due_date && (
-                               <p className="text-xs text-red-500 mt-2">
-                                 Due by: {new Date(phase.due_date).toLocaleDateString()}
-                               </p>
-                             )}
+                             <div className="mt-2 space-y-1">
+                               {phase.due_date && (
+                                 <p className="text-xs text-gray-600">
+                                   Due Date: {new Date(phase.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                 </p>
+                               )}
+                               {phase.payment_date && (
+                                 <p className="text-xs text-green-600 font-medium">
+                                   Payment Date: {new Date(phase.payment_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                 </p>
+                               )}
+                               {phase.status === 'pending' && phase.due_date && (
+                                 <p className="text-xs text-red-500">
+                                   Due by: {new Date(phase.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                 </p>
+                               )}
+                             </div>
                            </div>
                          </div>
                        </div>
