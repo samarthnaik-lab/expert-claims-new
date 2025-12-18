@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Users, FileText, Settings, TrendingUp, LogOut, Plus, Eye, Edit, Trash, UserPlus, ArrowLeft, List, Calendar, CheckCircle, XCircle, Search, Filter, X, AlertTriangle, RefreshCw, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { SessionExpiry } from '@/components/SessionExpiry';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -425,7 +426,7 @@ const AdminDashboard = () => {
   // Initialize active tab from URL parameters
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
-    if (tabFromUrl && ['overview', 'tasks', 'users', 'leave', 'cases', 'reports', 'settings'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['overview', 'tasks', 'users', 'leave', 'cases'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
   }, [searchParams]);
@@ -2329,6 +2330,7 @@ Created Time: ${report.created_time}
               </p>
             </div>
             <div className="flex items-center space-x-3">
+              <SessionExpiry />
               <Button
                 variant="outline"
                 onClick={() => {
@@ -2390,14 +2392,14 @@ Created Time: ${report.created_time}
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="tasks">Task Management</TabsTrigger>
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="leave">Leave Management</TabsTrigger>
             <TabsTrigger value="cases">Gap Analysis</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+            {/* <TabsTrigger value="reports">Reports</TabsTrigger> */}
+            {/* <TabsTrigger value="settings">Settings</TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -2440,7 +2442,7 @@ Created Time: ${report.created_time}
                     <h3 className="font-semibold text-gray-900">Manage Users</h3>
                   </CardContent>
                 </Card>
-                <Card
+                {/* <Card
                   className="cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => handleTabChange('reports')}
                 >
@@ -2448,7 +2450,7 @@ Created Time: ${report.created_time}
                     <TrendingUp className="h-8 w-8 mx-auto mb-3 text-gray-600" />
                     <h3 className="font-semibold text-gray-900">View Reports</h3>
                   </CardContent>
-                </Card>
+                </Card> */}
                 <Card
                   className="cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => navigate('/leave-management')}
@@ -3287,7 +3289,7 @@ Created Time: ${report.created_time}
             </Card>
           </TabsContent>
 
-          <TabsContent value="reports" className="space-y-6">
+          {/* <TabsContent value="reports" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-900">Case Reports</h2>
             </div>
@@ -3308,40 +3310,6 @@ Created Time: ${report.created_time}
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {/* {reports.map((report: any, index: number) => (
-                          <tr key={report.update_id || index} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                              {report.case_id}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title={report.progress_description}>
-                              {report.progress_description}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                              {report.update_date}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewReport(report)}
-                                className="border-2 border-gray-300 hover:border-primary-500"
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDownloadReport(report)}
-                                className="border-2 border-gray-300 hover:border-primary-500"
-                              >
-                                <FileText className="h-4 w-4 mr-1" />
-                                Download
-                              </Button>
-                            </td>
-                          </tr>
-                        ))} */}
-
                         <p className="text-center text-gray-500 p-4   ">No reports found</p>
                         {reports.length === 0 && (
                           <tr>
@@ -3356,9 +3324,9 @@ Created Time: ${report.created_time}
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent> */}
 
-          <TabsContent value="settings" className="space-y-6">
+          {/* <TabsContent value="settings" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-900">System Settings</h2>
             </div>
@@ -3376,7 +3344,7 @@ Created Time: ${report.created_time}
                 <Button className="bg-gray-900 hover:bg-gray-800">Update Settings</Button>
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
       </div>
 

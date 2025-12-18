@@ -54,6 +54,7 @@ import {
 import SortableTableHeader from "@/components/ui/SortableTableHeader";
 import { useTableSort } from "@/hooks/useTableSort";
 import { useAuth } from "@/contexts/AuthContext";
+import { SessionExpiry } from "@/components/SessionExpiry";
 
 const PartnerDashboard = () => {
   const navigate = useNavigate();
@@ -1149,6 +1150,7 @@ const PartnerDashboard = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <SessionExpiry />
               {/* Refresh Button */}
               <Button
                 variant="outline"
