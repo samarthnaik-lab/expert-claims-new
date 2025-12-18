@@ -278,8 +278,7 @@ const CustomerDocumentUpload = () => {
       formData.append('data', uploadedFile.file);
       formData.append('case_id', selectedClaim);
       formData.append('category_id', categoryId.toString());
-      formData.append('emp_id', employeeId.toString());
-      formData.append('is_customer', 'yes');
+      formData.append('is_customer_visible', 'true'); // Customer uploads are visible to customers
       
       // Update progress to show upload starting
       setUploadedFiles(prev => prev.map(file => 
@@ -289,17 +288,13 @@ const CustomerDocumentUpload = () => {
       ));
       
       const response = await fetch(
-        'http://localhost:3000/support/upload',
+        'http://localhost:3000/api/upload',
         {
           method: 'POST',
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5bmVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5bmVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-            'session_id': 'd012f756-cb15-4ca2-abe2-57305d399f08',
-            'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NDcyNzQwfQ.i7Vu6E-r1iaEvsnCUcD8DAy4SP6_enoRrGRviGdi1p8',
-            'Accept-Profile': 'expc',
-            'Content-Profile': 'expc',
-            // Don't set Content-Type for FormData
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
+            // Don't set Content-Type for FormData - browser will set it automatically with boundary
           },
           body: formData,
         }

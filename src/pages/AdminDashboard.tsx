@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Users, FileText, Settings, TrendingUp, LogOut, Plus, Eye, Edit, Trash, UserPlus, ArrowLeft, List, Calendar, CheckCircle, XCircle, Search, Filter, X, AlertTriangle, RefreshCw, ZoomIn, ZoomOut, RotateCcw, Clock } from 'lucide-react';
+import { Users, FileText, Settings, TrendingUp, LogOut, Plus, Eye, Edit, Trash, UserPlus, ArrowLeft, List, Calendar, CheckCircle, XCircle, Search, Filter, X, AlertTriangle, RefreshCw, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { SessionExpiry } from '@/components/SessionExpiry';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -456,7 +457,7 @@ const AdminDashboard = () => {
   // Initialize active tab from URL parameters
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
-    if (tabFromUrl && ['overview', 'tasks', 'users', 'leave', 'cases', 'reports', 'settings'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['overview', 'tasks', 'users', 'leave', 'cases'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
   }, [searchParams]);
@@ -572,18 +573,40 @@ const AdminDashboard = () => {
         }
       });
 
-      if (response.status === 200) {
-        const result = await response.json();
-        console.log('Admin dashboard data:', result);
+      const result = await response.json();
+      console.log('Admin dashboard data:', result);
 
+      if (response.ok) {
         if (Array.isArray(result) && result.length > 0) {
-          setStats(result[0]);
+          const firstResult = result[0];
+          if (firstResult.status === 'success' && firstResult.data) {
+            setStats(firstResult.data);
+          } else if (firstResult.status === 'error' || firstResult.status === 'failure') {
+            toast({
+              title: "Error",
+              description: firstResult.message || firstResult.error || "Failed to fetch dashboard data",
+              variant: "destructive",
+            });
+          } else {
+            setStats(firstResult);
+          }
+        } else if (result.status === 'success' && result.data) {
+          setStats(result.data);
+        } else if (result.status === 'error' || result.status === 'failure') {
+          toast({
+            title: "Error",
+            description: result.message || result.error || "Failed to fetch dashboard data",
+            variant: "destructive",
+          });
+        } else {
+          setStats(result);
         }
       } else {
-        console.error('Failed to fetch dashboard data:', response.status);
+        const errorMessage = result?.message || result?.error || `Failed to fetch dashboard data (Status: ${response.status})`;
+        console.error('Failed to fetch dashboard data:', response.status, result);
         toast({
           title: "Error",
-          description: "Failed to fetch dashboard data",
+          description: errorMessage,
           variant: "destructive",
         });
       }
@@ -631,8 +654,9 @@ const AdminDashboard = () => {
         }
       });
 
-      if (response.status === 200) {
-        const result = await response.json();
+      const result = await response.json();
+      
+      if (response.ok) {
         if (Array.isArray(result) && result.length > 0) {
           const firstResult = result[0];
           if (firstResult.status === 'success' && firstResult.data) {
@@ -669,8 +693,27 @@ const AdminDashboard = () => {
               customers: user.customers
             }));
             setAllUsersForSearch(transformedUsersForSearch);
+          } else if (firstResult.status === 'error' || firstResult.status === 'failure') {
+            toast({
+              title: "Error",
+              description: firstResult.message || firstResult.error || "Failed to fetch users",
+              variant: "destructive",
+            });
           }
+        } else if (result.status === 'error' || result.status === 'failure') {
+          toast({
+            title: "Error",
+            description: result.message || result.error || "Failed to fetch users",
+            variant: "destructive",
+          });
         }
+      } else {
+        const errorMessage = result?.message || result?.error || `Failed to fetch users (Status: ${response.status})`;
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error fetching all users:', error);
@@ -717,10 +760,10 @@ const AdminDashboard = () => {
         }
       });
 
-      if (response.status === 200) {
-        const result = await response.json();
-        console.log('Users API response:', result);
+      const result = await response.json();
+      console.log('Users API response:', result);
 
+      if (response.ok) {
         if (Array.isArray(result) && result.length > 0) {
           const firstResult = result[0];
           if (firstResult.status === 'success' && firstResult.data) {
@@ -765,29 +808,62 @@ const AdminDashboard = () => {
               setHasMoreUsers(transformedUsers.length >= parseInt(userPageLimit));
             }
             console.log('Transformed users:', transformedUsers);
-          } else {
+          } else if (firstResult.status === 'error' || firstResult.status === 'failure') {
             console.error('API returned error:', firstResult);
             toast({
               title: "Error",
-              description: firstResult.message || "Failed to fetch users",
+              description: firstResult.message || firstResult.error || "Failed to fetch users",
               variant: "destructive",
             });
             setUsers([]);
           }
+        } else if (result.status === 'success' && result.data) {
+          // Handle direct object response
+          const transformedUsers = result.data.map((user: any) => ({
+            id: user.user_id.toString(),
+            name: user.employees ? `${user.employees.first_name || ''} ${user.employees.last_name || ''}`.trim() : user.username,
+            role: user.role,
+            status: user.status,
+            email: user.email,
+            department: user.role === 'employee' && user.employees ? user.employees.department : 
+                       user.role === 'partner' && user.partners ? user.partners.department :
+                       user.role === 'customer' && user.customers ? user.customers.department : 'N/A',
+            mobile_number: user.employees ? user.employees.mobile_number : 
+                         user.partners ? user.partners.mobile_number :
+                         user.customers ? user.customers.mobile_number : null,
+            entity: user.partners ? (user.partners["name of entity"] || user.partners.entity_name || 'N/A') :
+                   user.employees ? (user.employees.entity_name || user.employees["name of entity"] || 'N/A') :
+                   user.customers ? (user.customers.entity_name || user.customers["name of entity"] || 'N/A') : 'N/A',
+            partner_type: user.partners ? (user.partners.partner_type || 'N/A') : 'N/A',
+            created_time: user.created_time,
+            employees: user.employees,
+            partners: user.partners,
+            customers: user.customers
+          }));
+          setUsers(transformedUsers);
+        } else if (result.status === 'error' || result.status === 'failure') {
+          console.error('API returned error:', result);
+          toast({
+            title: "Error",
+            description: result.message || result.error || "Failed to fetch users",
+            variant: "destructive",
+          });
+          setUsers([]);
         } else {
           console.error('API returned unexpected format:', result);
           toast({
             title: "Error",
-            description: "Unexpected response format from API",
+            description: result.message || result.error || "Unexpected response format from API",
             variant: "destructive",
           });
           setUsers([]);
         }
       } else {
-        console.error('Failed to fetch users:', response.status);
+        const errorMessage = result?.message || result?.error || `Failed to fetch users (Status: ${response.status})`;
+        console.error('Failed to fetch users:', response.status, result);
         toast({
           title: "Error",
-          description: "Failed to fetch users",
+          description: errorMessage,
           variant: "destructive",
         });
         setUsers([]);
@@ -876,25 +952,31 @@ const AdminDashboard = () => {
         jwtToken = session.jwtToken || '';
       }
 
-      // Fetch all tasks with a large size limit
-      const url = `https://n8n.srv952553.hstgr.cloud/webhook/gettasks?page=1&size=10000`;
+      // Fetch all tasks with a large size limit from admin backend
+      const url = `http://localhost:3000/admin/gettasks?page=1&size=10000`;
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
+          'Connection': 'keep-alive',
+          'Origin': 'http://localhost:8080',
+          'Prefer': 'count=exact',
+          'Range': '0-100',
+          'Referer': 'http://localhost:8080/',
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
-          'accept-profile': 'srtms',
+          'accept-profile': 'expc',
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
           'authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
           'content-type': 'application/json',
-          'jwt_token': jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjM0IiwiaWF0IjoxNzU2NTUwODUwfQ.Kmh5wQS9CXpRK0TmBXlJJhGlfr9ulMx8ou5nCk7th8g',
-          'session_id': sessionId || 'efd005c8-d9a1-4cfa-adeb-1ca2a7f13775',
+          'jwt_token': jwtToken || 'token_1765952455523_ukhols79v',
+          'session_id': sessionId || 'sess_1765952455523_cceyku19o',
         }
       });
 
-      if (response.status === 200) {
-        const result = await response.json();
+      const result = await response.json();
+      
+      if (response.ok) {
         if (Array.isArray(result) && result.length > 0) {
           const firstResult = result[0];
           if (firstResult.status === 'success' && firstResult.data) {
@@ -905,8 +987,37 @@ const AdminDashboard = () => {
               current_status: task.ticket_stage?.toLowerCase() || 'new',
             }));
             setAllTasks(transformedTasks);
+          } else if (firstResult.status === 'error' || firstResult.status === 'failure') {
+            console.error('API returned error:', firstResult);
+            toast({
+              title: "Error",
+              description: firstResult.message || firstResult.error || "Failed to fetch all tasks",
+              variant: "destructive",
+            });
           }
+        } else if (result.status === 'success' && result.data) {
+          const transformedTasks = result.data.map((task: any) => ({
+            id: task.case_id.toString(),
+            task_id: task.case_id.toString(),
+            title: task.case_summary || 'No Summary',
+            current_status: task.ticket_stage?.toLowerCase() || 'new',
+          }));
+          setAllTasks(transformedTasks);
+        } else if (result.status === 'error' || result.status === 'failure') {
+          console.error('API returned error:', result);
+          toast({
+            title: "Error",
+            description: result.message || result.error || "Failed to fetch all tasks",
+            variant: "destructive",
+          });
         }
+      } else {
+        const errorMessage = result?.message || result?.error || `Failed to fetch all tasks (Status: ${response.status})`;
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error fetching all tasks:', error);
@@ -931,91 +1042,51 @@ const AdminDashboard = () => {
 
       console.log('Fetching task management data...');
 
-      const url = `https://n8n.srv952553.hstgr.cloud/webhook/gettasks?page=${taskCurrentPage}&size=${parseInt(taskPageLimit)}`;
+      // Use admin backend URL for paginated task list in Task Management tab
+      const url = `http://localhost:3000/admin/gettasks?page=${taskCurrentPage}&size=${parseInt(taskPageLimit)}`;
       console.log('Fetching tasks with URL:', url);
 
       const response = await fetch(url, {
         method: 'GET',
         headers: {
+          'Connection': 'keep-alive',
+          'Origin': 'http://localhost:8080',
+          'Prefer': 'count=exact',
+          'Range': '0-100',
+          'Referer': 'http://localhost:8080/',
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
-          'accept-profile': 'srtms',
+          'accept-profile': 'expc',
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
           'authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
           'content-type': 'application/json',
-          'jwt_token': jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjM0IiwiaWF0IjoxNzU2NTUwODUwfQ.Kmh5wQS9CXpRK0TmBXlJJhGlfr9ulMx8ou5nCk7th8g',
-          'origin': 'http://localhost:8080',
-          'priority': 'u=1, i',
-          'referer': 'http://localhost:8080/',
-          'session_id': sessionId || 'efd005c8-d9a1-4cfa-adeb-1ca2a7f13775',
-          'Range': '5-10',
-          'Prefer': 'count=exact'
+          'jwt_token': jwtToken || 'token_1765952455523_ukhols79v',
+          'session_id': sessionId || 'sess_1765952455523_cceyku19o',
         }
       });
 
-      if (response.status === 200) {
-        const result = await response.json();
-        console.log('Task management data:', result);
+      const result = await response.json();
+      console.log('Task management data:', result);
 
-        // Handle array response structure
-        if (Array.isArray(result) && result.length > 0) {
-          const firstResult = result[0];
-          if (firstResult.status === 'success' && firstResult.data) {
-            // Transform the API data to match the expected format
-            const transformedTasks = firstResult.data.map((task: any) => ({
-              id: task.case_id.toString(),
-              task_id: task.case_id.toString(),
-              title: task.case_summary || 'No Summary',
-              assigned_to_profile: {
-                full_name: `${task.assigned_employee_name}`.trim() || 'Unassigned'
-              },
-              assigned_employee_name: task.assigned_employee_name || 'Unassigned',
-              customer_profile: {
-                full_name: task.customer_name || (task.customer_id ? `Customer ${task.customer_id}` : 'N/A')
-              },
-              current_status: task.ticket_stage?.toLowerCase() || 'new',
-              due_date: task.due_date || null,
-              case_description: task.case_description,
-              priority: task.priority,
-              case_value: task.case_value,
-              value_currency: task.value_currency,
-              created_time: task.created_time,
-              customer_email: task.email_address,
-              customer_phone: task.mobile_number,
-              customer_address: task.address
-            }));
+      // Handle non-200 status codes
+      if (!response.ok) {
+        const errorMessage = result?.message || result?.error || `Failed to fetch tasks (Status: ${response.status})`;
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        return;
+      }
 
-            setTasks(transformedTasks);
-            console.log('Transformed tasks:', transformedTasks);
-
-            // Update dashboard stats based on task data
-            const totalTasks = transformedTasks.length;
-            const completedCounts = transformedTasks.filter(task => task.current_status === 'completed').length;
-            const reviewCounts = transformedTasks.filter(task => task.current_status === 'review').length;
-            const newCounts = transformedTasks.filter(task => task.current_status === 'new').length;
-            const analysisCounts = transformedTasks.filter(task => task.current_status === 'analysis').length;
-
-            setStats(prevStats => ({
-              ...prevStats,
-              totalTasks,
-              completedCounts,
-              reviewCounts,
-              newCounts,
-              analysisCounts
-            }));
-          } else {
-            console.error('API returned error:', firstResult);
-            toast({
-              title: "Error",
-              description: firstResult.message || "Failed to fetch tasks",
-              variant: "destructive",
-            });
-          }
-        } else if (result.status === 'success' && result.data) {
-          // Handle direct object response
-          const transformedTasks = result.data.map((task: any) => ({
+      // Handle array response structure
+      if (Array.isArray(result) && result.length > 0) {
+        const firstResult = result[0];
+        if (firstResult.status === 'success' && firstResult.data) {
+          // Transform the API data to match the expected format
+          const transformedTasks = firstResult.data.map((task: any) => ({
             id: task.case_id.toString(),
-            task_id: `CLM-${task.case_id.toString().padStart(3, '0')}`,
+            task_id: task.case_id.toString(),
             title: task.case_summary || 'No Summary',
             assigned_to_profile: {
               full_name: `${task.assigned_employee_name}`.trim() || 'Unassigned'
@@ -1037,8 +1108,9 @@ const AdminDashboard = () => {
           }));
 
           setTasks(transformedTasks);
+          console.log('Transformed tasks:', transformedTasks);
 
-          // Update dashboard stats
+          // Update dashboard stats based on task data
           const totalTasks = transformedTasks.length;
           const completedCounts = transformedTasks.filter(task => task.current_status === 'completed').length;
           const reviewCounts = transformedTasks.filter(task => task.current_status === 'review').length;
@@ -1053,19 +1125,68 @@ const AdminDashboard = () => {
             newCounts,
             analysisCounts
           }));
-        } else {
-          console.error('API returned unexpected format:', result);
+        } else if (firstResult.status === 'error' || firstResult.status === 'failure') {
+          console.error('API returned error:', firstResult);
           toast({
             title: "Error",
-            description: "Unexpected response format from API",
+            description: firstResult.message || firstResult.error || "Failed to fetch tasks",
             variant: "destructive",
           });
         }
-      } else {
-        console.error('Failed to fetch tasks:', response.status);
+      } else if (result.status === 'success' && result.data) {
+        // Handle direct object response
+        const transformedTasks = result.data.map((task: any) => ({
+          id: task.case_id.toString(),
+          task_id: `CLM-${task.case_id.toString().padStart(3, '0')}`,
+          title: task.case_summary || 'No Summary',
+          assigned_to_profile: {
+            full_name: `${task.assigned_employee_name}`.trim() || 'Unassigned'
+          },
+          assigned_employee_name: task.assigned_employee_name || 'Unassigned',
+          customer_profile: {
+            full_name: task.customer_name || (task.customer_id ? `Customer ${task.customer_id}` : 'N/A')
+          },
+          current_status: task.ticket_stage?.toLowerCase() || 'new',
+          due_date: task.due_date || null,
+          case_description: task.case_description,
+          priority: task.priority,
+          case_value: task.case_value,
+          value_currency: task.value_currency,
+          created_time: task.created_time,
+          customer_email: task.email_address,
+          customer_phone: task.mobile_number,
+          customer_address: task.address
+        }));
+
+        setTasks(transformedTasks);
+
+        // Update dashboard stats
+        const totalTasks = transformedTasks.length;
+        const completedCounts = transformedTasks.filter(task => task.current_status === 'completed').length;
+        const reviewCounts = transformedTasks.filter(task => task.current_status === 'review').length;
+        const newCounts = transformedTasks.filter(task => task.current_status === 'new').length;
+        const analysisCounts = transformedTasks.filter(task => task.current_status === 'analysis').length;
+
+        setStats(prevStats => ({
+          ...prevStats,
+          totalTasks,
+          completedCounts,
+          reviewCounts,
+          newCounts,
+          analysisCounts
+        }));
+      } else if (result.status === 'error' || result.status === 'failure') {
+        console.error('API returned error:', result);
         toast({
           title: "Error",
-          description: "Failed to fetch tasks",
+          description: result.message || result.error || "Failed to fetch tasks",
+          variant: "destructive",
+        });
+      } else {
+        console.error('API returned unexpected format:', result);
+        toast({
+          title: "Error",
+          description: result.message || result.error || "Unexpected response format from API",
           variant: "destructive",
         });
       }
@@ -1203,19 +1324,46 @@ const AdminDashboard = () => {
         }
       });
 
-      if (response.status === 200) {
-        const result = await response.json();
+      const result = await response.json();
+      
+      if (response.ok) {
         if (Array.isArray(result) && result.length > 0) {
           const firstResult = result[0];
           if (firstResult.status === 'success' && firstResult.data) {
             setAllLeaveRequests(firstResult.data);
+          } else if (firstResult.status === 'error' || firstResult.status === 'failure') {
+            console.error('API returned error:', firstResult);
+            toast({
+              title: "Error",
+              description: firstResult.message || firstResult.error || "Failed to fetch all leave requests",
+              variant: "destructive",
+            });
           }
         } else if (result.status === 'success' && result.data) {
           setAllLeaveRequests(result.data);
+        } else if (result.status === 'error' || result.status === 'failure') {
+          console.error('API returned error:', result);
+          toast({
+            title: "Error",
+            description: result.message || result.error || "Failed to fetch all leave requests",
+            variant: "destructive",
+          });
         }
+      } else {
+        const errorMessage = result?.message || result?.error || `Failed to fetch all leave requests (Status: ${response.status})`;
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching all leave requests:', error);
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to fetch all leave requests",
+        variant: "destructive",
+      });
     } finally {
       setLoadingAllLeaves(false);
     }
@@ -1250,43 +1398,51 @@ const AdminDashboard = () => {
         }
       });
 
-      if (response.status === 200) {
-        const result = await response.json();
-        console.log('Leave requests data:', result);
+      const result = await response.json();
+      console.log('Leave requests data:', result);
 
-        // Handle array response structure
-        if (Array.isArray(result) && result.length > 0) {
-          const firstResult = result[0];
-          console.log('First result:', firstResult);
-          console.log('Data array length:', firstResult.data?.length);
-          if (firstResult.status === 'success' && firstResult.data) {
-            setLeaveRequests(firstResult.data);
-            console.log('Setting leave requests:', firstResult.data);
-          } else {
-            console.error('API returned error:', firstResult);
-            toast({
-              title: "Error",
-              description: firstResult.message || "Failed to fetch leave requests",
-              variant: "destructive",
-            });
-          }
-        } else if (result.status === 'success' && result.data) {
-          // Handle direct object response
-          setLeaveRequests(result.data);
-        } else {
-          console.error('API returned unexpected format:', result);
+      // Handle non-200 status codes
+      if (!response.ok) {
+        const errorMessage = result?.message || result?.error || `Failed to fetch leave requests (Status: ${response.status})`;
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Handle array response structure
+      if (Array.isArray(result) && result.length > 0) {
+        const firstResult = result[0];
+        console.log('First result:', firstResult);
+        console.log('Data array length:', firstResult.data?.length);
+        if (firstResult.status === 'success' && firstResult.data) {
+          setLeaveRequests(firstResult.data);
+          console.log('Setting leave requests:', firstResult.data);
+        } else if (firstResult.status === 'error' || firstResult.status === 'failure') {
+          console.error('API returned error:', firstResult);
           toast({
             title: "Error",
-            description: "Unexpected response format from API",
+            description: firstResult.message || firstResult.error || "Failed to fetch leave requests",
             variant: "destructive",
           });
         }
-      } else {
-        console.error('Failed to fetch leave requests:', response.status);
-        const errorData = await response.json().catch(() => ({}));
+      } else if (result.status === 'success' && result.data) {
+        // Handle direct object response
+        setLeaveRequests(result.data);
+      } else if (result.status === 'error' || result.status === 'failure') {
+        console.error('API returned error:', result);
         toast({
           title: "Error",
-          description: errorData.message || "Failed to fetch leave requests",
+          description: result.message || result.error || "Failed to fetch leave requests",
+          variant: "destructive",
+        });
+      } else {
+        console.error('API returned unexpected format:', result);
+        toast({
+          title: "Error",
+          description: result.message || result.error || "Unexpected response format from API",
           variant: "destructive",
         });
       }
@@ -1624,42 +1780,40 @@ Created Time: ${report.created_time}
         })
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Leave status update response:', result);
+      const result = await response.json();
+      console.log('Leave status update response:', result);
 
-        // Handle array response structure
-        let responseData = result;
-        if (Array.isArray(result) && result.length > 0) {
-          responseData = result[0];
-        }
+      // Handle array response structure
+      let responseData = result;
+      if (Array.isArray(result) && result.length > 0) {
+        responseData = result[0];
+      }
 
-        if (responseData.status === 'success') {
-          // Reflect the change locally
-          const updatedRequests = leaveRequests.map(req =>
-            req.application_id === leaveId ? { ...req, status: action } : req
-          );
-          setLeaveRequests(updatedRequests);
+      if (response.ok && responseData.status === 'success') {
+        // Reflect the change locally
+        const updatedRequests = leaveRequests.map(req =>
+          req.application_id === leaveId ? { ...req, status: action } : req
+        );
+        setLeaveRequests(updatedRequests);
 
-          // Also update allLeaveRequests for the cards
-          const updatedAllRequests = allLeaveRequests.map(req =>
-            req.application_id === leaveId ? { ...req, status: action } : req
-          );
-          setAllLeaveRequests(updatedAllRequests);
+        // Also update allLeaveRequests for the cards
+        const updatedAllRequests = allLeaveRequests.map(req =>
+          req.application_id === leaveId ? { ...req, status: action } : req
+        );
+        setAllLeaveRequests(updatedAllRequests);
 
-          toast({
-            title: 'Success',
-            description: `Leave request ${action} successfully`,
-          });
-        } else {
-          throw new Error(responseData.message || 'Failed to update leave request');
-        }
+        const successMessage = responseData.message || `Leave request ${action} successfully`;
+        toast({
+          title: 'Success',
+          description: successMessage,
+        });
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Failed to update leave request:', response.status, errorData);
+        // Handle error response
+        const errorMessage = responseData?.message || responseData?.error || `Failed to ${action} leave request`;
+        console.error('Failed to update leave request:', response.status, responseData);
         toast({
           title: 'Error',
-          description: errorData.message || `Failed to ${action} leave request`,
+          description: errorMessage,
           variant: 'destructive',
         });
       }
@@ -2207,16 +2361,7 @@ Created Time: ${report.created_time}
               </p>
             </div>
             <div className="flex items-center space-x-3">
-              {/* Session Expiry Display */}
-              {sessionExpiry && (
-                <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/20">
-                  <Clock className="h-4 w-4 text-white" />
-                  <div className="text-white text-sm">
-                    <div className="font-semibold">Session expires in: {formatTimeRemaining(sessionExpiry.expiresIn)}</div>
-                    <div className="text-xs text-white/80">Expires: {sessionExpiry.formatted}</div>
-                  </div>
-                </div>
-              )}
+              <SessionExpiry />
               <Button
                 variant="outline"
                 onClick={() => {
@@ -2278,14 +2423,14 @@ Created Time: ${report.created_time}
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="tasks">Task Management</TabsTrigger>
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="leave">Leave Management</TabsTrigger>
             <TabsTrigger value="cases">Gap Analysis</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+            {/* <TabsTrigger value="reports">Reports</TabsTrigger> */}
+            {/* <TabsTrigger value="settings">Settings</TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -2328,7 +2473,7 @@ Created Time: ${report.created_time}
                     <h3 className="font-semibold text-gray-900">Manage Users</h3>
                   </CardContent>
                 </Card>
-                <Card
+                {/* <Card
                   className="cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => handleTabChange('reports')}
                 >
@@ -2336,7 +2481,7 @@ Created Time: ${report.created_time}
                     <TrendingUp className="h-8 w-8 mx-auto mb-3 text-gray-600" />
                     <h3 className="font-semibold text-gray-900">View Reports</h3>
                   </CardContent>
-                </Card>
+                </Card> */}
                 <Card
                   className="cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => navigate('/leave-management')}
@@ -3175,7 +3320,7 @@ Created Time: ${report.created_time}
             </Card>
           </TabsContent>
 
-          <TabsContent value="reports" className="space-y-6">
+          {/* <TabsContent value="reports" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-900">Case Reports</h2>
             </div>
@@ -3196,40 +3341,6 @@ Created Time: ${report.created_time}
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {/* {reports.map((report: any, index: number) => (
-                          <tr key={report.update_id || index} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                              {report.case_id}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title={report.progress_description}>
-                              {report.progress_description}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                              {report.update_date}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewReport(report)}
-                                className="border-2 border-gray-300 hover:border-primary-500"
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDownloadReport(report)}
-                                className="border-2 border-gray-300 hover:border-primary-500"
-                              >
-                                <FileText className="h-4 w-4 mr-1" />
-                                Download
-                              </Button>
-                            </td>
-                          </tr>
-                        ))} */}
-
                         <p className="text-center text-gray-500 p-4   ">No reports found</p>
                         {reports.length === 0 && (
                           <tr>
@@ -3244,9 +3355,9 @@ Created Time: ${report.created_time}
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent> */}
 
-          <TabsContent value="settings" className="space-y-6">
+          {/* <TabsContent value="settings" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-900">System Settings</h2>
             </div>
@@ -3264,7 +3375,7 @@ Created Time: ${report.created_time}
                 <Button className="bg-gray-900 hover:bg-gray-800">Update Settings</Button>
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
       </div>
 

@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import SortableTableHeader from '@/components/ui/SortableTableHeader';
 import { useTableSort } from '@/hooks/useTableSort';
 import { useAuth } from '@/contexts/AuthContext';
+import { SessionExpiry } from '@/components/SessionExpiry';
 
 // Task interface based on the API response
 interface Task {
@@ -785,6 +786,7 @@ const EmployeeDashboard = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <SessionExpiry />
               {/* Refresh Button */}
               {/* <Button
                 variant="outline"

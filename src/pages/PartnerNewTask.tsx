@@ -540,37 +540,38 @@ const PartnerNewTask = () => {
         // Create FormData to send everything as form data (including binary files)
         const formDataPayload = new FormData();
         
-        // Add all the backlog data as form fields
-        formDataPayload.append("case_type_id", caseTypeId?.toString() || "");
+        // Get partner full name and extract first/last name
+        const partnerFullName = getPartnerFullName();
+        const nameParts = partnerFullName.trim().split(/\s+/);
+        const customerFirstName = nameParts[0] || "John";
+        const customerLastName = nameParts.slice(1).join(" ") || "Doe";
+        
+        // Add all the backlog data as form fields (matching curl command exactly)
+        formDataPayload.append("case_type_id", caseTypeId?.toString() || "1");
+        formDataPayload.append("task_summary", formData.task_summary || "");
+        formDataPayload.append("case_description", formData.description || "");
         formDataPayload.append("backlog_referring_partner_id", partnerId.toString());
         formDataPayload.append("backlog_referral_date", new Date().toISOString().split('T')[0]);
         formDataPayload.append("created_by", createdBy.toString());
-        formDataPayload.append("department", "partner");
         formDataPayload.append("updated_by", updatedBy.toString());
-        formDataPayload.append("comment_text", formData.comments);
-        formDataPayload.append("task_summary", formData.task_summary);
-        formDataPayload.append("case_description", formData.description);
-        formDataPayload.append("case_type", formData.caseType);
-        formDataPayload.append("created_date", new Date().toISOString());
-        formDataPayload.append("status", "new");
-        formDataPayload.append("customer_username", `partner_${partnerId}_${Date.now()}`);
-        formDataPayload.append("customer_first_name", "Partner");
-        formDataPayload.append("customer_last_name", "User");
+        formDataPayload.append("department", "partner");
+        formDataPayload.append("comment_text", formData.comments || "");
+        formDataPayload.append("customer_first_name", customerFirstName);
+        formDataPayload.append("customer_last_name", customerLastName);
         formDataPayload.append("document_count", selectedFiles.length.toString());
         formDataPayload.append("selected_document_type", selectedDocumentType || "");
         formDataPayload.append("selected_document_type_name", selectedDocumentType ? getDocumentTypeName() : "");
         
         // Add partner name fields
-        const partnerFullName = getPartnerFullName();
-        formDataPayload.append("updatedby_name", partnerFullName); // Partner's full name (e.g., "Sam Naik")
-        formDataPayload.append("createdby_name", partnerFullName); // Partner's full name (e.g., "Sam Naik")
-        formDataPayload.append("partner_name", partnerFullName); // Partner's full name (same as createdby_name/updatedby_name)
+        formDataPayload.append("createdby_name", partnerFullName);
+        formDataPayload.append("updatedby_name", partnerFullName);
+        formDataPayload.append("partner_name", partnerFullName);
 
         // Add documents as binary files
         selectedFiles.forEach((file, index) => {
           formDataPayload.append(`document_${index}`, file);
           formDataPayload.append(`document_${index}_name`, file.name);
-          formDataPayload.append(`document_${index}_type`, selectedDocumentType);
+          formDataPayload.append(`document_${index}_type`, selectedDocumentType || "");
           formDataPayload.append(`document_${index}_type_name`, getDocumentTypeName());
         });
 
@@ -578,29 +579,18 @@ const PartnerNewTask = () => {
           case_type_id: caseTypeId,
           backlog_referring_partner_id: partnerId,
           document_count: selectedFiles.length,
+          customer_first_name: customerFirstName,
+          customer_last_name: customerLastName,
+          partner_name: partnerFullName,
           files: selectedFiles.map(f => f.name)
         });
-
-        // Get JWT token from session for backlog API
-        const sessionStrForBacklog = localStorage.getItem("expertclaims_session");
-        let authTokenForBacklog = "";
-        if (sessionStrForBacklog) {
-          try {
-            const session = JSON.parse(sessionStrForBacklog);
-            authTokenForBacklog = session.jwtToken || "";
-          } catch (error) {
-            console.error("Error parsing session:", error);
-          }
-        }
 
         const backlogResponse = await fetch(
           "http://localhost:3000/api/partnerbacklogentry",
           {
             method: "POST",
-            headers: {
-              "Authorization": `Bearer ${authTokenForBacklog}`,
-            },
-            body: formDataPayload, // Send as FormData instead of JSON
+            // Don't set Content-Type header - browser will set it automatically with boundary for FormData
+            body: formDataPayload,
           }
         );
 

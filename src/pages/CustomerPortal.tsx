@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { MessageCircle, Upload, FileText, LogOut, Phone, Shield, TrendingUp, Clock, CheckCircle, Mail, X, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AuthService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
+import { SessionExpiry } from '@/components/SessionExpiry';
 
 const CustomerPortal = () => {
   const navigate = useNavigate();
@@ -361,17 +362,20 @@ const CustomerPortal = () => {
                 <p className="text-xs text-white/80 font-medium">Welcome back, {customerName}</p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                logout();
-                navigate('/login');
-              }}
-              className="flex items-center space-x-2 border-2 border-gray-300 hover:border-primary-500 rounded-xl transition-all duration-300"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Logout</span>
-            </Button>
+            <div className="flex items-center space-x-3">
+              <SessionExpiry />
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  logout();
+                  navigate('/login');
+                }}
+                className="flex items-center space-x-2 border-2 border-gray-300 hover:border-primary-500 rounded-xl transition-all duration-300"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </Button>
+            </div>
           </div>
         </div>
       </header>
