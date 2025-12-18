@@ -11,25 +11,39 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { AuthService } from '@/services/authService';
 
-// Simple hash function for password (same as Register.tsx)
-const hashPassword = (password: string): string => {
-  let hash = 0;
-  if (password.length === 0) return hash.toString();
+/**
+ * Get password for sending to backend
+ * SECURITY: Passwords are sent as plain text over HTTPS.
+ * Backend will hash them properly using bcrypt.
+ * 
+ * Note: For existing users with fake hashes in database,
+ * we temporarily support sending hashed passwords for migration.
+ * New users should send plain passwords.
+ */
+const getPasswordForBackend = (password: string, isLegacyUser: boolean = false): string => {
+  if (isLegacyUser) {
+    // Legacy: Generate fake hash for users with fake hashes in DB
+    // TODO: Remove this after migrating all users to proper bcrypt
+    let hash = 0;
+    if (password.length === 0) return hash.toString();
 
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0; // force 32-bit int
+    for (let i = 0; i < password.length; i++) {
+      const char = password.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash |= 0;
+    }
+
+    const base = Math.abs(hash).toString(36);
+    const longHash = Array(8)
+      .fill(base)
+      .map((b, i) => b + ((hash >> i) & 0xff).toString(36))
+      .join("");
+
+    return `$2b$10$${longHash}`;
   }
-
-  // Expand the hash by repeating/mixing and encoding
-  const base = Math.abs(hash).toString(36);
-  const longHash = Array(8) // repeat 8x for length
-    .fill(base)
-    .map((b, i) => b + ((hash >> i) & 0xff).toString(36))
-    .join("");
-
-  return `$2b$10$${longHash}`;
+  
+  // New approach: Send plain password - backend will hash it
+  return password;
 };
 
 interface Role {
@@ -51,8 +65,12 @@ const Login = () => {
     mobile: '',
     otp: ''
   });
-  const [otpSent, setOtpSent] = useState(true); // Always show OTP field for admin/customer
+  // Login step tracking for admin: 'initial' -> 'credentials_validated' -> 'otp_sent' -> 'logged_in'
+  const [loginStep, setLoginStep] = useState<'initial' | 'credentials_validated' | 'otp_sent'>('initial');
+  const [otpSent, setOtpSent] = useState(false); // Start with false - OTP field hidden initially
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [otpValue, setOtpValue] = useState(''); // Store OTP from backend response (for testing)
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
@@ -63,6 +81,14 @@ const Login = () => {
   const { toast } = useToast();
 
   const from = location.state?.from?.pathname || '/';
+
+  // Reset login step when role changes
+  useEffect(() => {
+    setLoginStep('initial');
+    setOtpSent(false);
+    setFormData(prev => ({ ...prev, otp: '' }));
+    setOtpValue('');
+  }, [role]);
 
   // Load roles on component mount
   useEffect(() => {
@@ -129,7 +155,7 @@ const Login = () => {
     return error;
   };
 
-  const validateForm = () => {
+  const validateForm = (includeOtp: boolean = false) => {
     const newErrors: {[key: string]: string} = {};
     const newTouched: {[key: string]: boolean} = {};
     
@@ -156,7 +182,6 @@ const Login = () => {
     } else if (role === 'admin') {
       const emailError = validateField('email', formData.email);
       const passwordError = validateField('password', formData.password);
-      const otpError = validateField('otp', formData.otp);
       if (emailError) {
         newErrors.email = emailError;
         newTouched.email = true;
@@ -165,9 +190,13 @@ const Login = () => {
         newErrors.password = passwordError;
         newTouched.password = true;
       }
-      if (otpError) {
-        newErrors.otp = otpError;
-        newTouched.otp = true;
+      // Only validate OTP if it's required (after OTP is sent)
+      if (includeOtp && loginStep === 'otp_sent') {
+        const otpError = validateField('otp', formData.otp);
+        if (otpError) {
+          newErrors.otp = otpError;
+          newTouched.otp = true;
+        }
       }
     } else if (role === 'hr') {
       const emailError = validateField('email', formData.email);
@@ -187,7 +216,7 @@ const Login = () => {
         newTouched.mobile = true;
       }
       
-      if (role === 'customer' || role === 'admin' || role === 'hr') {
+      if (includeOtp && (role === 'customer' || role === 'hr')) {
         const otpError = validateField('otp', formData.otp);
         if (otpError) {
           newErrors.otp = otpError;
@@ -224,7 +253,83 @@ const Login = () => {
     }
   };
 
+  // Step 1: Validate credentials for admin
+  const handleValidateCredentials = async () => {
+    if (!validateForm(false)) {
+      return;
+    }
+
+    setIsLoggingIn(true);
+
+    try {
+      // Send plain password - backend will compare with stored hash using bcrypt
+      // For legacy users with fake hashes, backend handles migration
+      const passwordToSend = getPasswordForBackend(formData.password, true); // true = legacy support
+      
+      // Call credential validation endpoint
+      const response = await fetch('http://localhost:3000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: passwordToSend,
+          role: role
+          // No OTP, no step - this triggers credential validation
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // If OTP was automatically sent (nextStep === 'final_login'), show OTP input
+        if (result.nextStep === 'final_login' || result.requiresOtp) {
+          setLoginStep('otp_sent');
+          setOtpSent(true);
+          toast({
+            title: "OTP Sent Successfully",
+            description: result.message || "OTP has been sent to your mobile number. Please enter the OTP code.",
+          });
+        } else {
+          // Credentials validated but OTP not sent yet (shouldn't happen with new flow)
+          setLoginStep('credentials_validated');
+          toast({
+            title: "Credentials Validated",
+            description: "Credentials are valid. Please request OTP.",
+          });
+        }
+      } else {
+        toast({
+          title: "Validation Failed",
+          description: result.message || "Invalid email or password",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error validating credentials:', error);
+      toast({
+        title: "Error",
+        description: "Failed to validate credentials. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // Step 2: Send OTP for admin
   const handleSendOtp = async () => {
+    // For admin, credentials must be validated first
+    if (role === 'admin' && loginStep !== 'credentials_validated') {
+      toast({
+        title: "Error",
+        description: "Please validate credentials first",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // For customer role, validate mobile number
     if (role === 'customer' && !formData.mobile) {
       toast({
@@ -235,60 +340,61 @@ const Login = () => {
       return;
     }
 
-    // For customer and admin roles, use the new n8n webhook API
-    if (role === 'customer' || role === 'admin' || role === 'hr') {
-      try {
-        const hashedPassword = hashPassword(formData.password);
-        console.log('=== OTP SEND ===');
-        console.log('Original password:', formData.password);
-        console.log('Hashed password:', hashedPassword);
-        console.log('================');
-        
-        const result = await AuthService.sendCustomerOTP({
-          email: formData.email,
-          password: hashedPassword,
-          mobile: formData.mobile,
-          role: role
-        });
+    setIsSendingOtp(true);
 
-        if (result.success) {
-          // Check if we should show OTP input based on the response
-          if (result.showOtpInput) {
-            setOtpSent(true);
-            toast({
-              title: "OTP Sent Successfully",
-              description: result.message || "OTP has been sent to your mobile number. Please enter the OTP code.",
-            });
-          } else {
-            toast({
-              title: "Success",
-              description: result.message || "Operation completed successfully",
-            });
-          }
-        } else {
-          toast({
-            title: "Error",
-            description: result.message || "Failed to send OTP",
-            variant: "destructive",
-          });
+    try {
+      // Send plain password - backend will compare with stored hash
+      const passwordToSend = getPasswordForBackend(formData.password, true); // true = legacy support
+      
+      // Call send_otp endpoint
+      const response = await fetch('http://localhost:3000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: passwordToSend,
+          role: role,
+          mobile: role === 'admin' ? formData.email : formData.mobile, // For admin, use email
+          step: 'send_otp'
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setOtpSent(true);
+        setLoginStep('otp_sent');
+        setOtpValue(result.otp || ''); // Store OTP for testing (remove in production)
+        
+        // Pre-fill OTP field with received OTP (for testing only)
+        if (result.otp) {
+          setFormData(prev => ({ ...prev, otp: result.otp }));
         }
-      } catch (error) {
-        console.error('Error sending OTP:', error);
+
+        toast({
+          title: "OTP Sent Successfully",
+          description: result.message || (role === 'admin' 
+            ? `OTP sent to email ${formData.email}` 
+            : "OTP has been sent to your mobile number. Please enter the OTP code."),
+        });
+      } else {
         toast({
           title: "Error",
-          description: "Failed to send OTP. Please try again.",
+          description: result.message || "Failed to send OTP",
           variant: "destructive",
         });
       }
-    } else {
-      // For other roles, use the existing logic
-      console.log('Sending OTP to:', formData.mobile);
-      // Here you would typically call an API to send OTP
-      setOtpSent(true);
+    } catch (error) {
+      console.error('Error sending OTP:', error);
       toast({
-        title: "OTP Sent",
-        description: "OTP has been sent to your mobile number",
+        title: "Error",
+        description: "Failed to send OTP. Please try again.",
+        variant: "destructive",
       });
+    } finally {
+      setIsSendingOtp(false);
     }
   };
 
@@ -296,41 +402,92 @@ const Login = () => {
     console.log('Login button clicked');
     console.log('Selected role:', role);
     console.log('Form data:', formData);
+    console.log('Login step:', loginStep);
     
-    // Validate form before proceeding
-    if (!validateForm()) {
+    // For admin: Step 1 - Validate credentials first
+    if (role === 'admin' && loginStep === 'initial') {
+      await handleValidateCredentials();
       return;
     }
 
-    setIsLoggingIn(true);
+    // For admin: Step 2 - Send OTP after credentials validated
+    if (role === 'admin' && loginStep === 'credentials_validated') {
+      await handleSendOtp();
+      return;
+    }
 
-    try {
-      if (role === 'customer' || role === 'admin' || role === 'hr') {
-        if (!otpSent) {
-          toast({
-            title: "Error",
-            description: "Please send OTP first",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        // For customer and admin roles, use the auth context login function
-        const hashedPassword = hashPassword(formData.password);
-        console.log('=== LOGIN ===');
-        console.log('Original password:', formData.password);
-        console.log('Hashed password:', hashedPassword);
-        console.log(`${role} login with OTP:`, { 
-          email: formData.email, 
-          password: hashedPassword, 
-          mobile: formData.mobile, 
-          otp: formData.otp 
-        });
-        console.log('=============');
+    // For admin: Step 3 - Final login with OTP
+    if (role === 'admin' && loginStep === 'otp_sent') {
+      // Validate form including OTP
+      if (!validateForm(true)) {
+        return;
+      }
+
+      setIsLoggingIn(true);
+
+      try {
+        // Send plain password - backend will compare with stored hash
+        const passwordToSend = getPasswordForBackend(formData.password, true); // true = legacy support
         
         const result = await login({
           email: formData.email,
-          password: hashedPassword,
+          password: passwordToSend,
+          otp: formData.otp,
+          mobile: formData.email, // For admin, use email as mobile
+          role: role
+        });
+
+        if (result.success) {
+          toast({
+            title: "Login Successful",
+            description: result.message || `Welcome to your ${role} portal!`,
+          });
+          
+          navigate('/admin-dashboard');
+        } else {
+          toast({
+            title: "Login Failed",
+            description: result.message || "Invalid OTP",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoggingIn(false);
+      }
+      return;
+    }
+
+    // For customer/hr: Use existing flow
+    if (role === 'customer' || role === 'hr') {
+      if (!otpSent) {
+        toast({
+          title: "Error",
+          description: "Please send OTP first",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!validateForm(true)) {
+        return;
+      }
+
+      setIsLoggingIn(true);
+
+      try {
+        // Send plain password - backend will compare with stored hash
+        const passwordToSend = getPasswordForBackend(formData.password, true); // true = legacy support
+        
+        const result = await login({
+          email: formData.email,
+          password: passwordToSend,
           otp: formData.otp,
           mobile: formData.mobile,
           role: role
@@ -342,11 +499,8 @@ const Login = () => {
             description: result.message || `Welcome to your ${role} portal!`,
           });
           
-          // Navigate based on role
           if (role === 'customer') {
             navigate('/customer-portal');
-          } else if (role === 'admin') {
-            navigate('/admin-dashboard');
           } else if (role === 'hr') {
             navigate('/employee-dashboard');
           }
@@ -357,24 +511,38 @@ const Login = () => {
             variant: "destructive",
           });
         }
-      } else {
-        // For employee/partner, use email/password login
-        const hashedPassword = hashPassword(formData.password);
-        console.log('=== EMPLOYEE/PARTNER LOGIN ===');
-        console.log('Original password:', formData.password);
-        console.log('Hashed password:', hashedPassword);
-        console.log('Attempting login with:', { email: formData.email, password: hashedPassword });
-        console.log('==============================');
+      } catch (error) {
+        console.error('Login error:', error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoggingIn(false);
+      }
+      return;
+    }
+
+    // For employee/partner: Direct login
+    if (role === 'employee' || role === 'partner') {
+      if (!validateForm(false)) {
+        return;
+      }
+
+      setIsLoggingIn(true);
+
+      try {
+        // Send plain password - backend will compare with stored hash
+        const passwordToSend = getPasswordForBackend(formData.password, true); // true = legacy support
         
         const result = await login({
           email: formData.email,
-          password: hashedPassword,
-          otp: formData.otp,
-          mobile: formData.mobile,
+          password: passwordToSend,
+          otp: '',
+          mobile: '',
           role: role
         });
-
-        console.log('Login result:', result);
 
         if (result.success) {
           toast({
@@ -382,17 +550,12 @@ const Login = () => {
             description: "Login successful",
           });
           
-          // Navigate based on role
           switch (role) {
             case 'employee':
-            case 'hr':
               navigate('/employee-dashboard');
               break;
             case 'partner':
               navigate('/partner-dashboard');
-              break;
-            case 'admin':
-              navigate('/admin-dashboard');
               break;
             default:
               navigate(from);
@@ -404,16 +567,16 @@ const Login = () => {
             variant: "destructive",
           });
         }
+      } catch (error) {
+        console.error('Login error:', error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoggingIn(false);
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoggingIn(false);
     }
   };
 
@@ -517,11 +680,12 @@ const Login = () => {
                 <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 <Input
                   id="username"
-                  value={formData.email} // Changed to email for admin
+                  value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   onKeyDown={handleKeyPress}
                   onBlur={() => handleFieldBlur('email')}
                   placeholder="Enter your email"
+                  disabled={loginStep !== 'initial'}
                   className="pl-10 h-12 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
                 />
                 {touched.email && errors.email && (
@@ -541,6 +705,7 @@ const Login = () => {
                   onKeyDown={handleKeyPress}
                   onBlur={() => handleFieldBlur('password')}
                   placeholder="Enter your password"
+                  disabled={loginStep !== 'initial'}
                   className="pl-10 h-12 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
                 />
                 {touched.password && errors.password && (
@@ -549,26 +714,43 @@ const Login = () => {
               </div>
             </div>
             
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="otp" className="text-gray-700 font-semibold">OTP <span className="text-red-500">*</span></Label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                  <Input
-                    id="otp"
-                    value={formData.otp}
-                    onChange={(e) => handleOtpChange(e.target.value)}
-                    onKeyDown={handleKeyPress}
-                    onBlur={() => handleFieldBlur('otp')}
-                    placeholder="Enter OTP (use 1234 for testing)"
-                    className="pl-10 h-12 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-                  />
-                  {touched.otp && errors.otp && (
-                    <p className="text-xs text-red-500 mt-1">{errors.otp}</p>
+            {/* OTP Field - Only show after credentials are validated and OTP is sent */}
+            {loginStep === 'otp_sent' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="otp" className="text-gray-700 font-semibold">OTP <span className="text-red-500">*</span></Label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                    <Input
+                      id="otp"
+                      value={formData.otp}
+                      onChange={(e) => handleOtpChange(e.target.value)}
+                      onKeyDown={handleKeyPress}
+                      onBlur={() => handleFieldBlur('otp')}
+                      placeholder={otpValue ? `Enter OTP (${otpValue} for testing)` : "Enter OTP"}
+                      className="pl-10 h-12 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                    />
+                    {touched.otp && errors.otp && (
+                      <p className="text-xs text-red-500 mt-1">{errors.otp}</p>
+                    )}
+                  </div>
+                  {otpValue && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      OTP sent to email. For testing, use: <strong>{otpValue}</strong>
+                    </p>
                   )}
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Show status message */}
+            {loginStep === 'credentials_validated' && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700">
+                  ✓ Credentials validated. Click "Send OTP" to receive OTP via email.
+                </p>
+              </div>
+            )}
           </div>
         );
 
@@ -585,10 +767,31 @@ const Login = () => {
   };
 
   const shouldShowSignInButton = () => {
-    if (role === 'customer' || role === 'admin' || role === 'hr') {
-      return true; // OTP field is always shown, login button always visible
+    if (role === 'admin') {
+      // For admin: Show button in initial state (to validate credentials)
+      // Or show button when OTP is sent (to complete login)
+      return loginStep === 'initial' || loginStep === 'otp_sent';
+    }
+    if (role === 'customer' || role === 'hr') {
+      return true; // Always show for customer/hr
     }
     return role && role !== '';
+  };
+
+  const shouldShowSendOtpButton = () => {
+    // Show "Send OTP" button for admin after credentials are validated
+    return role === 'admin' && loginStep === 'credentials_validated';
+  };
+
+  const getButtonText = () => {
+    if (role === 'admin') {
+      if (loginStep === 'initial') {
+        return 'Validate Credentials';
+      } else if (loginStep === 'otp_sent') {
+        return 'Sign In';
+      }
+    }
+    return 'Sign In';
   };
 
   return (
@@ -651,13 +854,25 @@ const Login = () => {
 
           {renderFormFields()}
 
+          {/* Send OTP Button - Only for admin after credentials validated */}
+          {shouldShowSendOtpButton() && (
+            <Button 
+              onClick={handleSendOtp}
+              disabled={isSendingOtp}
+              className="w-full h-12 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
+            >
+              {isSendingOtp ? 'Sending OTP...' : 'Send OTP'}
+            </Button>
+          )}
+
+          {/* Sign In / Validate Credentials Button */}
           {shouldShowSignInButton() && (
             <Button 
               onClick={handleLogin}
-              disabled={isLoggingIn}
+              disabled={isLoggingIn || isSendingOtp}
               className="w-full h-12 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
             >
-              {isLoggingIn ? 'Signing In...' : 'Sign In'}
+              {isLoggingIn ? (loginStep === 'initial' ? 'Validating...' : 'Signing In...') : getButtonText()}
             </Button>
           )}
 
