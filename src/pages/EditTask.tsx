@@ -2212,6 +2212,146 @@ const EditTask = () => {
             console.log('PaymentStages:', paymentStages);
             console.log('Case phase ID:', casePhaseId);
             
+            // Check if invoice number already exists
+            const existingInvoiceNumber = paymentStages[paymentStageIndex]?.invoice_number;
+            const hasInvoiceNumber = existingInvoiceNumber && 
+                                     existingInvoiceNumber !== 'N/A' && 
+                                     existingInvoiceNumber !== null &&
+                                     String(existingInvoiceNumber).trim() !== '';
+            
+            let invoiceNumber = existingInvoiceNumber;
+            
+            // If invoice number doesn't exist, fetch and save new one
+            if (!hasInvoiceNumber) {
+                // Get session details for headers
+                const sessionStr = localStorage.getItem('expertclaims_session');
+                let sessionId = '';
+                let jwtToken = '';
+
+                if (sessionStr) {
+                    const session = JSON.parse(sessionStr);
+                    sessionId = session.sessionId || '';
+                    jwtToken = session.jwtToken || '';
+                }
+
+                const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+
+                // GET API - Fetch latest invoice number
+                console.log('Fetching latest invoice number...');
+                const getResponse = await fetch(`http://localhost:3000/support/invoice_get?case_phase_id=${casePhaseId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': API_KEY,
+                        'authorization': `Bearer ${API_KEY}`,
+                        'session_id': sessionId,
+                        'jwt_token': jwtToken
+                    }
+                });
+
+                if (!getResponse.ok) {
+                    throw new Error(`Failed to fetch invoice number: ${getResponse.status}`);
+                }
+
+                const getResult = await getResponse.json();
+                console.log('Invoice GET response:', getResult);
+                
+                // Extract invoice number from response
+                // API returns: { latest_invoice: "ECSI-25-0001", statusCode: 200 }
+                let latestInvoiceNumber = null;
+                if (getResult.latest_invoice) {
+                    latestInvoiceNumber = getResult.latest_invoice;
+                } else if (Array.isArray(getResult) && getResult.length > 0) {
+                    latestInvoiceNumber = getResult[0]?.latest_invoice || getResult[0]?.invoice_number || getResult[0]?.data?.invoice_number;
+                } else if (getResult.invoice_number) {
+                    latestInvoiceNumber = getResult.invoice_number;
+                } else if (getResult.data?.invoice_number) {
+                    latestInvoiceNumber = getResult.data.invoice_number;
+                }
+
+                console.log('Latest invoice number from GET API:', latestInvoiceNumber);
+
+                // Generate new invoice number (increment the last number by 1)
+                if (latestInvoiceNumber) {
+                    // Extract the number part at the end (e.g., "0001" from "ECSI-25-0001")
+                    const match = latestInvoiceNumber.match(/(\d+)$/);
+                    if (match) {
+                        const lastNumber = parseInt(match[1], 10);
+                        console.log('Extracted number:', lastNumber);
+                        
+                        // Increment by 1
+                        const incrementedNumber = lastNumber + 1;
+                        console.log('Incremented number:', incrementedNumber);
+                        
+                        // Pad with zeros to maintain 4 digits (e.g., 2 -> "0002", 10 -> "0010")
+                        const paddedNumber = String(incrementedNumber).padStart(4, '0');
+                        console.log('Padded number:', paddedNumber);
+                        
+                        // Replace the last number part with incremented number
+                        // e.g., "ECSI-25-0001" -> "ECSI-25-0002"
+                        invoiceNumber = latestInvoiceNumber.replace(/\d+$/, paddedNumber);
+                        console.log('Final invoice number:', invoiceNumber);
+                    } else {
+                        // If no number found, generate default format
+                        const now = new Date();
+                        const year = now.getFullYear().toString().slice(-2);
+                        invoiceNumber = `ECSI-${year}-0001`;
+                        console.log('No number found, using default:', invoiceNumber);
+                    }
+                } else {
+                    // If no existing invoice, generate first one
+                    const now = new Date();
+                    const year = now.getFullYear().toString().slice(-2);
+                    invoiceNumber = `ECSI-${year}-0001`;
+                    console.log('No invoice found, generating first:', invoiceNumber);
+                }
+
+                console.log('Final invoice number to send in POST:', invoiceNumber);
+
+                // POST API - Save new invoice number
+                console.log('Saving invoice number...');
+                const postResponse = await fetch('http://localhost:3000/support/invoice', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': API_KEY,
+                        'authorization': `Bearer ${API_KEY}`,
+                        'session_id': sessionId,
+                        'jwt_token': jwtToken
+                    },
+                    body: JSON.stringify({
+                        case_phase_id: casePhaseId,
+                        invoice_number: invoiceNumber
+                    })
+                });
+
+                if (!postResponse.ok) {
+                    throw new Error(`Failed to save invoice number: ${postResponse.status}`);
+                }
+
+                const postResult = await postResponse.json();
+                console.log('Invoice POST response:', postResult);
+
+                // Update local state with new invoice number
+                const updatedPaymentStages = [...paymentStages];
+                if (updatedPaymentStages[paymentStageIndex]) {
+                    updatedPaymentStages[paymentStageIndex] = {
+                        ...updatedPaymentStages[paymentStageIndex],
+                        invoice_number: invoiceNumber
+                    };
+                    setPaymentStages(updatedPaymentStages);
+                }
+
+                const updatedEditableStages = [...editablePaymentStages];
+                if (updatedEditableStages[paymentStageIndex]) {
+                    updatedEditableStages[paymentStageIndex] = {
+                        ...updatedEditableStages[paymentStageIndex],
+                        invoice_number: invoiceNumber
+                    };
+                    setEditablePaymentStages(updatedEditableStages);
+                }
+            }
+            
             // If paymentStage is undefined, try to get it directly from the index
             if (!paymentStage && paymentStageIndex >= 0) {
                 console.log('Payment stage not found, trying direct access...');
@@ -2228,7 +2368,8 @@ const EditTask = () => {
                         ...originalPaymentStage,
                         phase_amount: editableStage.phase_amount,
                         phase_name: editableStage.phase_name,
-                        due_date: editableStage.due_date
+                        due_date: editableStage.due_date,
+                        invoice_number: invoiceNumber || originalPaymentStage.invoice_number
                     };
                         console.log('Using merged payment stage:', mergedPaymentStage);
                         
@@ -2258,9 +2399,11 @@ const EditTask = () => {
                             };
                         }
                         
-                        // Generate and download PDF directly
-                        console.log('Generating and downloading PDF...');
-                        await generateAndDownloadInvoice(mergedPaymentStage, caseData, customerData);
+                        // Generate and download PDF with invoice number
+                        console.log('Generating and downloading PDF with invoice number:', invoiceNumber);
+                        await generateAndDownloadInvoice(mergedPaymentStage, caseData, customerData, {
+                            invoiceNumber: invoiceNumber || mergedPaymentStage.invoice_number
+                        });
                         console.log('PDF download completed');
                         
                         toast({
@@ -2309,15 +2452,23 @@ const EditTask = () => {
                 console.log('Using fallback customer data:', customerData);
             }
 
-                // Generate and download PDF directly
-                console.log('Generating and downloading PDF...');
-                await generateAndDownloadInvoice(paymentStage, caseData, customerData);
-                console.log('PDF download completed');
-                
-                toast({
-                    title: "Success",
-                    description: "Invoice PDF has been downloaded successfully!",
-                });
+            // Update payment stage with invoice number for PDF generation
+            const paymentStageWithInvoice = {
+                ...paymentStage,
+                invoice_number: invoiceNumber || paymentStage.invoice_number
+            };
+
+            // Generate and download PDF with invoice number
+            console.log('Generating and downloading PDF with invoice number:', invoiceNumber);
+            await generateAndDownloadInvoice(paymentStageWithInvoice, caseData, customerData, {
+                invoiceNumber: invoiceNumber || paymentStageWithInvoice.invoice_number
+            });
+            console.log('PDF download completed');
+            
+            toast({
+                title: "Success",
+                description: "Invoice PDF has been downloaded successfully!",
+            });
 
         } catch (error) {
             console.error('Error preparing invoice:', error);
@@ -3895,7 +4046,7 @@ const EditTask = () => {
                                                     </div>
                                                 </div>
                                                 
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                                     <div>
                                                         <Label>Phase Name</Label>
                                                         <Popover open={phaseNameComboboxOpenIndex === index} onOpenChange={(open) => setPhaseNameComboboxOpenIndex(open ? index : null)}>
@@ -3999,44 +4150,35 @@ const EditTask = () => {
                                                                     <Input
                                                                         type="text"
                                                                         readOnly
-                                                                        value={phase.payment_date ? (() => {
+                                                                        value={phase.due_date ? (() => {
                                                                             try {
-                                                                                // Format date to dd/mm/yyyy
-                                                                                // Always show payment_date if it exists from API
-                                                                                const dateStr = phase.payment_date;
-                                                                                
-                                                                                // Parse YYYY-MM-DD format directly to avoid timezone issues
+                                                                                const dateStr = phase.due_date;
                                                                                 if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
                                                                                     const [year, month, day] = dateStr.split('-').map(Number);
-                                                                                    return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+                                                                                    return `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${year}`;
                                                                                 }
-                                                                                
-                                                                                // Handle ISO format with time
                                                                                 if (dateStr.includes('T')) {
                                                                                     const date = new Date(dateStr);
                                                                                     if (!isNaN(date.getTime())) {
-                                                                                        const day = String(date.getDate()).padStart(2, '0');
                                                                                         const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                                                        const day = String(date.getDate()).padStart(2, '0');
                                                                                         const year = date.getFullYear();
-                                                                                        return `${day}/${month}/${year}`;
+                                                                                        return `${month}/${day}/${year}`;
                                                                                     }
                                                                                 }
-                                                                                
-                                                                                // Fallback for other formats
                                                                                 const date = new Date(dateStr);
                                                                                 if (!isNaN(date.getTime())) {
-                                                                                    const day = String(date.getDate()).padStart(2, '0');
                                                                                     const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                                                    const day = String(date.getDate()).padStart(2, '0');
                                                                                     const year = date.getFullYear();
-                                                                                    return `${day}/${month}/${year}`;
+                                                                                    return `${month}/${day}/${year}`;
                                                                                 }
                                                                                 return '';
-                                                                            } catch (error) {
-                                                                                console.error('Error parsing payment_date:', error, 'dateStr:', phase.payment_date);
+                                                                            } catch {
                                                                                 return '';
                                                                             }
                                                                         })() : ''}
-                                                                        placeholder="dd/mm/yyyy"
+                                                                        placeholder="MM/DD/YYYY"
                                                                         onClick={() => setPaymentDateCalendarOpenIndex(index)}
                                                                         className="mt-1 cursor-pointer pr-10"
                                                                     />
@@ -4046,25 +4188,13 @@ const EditTask = () => {
                                                             <PopoverContent className="w-auto p-0" align="start">
                                                                 <Calendar
                                                                     mode="single"
-                                                                    selected={phase.payment_date ? (() => {
+                                                                    selected={phase.due_date ? (() => {
                                                                         try {
-                                                                            const dateStr = phase.payment_date;
-                                                                            
-                                                                            // Parse YYYY-MM-DD format directly to avoid timezone issues
+                                                                            const dateStr = phase.due_date;
                                                                             if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
                                                                                 const [year, month, day] = dateStr.split('-').map(Number);
-                                                                                // Create date in local timezone (month is 0-indexed in Date constructor)
-                                                                                const date = new Date(year, month - 1, day);
-                                                                                return !isNaN(date.getTime()) ? date : undefined;
+                                                                                return new Date(year, month - 1, day);
                                                                             }
-                                                                            
-                                                                            // Handle ISO format with time
-                                                                            if (dateStr.includes('T')) {
-                                                                                const date = new Date(dateStr);
-                                                                                return !isNaN(date.getTime()) ? date : undefined;
-                                                                            }
-                                                                            
-                                                                            // Fallback for other formats
                                                                             const date = new Date(dateStr);
                                                                             return !isNaN(date.getTime()) ? date : undefined;
                                                                         } catch {
@@ -4073,12 +4203,11 @@ const EditTask = () => {
                                                                     })() : undefined}
                                                                     onSelect={(date) => {
                                                                         if (date) {
-                                                                            // Format date in local timezone (YYYY-MM-DD) to avoid timezone shift
                                                                             const year = date.getFullYear();
                                                                             const month = String(date.getMonth() + 1).padStart(2, '0');
                                                                             const day = String(date.getDate()).padStart(2, '0');
                                                                             const formattedDate = `${year}-${month}-${day}`;
-                                                                            handlePaymentStageChange(index, 'payment_date', formattedDate);
+                                                                            handlePaymentStageChange(index, 'due_date', formattedDate);
                                                                             setPaymentDateCalendarOpenIndex(null);
                                                                         }
                                                                     }}
@@ -4097,98 +4226,21 @@ const EditTask = () => {
                                                             className="mt-1"
                                                         />
                                                     </div>
-                                                    <div>
-                                                        <Label>Status</Label>
-                                                        <Select
-                                                            value={phase.status || 'pending'}
-                                                            onValueChange={(value: 'paid' | 'pending') => handlePaymentStageChange(index, 'status', value)}
-                                                        >
-                                                            <SelectTrigger className="mt-1 w-full">
-                                                                <SelectValue placeholder="Select status" />
-                                                            </SelectTrigger>
-                                                            <SelectContent className="z-[100]" position="popper">
-                                                                <SelectItem value="pending">Pending</SelectItem>
-                                                                <SelectItem value="paid">Paid</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
                                                 </div>
-
+                                                {/* Invoice Number Display */}
+                                                <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                                    <Label className="text-sm font-medium text-gray-700">Invoice Number</Label>
+                                                    <p className="text-sm mt-1 font-semibold text-gray-900">
+                                                        {paymentStages[index]?.invoice_number && 
+                                                         paymentStages[index].invoice_number !== 'N/A' && 
+                                                         paymentStages[index].invoice_number !== null &&
+                                                         String(paymentStages[index].invoice_number).trim() !== '' 
+                                                            ? paymentStages[index].invoice_number 
+                                                            : 'Not Generated'}
+                                                    </p>
+                                                </div>
                                                 {/* Individual Action Buttons for each phase */}
-                                                <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                                                    <div className="text-sm text-gray-600 space-y-1">
-                                                        {formData.due_date && (
-                                                            <div>
-                                                            <span className="text-red-500">
-                                                                Assign Date: {(() => {
-                                                                    try {
-                                                                            const dateStr = formData.due_date;
-                                                                        let date: Date;
-                                                                        
-                                                                        if (dateStr.includes('T')) {
-                                                                            date = new Date(dateStr);
-                                                                        } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                                                                            date = new Date(dateStr + 'T00:00:00');
-                                                                        } else {
-                                                                            date = new Date(dateStr);
-                                                                        }
-                                                                        
-                                                                        if (!isNaN(date.getTime())) {
-                                                                            const day = String(date.getDate()).padStart(2, '0');
-                                                                            const month = String(date.getMonth() + 1).padStart(2, '0');
-                                                                            const year = date.getFullYear();
-                                                                            return `${day}/${month}/${year}`;
-                                                                        }
-                                                                            return new Date(formData.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                                                                    } catch (error) {
-                                                                            return new Date(formData.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                                                                    }
-                                                                })()}
-                                                            </span>
-                                                            </div>
-                                                        )}
-                                                        {phase.payment_date && (
-                                                            <div>
-                                                                <span className="text-green-600 font-medium">
-                                                                    Payment Date: {(() => {
-                                                                        try {
-                                                                            const dateStr = phase.payment_date;
-                                                                            
-                                                                            // Parse YYYY-MM-DD format directly to avoid timezone issues
-                                                                            if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                                                                                const [year, month, day] = dateStr.split('-').map(Number);
-                                                                                return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
-                                                                            }
-                                                                            
-                                                                            // Handle ISO format with time
-                                                                            if (dateStr.includes('T')) {
-                                                                                const date = new Date(dateStr);
-                                                                                if (!isNaN(date.getTime())) {
-                                                                                    const day = String(date.getDate()).padStart(2, '0');
-                                                                                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                                                                                    const year = date.getFullYear();
-                                                                                    return `${day}/${month}/${year}`;
-                                                                                }
-                                                                            }
-                                                                            
-                                                                            // Fallback for other formats
-                                                                            const date = new Date(dateStr);
-                                                                            if (!isNaN(date.getTime())) {
-                                                                                const day = String(date.getDate()).padStart(2, '0');
-                                                                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                                                                const year = date.getFullYear();
-                                                                                return `${day}/${month}/${year}`;
-                                                                            }
-                                                                            return '';
-                                                                        } catch (error) {
-                                                                            console.error('Error parsing payment_date:', error, 'dateStr:', phase.payment_date);
-                                                                            return '';
-                                                                        }
-                                                                    })()}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                <div className="flex justify-end items-center pt-3 border-t border-gray-200">
                                                     <div className="flex space-x-2">
                                                         <Button
                                                             size="sm"

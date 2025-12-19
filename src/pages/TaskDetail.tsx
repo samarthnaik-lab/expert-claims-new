@@ -1242,7 +1242,7 @@ const TaskDetail = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Case Value</p>
+                    <p className="text-sm text-gray-600">Case Amount</p>
                     <p className="font-medium">
                       {caseDetails.case_value ? `${caseDetails.case_value.toLocaleString()} ${caseDetails.value_currency || 'INR'}` : 'Not set'}
                     </p>
@@ -2174,6 +2174,17 @@ const TaskDetail = () => {
                                    Due by: {new Date(phase.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                </p>
                              )}
+                             </div>
+                             <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                               <Label className="text-sm font-medium text-gray-700">Invoice Number</Label>
+                               <p className="text-sm mt-1 font-semibold text-gray-900">
+                                 {phase.invoice_number && 
+                                  phase.invoice_number !== 'N/A' && 
+                                  phase.invoice_number !== null &&
+                                  String(phase.invoice_number).trim() !== '' 
+                                    ? phase.invoice_number 
+                                    : 'Not Generated'}
+                               </p>
                              </div>
                            </div>
                          </div>
