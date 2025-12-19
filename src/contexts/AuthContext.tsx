@@ -49,6 +49,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           const parsedSession: Session = JSON.parse(storedSession);
           const now = Date.now();
+          
+          // Ensure expiresAt exists and is a valid number
+          if (!parsedSession.expiresAt || isNaN(parsedSession.expiresAt)) {
+            console.warn('⚠️ Session missing or invalid expiresAt, setting default expiry');
+            parsedSession.expiresAt = now + (365 * 24 * 60 * 60 * 1000); // 365 days from now
+            localStorage.setItem('expertclaims_session', JSON.stringify(parsedSession));
+          }
+          
           const timeUntilExpiry = parsedSession.expiresAt - now;
           const isAdmin = parsedSession.userRole === 'admin';
           console.log('⏰ Session expires at:', new Date(parsedSession.expiresAt).toLocaleString());
@@ -65,13 +73,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             correctRole = storedUserDetails.role || storedUserDetails.designation || parsedSession.userRole;
           }
           
+          // Check if session is still valid (expiresAt is in the future)
           if (parsedSession.expiresAt > now) {
-            // Session is still valid
+            // Session is still valid - keep user logged in
+            console.log('✅ Session is valid, restoring...');
             const sessionToUse = correctRole !== parsedSession.userRole ? {
               ...parsedSession,
               userRole: correctRole
             } : parsedSession;
             
+            // Set session and authentication state synchronously
             setSession(sessionToUse);
             setIsAuthenticated(true);
             
@@ -80,58 +91,69 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               console.log('Updated session role from stored user details:', sessionToUse.userRole);
             }
             
-            // Use setTimeout to ensure state updates complete before setting loading to false
+            // Set loading to false after a brief delay to ensure state is updated
             setTimeout(() => {
               setIsLoading(false);
-              console.log('✅ Session check complete. Session valid.');
-            }, 0);
+              console.log('✅ Session check complete. User remains logged in.');
+            }, 100);
           } else {
+            // Session has expired
             const timeSinceExpiry = now - parsedSession.expiresAt;
+            const gracePeriod = 24 * 60 * 60 * 1000; // 24 hours grace period
             
-            // For admin users, always restore session even if expired (same as other roles)
-            const gracePeriod = 24 * 60 * 60 * 1000;
-            
-            if (timeSinceExpiry < gracePeriod || isAdmin || correctRole === 'admin') {
-              // For admin, always restore even if expired beyond grace period
+            // Only clear session if expired beyond grace period AND not admin
+            if (timeSinceExpiry >= gracePeriod && !isAdmin && correctRole !== 'admin') {
+              // Session expired beyond grace period for non-admin users
+              console.log('❌ Session expired beyond grace period, logging out...');
+              localStorage.removeItem('expertclaims_session');
+              clearUserDetailsFromStorage();
+              setSession(null);
+              setIsAuthenticated(false);
+              setIsLoading(false);
+            } else {
+              // Session expired but within grace period OR is admin - restore session
               if ((isAdmin || correctRole === 'admin') && timeSinceExpiry >= gracePeriod) {
-                console.log('Admin session expired but restoring anyway...');
+                console.log('✅ Admin session expired but restoring anyway...');
               } else {
-                console.log('Session expired but within grace period, refreshing...');
+                console.log('✅ Session expired but within grace period, refreshing...');
               }
               
               const refreshedSession: Session = {
                 ...parsedSession,
                 userRole: correctRole,
-                expiresAt: now + (365 * 24 * 60 * 60 * 1000) 
+                expiresAt: now + (365 * 24 * 60 * 60 * 1000) // Extend to 365 days
               };
               
               setSession(refreshedSession);
               setIsAuthenticated(true);
               localStorage.setItem('expertclaims_session', JSON.stringify(refreshedSession));
               
-              console.log('Session refreshed successfully with role:', refreshedSession.userRole);
+              console.log('✅ Session refreshed successfully with role:', refreshedSession.userRole);
               
-              // Use setTimeout to ensure state updates complete before setting loading to false
               setTimeout(() => {
                 setIsLoading(false);
                 console.log('✅ Session check complete. Session refreshed.');
-              }, 0);
-            } else {
-              // Session expired beyond grace period, clear it (only for non-admin)
-              console.log('Session expired beyond grace period, clearing...');
-              localStorage.removeItem('expertclaims_session');
-              clearUserDetailsFromStorage();
-              setIsLoading(false);
+              }, 100);
             }
           }
         } catch (error) {
-          console.error('Error parsing stored session:', error);
-          localStorage.removeItem('expertclaims_session');
-          clearUserDetailsFromStorage();
+          console.error('❌ Error parsing stored session:', error);
+          // Only clear on parse error, don't logout if session structure is wrong
+          try {
+            localStorage.removeItem('expertclaims_session');
+            clearUserDetailsFromStorage();
+          } catch (clearError) {
+            console.error('Error clearing session:', clearError);
+          }
+          setSession(null);
+          setIsAuthenticated(false);
           setIsLoading(false);
         }
       } else {
+        // No stored session found
         console.log('❌ No stored session found');
+        setSession(null);
+        setIsAuthenticated(false);
         setIsLoading(false);
       }
     };

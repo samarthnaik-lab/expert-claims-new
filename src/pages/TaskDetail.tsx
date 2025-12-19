@@ -1306,16 +1306,43 @@ const TaskDetail = () => {
                           {(() => {
                             const address = caseDetails.customers.address;
                             if (!address) return 'N/A';
-                            if (typeof address === 'string') return address;
-                            if (typeof address === 'object') {
+                            
+                            // If address is already a string, check if it's a JSON string
+                            if (typeof address === 'string') {
+                              // Try to parse if it looks like JSON
+                              if (address.trim().startsWith('{') || address.trim().startsWith('[')) {
+                                try {
+                                  const parsed = JSON.parse(address);
+                                  if (typeof parsed === 'object' && parsed !== null) {
+                                    // Format the parsed object
+                                    const parts = [
+                                      parsed.street,
+                                      parsed.city,
+                                      parsed.state,
+                                      parsed.zip || parsed.pincode
+                                    ].filter(Boolean);
+                                    return parts.length > 0 ? parts.join(', ') : address;
+                                  }
+                                } catch (e) {
+                                  // If parsing fails, return the string as-is
+                                  return address;
+                                }
+                              }
+                              // Return string address as-is
+                              return address;
+                            }
+                            
+                            // If address is an object
+                            if (typeof address === 'object' && address !== null) {
                               const parts = [
-                                address.street,
-                                address.city,
-                                address.state,
-                                address.zip
+                                (address as any).street,
+                                (address as any).city,
+                                (address as any).state,
+                                (address as any).zip || (address as any).pincode
                               ].filter(Boolean);
                               return parts.length > 0 ? parts.join(', ') : 'N/A';
                             }
+                            
                             return 'N/A';
                           })()}
                         </p>
@@ -2131,12 +2158,23 @@ const TaskDetail = () => {
                                </Badge>
                              </div>
                              
-                             
-                             {phase.status === 'pending' && phase.due_date && (
-                               <p className="text-xs text-red-500 mt-2">
-                                 Due by: {new Date(phase.due_date).toLocaleDateString()}
-                               </p>
-                             )}
+                             <div className="mt-2 space-y-1">
+                               {phase.due_date && (
+                                 <p className="text-xs text-gray-600">
+                                   Due Date: {new Date(phase.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                 </p>
+                               )}
+                               {phase.payment_date && (
+                                 <p className="text-xs text-green-600 font-medium">
+                                   Payment Date: {new Date(phase.payment_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                 </p>
+                               )}
+                               {phase.status === 'pending' && phase.due_date && (
+                                 <p className="text-xs text-red-500">
+                                   Due by: {new Date(phase.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                 </p>
+                               )}
+                             </div>
                            </div>
                          </div>
                        </div>
