@@ -61,6 +61,18 @@ const PartnerSignup = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
+    // Handle mobile number input - only allow digits and limit to 10 digits
+    if (name === 'mobileNumber') {
+      const digitsOnly = value.replace(/\D/g, ''); // Remove non-digits
+      const limitedValue = digitsOnly.slice(0, 10); // Limit to 10 digits
+      setFormData(prev => ({
+        ...prev,
+        [name]: limitedValue
+      }));
+      return;
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -102,9 +114,29 @@ const PartnerSignup = () => {
       return false;
     }
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
+    // Enhanced email validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const trimmedEmail = formData.email.trim().toLowerCase();
+    if (!emailRegex.test(trimmedEmail)) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid email address (e.g., example@domain.com)",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    // Additional email format checks
+    if (trimmedEmail.startsWith('.') || trimmedEmail.startsWith('@') || trimmedEmail.endsWith('@') || trimmedEmail.endsWith('.')) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    if (trimmedEmail.includes('..') || trimmedEmail.includes('@@')) {
       toast({
         title: "Validation Error",
         description: "Please enter a valid email address",
@@ -149,12 +181,35 @@ const PartnerSignup = () => {
       return false;
     }
 
-    // Basic mobile number validation (10 digits)
+    // Enhanced mobile number validation (exactly 10 digits)
+    const mobileDigits = formData.mobileNumber.replace(/\D/g, '');
     const mobileRegex = /^\d{10}$/;
-    if (!mobileRegex.test(formData.mobileNumber.replace(/\D/g, ''))) {
+    
+    if (!mobileRegex.test(mobileDigits)) {
       toast({
         title: "Validation Error",
-        description: "Please enter a valid 10-digit mobile number",
+        description: "Mobile number must be exactly 10 digits",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    // Validate mobile number range (should not start with 0 or 1)
+    const firstDigit = mobileDigits.charAt(0);
+    if (firstDigit === '0' || firstDigit === '1') {
+      toast({
+        title: "Validation Error",
+        description: "Mobile number should not start with 0 or 1",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    // Validate all digits are not the same
+    if (/^(\d)\1{9}$/.test(mobileDigits)) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid mobile number",
         variant: "destructive",
       });
       return false;
@@ -226,7 +281,7 @@ const PartnerSignup = () => {
       console.log("Partner signup data:", signupData);
       
       // Call partner creation API
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/partner_creation', {
+      const response = await fetch('http://localhost:3000/support/partner_creation', {
         method: 'POST',
         headers: {
           'accept': '*/*',
@@ -463,12 +518,21 @@ const PartnerSignup = () => {
                         id="mobileNumber"
                         name="mobileNumber"
                         type="tel"
-                        placeholder="Enter your mobile number"
+                        placeholder="Enter 10-digit mobile number"
                         value={formData.mobileNumber}
                         onChange={handleInputChange}
                         className="pl-10 border-2 border-gray-200 focus:border-primary-500 focus:ring-primary-500 rounded-lg transition-all duration-300"
                         required
+                        minLength={10}
+                        maxLength={10}
+                        pattern="[6-9]\d{9}"
+                        title="Mobile number must be 10 digits and start with 6-9"
                       />
+                      {formData.mobileNumber && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {formData.mobileNumber.replace(/\D/g, '').length}/10 digits
+                        </p>
+                      )}
                     </div>
                   </div>
 

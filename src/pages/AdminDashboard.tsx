@@ -36,6 +36,7 @@ const AdminDashboard = () => {
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('all');
   const [userPartnerTypeFilter, setUserPartnerTypeFilter] = useState('all');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
   const [userPageLimit, setUserPageLimit] = useState('10');
   const [userCurrentPage, setUserCurrentPage] = useState(1);
   const [leavePageLimit, setLeavePageLimit] = useState('10');
@@ -376,72 +377,117 @@ const AdminDashboard = () => {
     }
   }, [activeTab, allTasks, loadingAllTasks, allUsers, loadingAllUsers, allLeaveRequests, loadingAllLeaves, allCasesData, loadingAllCases, reports, reportsLoading, stats, dashboardLoading, statusMapping]);
 
-  // Filter tasks based on search term and status (client-side filtering for now)
-  // Note: In a real implementation, these filters should also be sent to the backend
-  const filteredTasks = tasks.filter(task => {
+  // Extract unique statuses from all tasks for dropdown (dynamic status filter)
+  const availableTaskStatuses = useMemo(() => {
+    const statusSet = new Set<string>();
+    allTasks.forEach((task: any) => {
+      if (task.current_status) {
+        statusSet.add(task.current_status);
+      }
+    });
+    return Array.from(statusSet).sort();
+  }, [allTasks]);
+
+  // Filter tasks based on search term and status
+  // When searching/filtering, use allTasks; otherwise use paginated tasks
+  const isSearchingOrFilteringTasks = searchTerm || statusFilter !== 'all';
+  const tasksToFilter = isSearchingOrFilteringTasks ? allTasks : tasks;
+  
+  const allFilteredTasks = tasksToFilter.filter(task => {
     const searchLower = searchTerm.toLowerCase();
-    const matchesSearch =
-      task.title.toLowerCase().includes(searchLower) ||
-      task.task_id.toLowerCase().includes(searchLower) ||
+    const matchesSearch = !searchTerm || (
+      task.title?.toLowerCase().includes(searchLower) ||
+      task.task_id?.toLowerCase().includes(searchLower) ||
       task.assigned_to_profile?.full_name?.toLowerCase().includes(searchLower) ||
       task.customer_profile?.full_name?.toLowerCase().includes(searchLower) ||
-      task.current_status.toLowerCase().includes(searchLower);
+      task.current_status?.toLowerCase().includes(searchLower)
+    );
     
     // Updated status matching logic (case-insensitive)
+    // If statusFilter is a mapped value (like 'under review'), use mapping
+    // Otherwise, do direct status match (for actual status values from table)
     let matchesStatus = true;
     if (statusFilter !== 'all') {
       const statusArray = statusMapping[statusFilter as keyof typeof statusMapping];
       if (statusArray) {
-        // Convert both task status and mapping values to lowercase for comparison
-        const taskStatusLower = task.current_status.toLowerCase();
+        // Use mapping for filter values like 'under review', 'approved', 'in progress'
+        const taskStatusLower = task.current_status?.toLowerCase() || '';
         matchesStatus = statusArray.some(status => status.toLowerCase() === taskStatusLower);
       } else {
-        matchesStatus = false;
-      }
-      
-      // Debug logging
-      if (statusFilter === 'under review' || statusFilter === 'approved' || statusFilter === 'in progress') {
-        console.log(`Filter: ${statusFilter}, Task Status: ${task.current_status}, Matches: ${matchesStatus}`);
+        // Direct status match for actual status values from table
+        matchesStatus = task.current_status?.toLowerCase() === statusFilter.toLowerCase();
       }
     }
     
     return matchesSearch && matchesStatus;
   });
 
+  // Paginate filtered tasks
+  // When searching/filtering: use client-side pagination on filtered results
+  // When NOT searching/filtering: use API pagination (tasks already paginated from API)
+  const taskPageLimitNum = parseInt(taskPageLimit);
+  const taskStartIndex = (taskCurrentPage - 1) * taskPageLimitNum;
+  const taskEndIndex = taskStartIndex + taskPageLimitNum;
+  
+  const filteredTasks = isSearchingOrFilteringTasks
+    ? allFilteredTasks.slice(taskStartIndex, taskEndIndex) // Client-side pagination for search/filter results
+    : allFilteredTasks; // API pagination - tasks are already paginated
+
   // Get unique partner types from users data
+  // Use allUsersForSearch if available to show all partner types from all records
   const partnerTypes = useMemo(() => {
     const types = new Set<string>();
-    users.forEach((user: any) => {
+    const sourceUsers = allUsersForSearch.length > 0 ? allUsersForSearch : users;
+    sourceUsers.forEach((user: any) => {
       if (user.partner_type && user.partner_type !== 'N/A') {
         types.add(user.partner_type);
       }
     });
     return Array.from(types).sort();
-  }, [users]);
+  }, [allUsersForSearch, users]);
 
-  // Filter users based on search term, status, and partner type
+  // Filter users based on search term, role, and partner type
   // When searching or filtering, use all users; otherwise use current page users for display
-  const isSearchingOrFiltering = userSearchTerm || userStatusFilter !== 'all' || userPartnerTypeFilter !== 'all';
+  // Search, role, and partner type filtering (status filter removed)
+  const isSearchingOrFiltering = userSearchTerm || userRoleFilter !== 'all' || userPartnerTypeFilter !== 'all';
   
   // Determine which user set to filter from
-  const usersToFilter = isSearchingOrFiltering
-    ? (userPartnerTypeFilter !== 'all' ? allFetchedUsers : allUsersForSearch.length > 0 ? allUsersForSearch : users)
-    : (userPartnerTypeFilter !== 'all' ? allFetchedUsers : users);
+  // When filtering/searching, we need all users; otherwise use paginated users
+  // If filtering but allUsersForSearch is empty, use users as fallback (will be limited to current page)
+  const usersToFilter = isSearchingOrFiltering 
+    ? (allUsersForSearch.length > 0 ? allUsersForSearch : users) // Use allUsersForSearch if available when filtering
+    : users; // Use paginated users when not filtering
   
-  // Apply filters
-  const allFilteredUsers = usersToFilter.filter(user => {
-    const searchLower = userSearchTerm.toLowerCase();
-    const matchesSearch = !userSearchTerm || (
-      (user.id && user.id.toLowerCase().includes(searchLower)) ||
-      (user.name && user.name.toLowerCase().includes(searchLower)) ||
-      (user.role && user.role.toLowerCase().includes(searchLower)) ||
-      (user.status && user.status.toLowerCase().includes(searchLower)) ||
-      (user.email && user.email.toLowerCase().includes(searchLower))
-    );
-    const matchesStatus = userStatusFilter === 'all' || (user.status && user.status === userStatusFilter);
-    const matchesPartnerType = userPartnerTypeFilter === 'all' || ((user as any).partner_type && (user as any).partner_type === userPartnerTypeFilter);
-    return matchesSearch && matchesStatus && matchesPartnerType;
-  });
+  // Extract unique roles from users data for dropdown
+  // Use allUsersForSearch if available to show all roles, otherwise use current users
+  const availableRoles = useMemo(() => {
+    const rolesSet = new Set<string>();
+    const sourceUsers = allUsersForSearch.length > 0 ? allUsersForSearch : users;
+    sourceUsers.forEach(user => {
+      if (user.role) {
+        rolesSet.add(user.role);
+      }
+    });
+    return Array.from(rolesSet).sort();
+  }, [allUsersForSearch, users]);
+  
+  // Apply search, role, and partner type filters (status filter removed)
+  // Only filter if we have data to filter (when filtering, wait for allUsersForSearch to load)
+  const allFilteredUsers = (isSearchingOrFiltering && allUsersForSearch.length === 0 && loadingAllUsers)
+    ? [] // Show empty while loading all users for filtering
+    : usersToFilter.filter(user => {
+        const searchLower = userSearchTerm.toLowerCase();
+        const matchesSearch = !userSearchTerm || (
+          (user.id && user.id.toLowerCase().includes(searchLower)) ||
+          (user.name && user.name.toLowerCase().includes(searchLower)) ||
+          (user.role && user.role.toLowerCase().includes(searchLower)) ||
+          (user.status && user.status.toLowerCase().includes(searchLower)) ||
+          (user.email && user.email.toLowerCase().includes(searchLower))
+        );
+        const matchesRole = userRoleFilter === 'all' || (user.role && user.role === userRoleFilter);
+        const matchesPartnerType = userPartnerTypeFilter === 'all' || ((user as any).partner_type && (user as any).partner_type === userPartnerTypeFilter);
+        return matchesSearch && matchesRole && matchesPartnerType;
+      });
 
   // Paginate filtered users
   // When searching/filtering: use client-side pagination on filtered results
@@ -452,7 +498,7 @@ const AdminDashboard = () => {
   
   const filteredUsers = isSearchingOrFiltering
     ? allFilteredUsers.slice(startIndex, endIndex) // Client-side pagination for search/filter results
-    : allFilteredUsers; // API pagination - users are already paginated
+    : users; // API pagination - users are already paginated
 
   // Initialize active tab from URL parameters
   useEffect(() => {
@@ -478,8 +524,12 @@ const AdminDashboard = () => {
       fetchTasks(); // Fetch paginated tasks for table
     }
     if (activeTab === 'users') {
-      fetchAllUsers(); // Fetch all users for cards
+      fetchAllUsers(); // Fetch all users for cards and filtering
       fetchUsers(); // Fetch paginated users for table
+      // Also ensure allUsersForSearch is populated for filtering
+      if (allUsersForSearch.length === 0) {
+        // fetchAllUsers will populate allUsersForSearch
+      }
     }
     if (activeTab === 'leave') {
       fetchAllLeaveRequests(); // Fetch all leave requests for cards
@@ -494,41 +544,28 @@ const AdminDashboard = () => {
     }
   }, [activeTab]);
 
-  // Reset accumulated users and page when partner type filter changes
+  // Fetch all users for searching when users tab is active or when filtering
+  // This ensures partner type filter checks all records, not just current page
   useEffect(() => {
-    if (activeTab === 'users' && userPartnerTypeFilter !== 'all') {
-      // Reset to page 1 and clear accumulated users when filter changes
-      setUserCurrentPage(1);
-      setAllFetchedUsers([]);
-      setHasMoreUsers(true);
-      // Trigger fetch for page 1
-      fetchUsers();
-    } else if (activeTab === 'users' && userPartnerTypeFilter === 'all') {
-      // Clear accumulated users when filter is removed
-      setAllFetchedUsers([]);
-    }
-  }, [userPartnerTypeFilter]);
-
-  // Fetch all users for searching when users tab is active
-  useEffect(() => {
-    if (activeTab === 'users' && allUsersForSearch.length === 0) {
+    if (activeTab === 'users' && isSearchingOrFiltering && allUsersForSearch.length === 0 && !loadingAllUsers) {
+      console.log('Fetching all users for filtering (including partner type filter)...');
       fetchAllUsers();
     }
-  }, [activeTab]);
+  }, [activeTab, isSearchingOrFiltering, userSearchTerm, userRoleFilter, userPartnerTypeFilter]);
 
   // Reset to page 1 when search term or filters change
   useEffect(() => {
-    if (activeTab === 'users' && (userSearchTerm || userStatusFilter !== 'all' || userPartnerTypeFilter !== 'all')) {
+    if (activeTab === 'users' && (userSearchTerm || userRoleFilter !== 'all' || userPartnerTypeFilter !== 'all')) {
       setUserCurrentPage(1);
     }
-  }, [userSearchTerm, userStatusFilter, userPartnerTypeFilter, activeTab]);
+  }, [userSearchTerm, userRoleFilter, userPartnerTypeFilter, activeTab]);
 
   // Refetch users when pagination parameters change (only if not searching/filtering)
   useEffect(() => {
-    if (activeTab === 'users' && !userSearchTerm && userStatusFilter === 'all' && userPartnerTypeFilter === 'all') {
+    if (activeTab === 'users' && !isSearchingOrFiltering) {
       fetchUsers();
     }
-  }, [userCurrentPage, userPageLimit]);
+  }, [userCurrentPage, userPageLimit, activeTab]);
 
   // Refetch leave requests when pagination parameters change
   useEffect(() => {
@@ -537,12 +574,19 @@ const AdminDashboard = () => {
     }
   }, [leaveCurrentPage, leavePageLimit]);
 
-  // Refetch tasks when pagination parameters change
+  // Refetch tasks when pagination parameters change (only if not searching/filtering)
   useEffect(() => {
-    if (activeTab === 'tasks') {
+    if (activeTab === 'tasks' && !isSearchingOrFilteringTasks) {
       fetchTasks();
     }
-  }, [taskCurrentPage, taskPageLimit]);
+  }, [taskCurrentPage, taskPageLimit, activeTab]);
+
+  // Reset to page 1 when search term or status filter changes
+  useEffect(() => {
+    if (activeTab === 'tasks' && (searchTerm || statusFilter !== 'all')) {
+      setTaskCurrentPage(1);
+    }
+  }, [searchTerm, statusFilter, activeTab]);
 
 
   const fetchDashboardData = async () => {
@@ -791,22 +835,9 @@ const AdminDashboard = () => {
               customers: user.customers
             }));
 
-            // If filtering by partner type, accumulate users across pages
-            if (userPartnerTypeFilter !== 'all') {
-              setAllFetchedUsers(prev => {
-                // Remove duplicates based on user ID
-                const existingIds = new Set(prev.map(u => u.id));
-                const newUsers = transformedUsers.filter(u => !existingIds.has(u.id));
-                return [...prev, ...newUsers];
-              });
-              // Check if we got a full page (means there might be more to fetch)
-              setHasMoreUsers(transformedUsers.length >= parseInt(userPageLimit));
-            } else {
-              // Normal pagination - replace users
-              setUsers(transformedUsers);
-              setAllFetchedUsers([]); // Clear accumulated users
-              setHasMoreUsers(transformedUsers.length >= parseInt(userPageLimit));
-            }
+            // Store paginated users
+            setUsers(transformedUsers);
+            setHasMoreUsers(transformedUsers.length >= parseInt(userPageLimit));
             console.log('Transformed users:', transformedUsers);
           } else if (firstResult.status === 'error' || firstResult.status === 'failure') {
             console.error('API returned error:', firstResult);
@@ -2503,30 +2534,32 @@ Created Time: ${report.created_time}
             {/* Search and Filter Section */}
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className="relative flex-1 max-w-sm">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="relative flex-1 w-full sm:max-w-sm">
                     <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                     <Input
                       placeholder="Search by task ID, assignee, customer, or status..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 border-2 border-gray-200 rounded-lg focus:border-primary-500"
+                      className="pl-10 border-2 border-gray-200 rounded-lg focus:border-primary-500 w-full"
                     />
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Filter className="h-4 w-4 text-gray-500" />
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <Filter className="h-4 w-4 text-gray-500 hidden sm:block" />
                     <Select
                       value={statusFilter}
                       onValueChange={setStatusFilter}
                     >
-                      <SelectTrigger className="w-40 border-2 border-gray-200 rounded-lg focus:border-primary-500">
+                      <SelectTrigger className="w-full sm:w-40 border-2 border-gray-200 rounded-lg focus:border-primary-500">
                         <SelectValue placeholder="Filter by status" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[100]">
                         <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="under review">Under Review</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="in progress">In Progress</SelectItem>
+                        {availableTaskStatuses.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Select
@@ -2536,10 +2569,10 @@ Created Time: ${report.created_time}
                         setTaskCurrentPage(1); // Reset to first page when limit changes
                       }}
                     >
-                      <SelectTrigger className="w-32 border-2 border-gray-200 rounded-lg focus:border-primary-500">
+                      <SelectTrigger className="w-full sm:w-32 border-2 border-gray-200 rounded-lg focus:border-primary-500">
                         <SelectValue placeholder="Page limit" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[100]">
                         <SelectItem value="10">10</SelectItem>
                         <SelectItem value="30">30</SelectItem>
                         <SelectItem value="50">50</SelectItem>
@@ -2555,7 +2588,7 @@ Created Time: ${report.created_time}
                           setSearchTerm('');
                           setStatusFilter('all');
                         }}
-                        className="border-2 border-gray-300 hover:border-primary-500"
+                        className="border-2 border-gray-300 hover:border-primary-500 w-full sm:w-auto"
                       >
                         Clear
                       </Button>
@@ -2640,9 +2673,13 @@ Created Time: ${report.created_time}
             </Card>
 
             {/* Pagination Controls */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-sm text-gray-700">
-                Showing {filteredTasks.length} tasks
+                {isSearchingOrFilteringTasks ? (
+                  <>Showing {filteredTasks.length} of {allFilteredTasks.length} filtered tasks</>
+                ) : (
+                  <>Showing {filteredTasks.length} tasks</>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <Button
@@ -2661,7 +2698,11 @@ Created Time: ${report.created_time}
                   variant="outline"
                   size="sm"
                   onClick={() => setTaskCurrentPage(prev => prev + 1)}
-                  disabled={filteredTasks.length < parseInt(taskPageLimit)}
+                  disabled={
+                    isSearchingOrFilteringTasks
+                      ? (taskEndIndex >= allFilteredTasks.length) // No more filtered tasks when searching/filtering
+                      : (filteredTasks.length < parseInt(taskPageLimit)) // Normal pagination: disabled when no more pages from API
+                  }
                   className="border-2 border-gray-300 hover:border-primary-500"
                 >
                   Next
@@ -2690,18 +2731,21 @@ Created Time: ${report.created_time}
                   </div>
                   <div className="flex items-center space-x-2">
                     <Filter className="h-4 w-4 text-gray-500" />
+                    {/* Status filter hidden as per requirements */}
                     <Select
-                      value={userStatusFilter}
-                      onValueChange={setUserStatusFilter}
+                      value={userRoleFilter}
+                      onValueChange={setUserRoleFilter}
                     >
                       <SelectTrigger className="w-40 border-2 border-gray-200 rounded-lg focus:border-primary-500">
-                        <SelectValue placeholder="Filter by status" />
+                        <SelectValue placeholder="Filter by role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                        <SelectItem value="suspended">Suspended</SelectItem>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        {availableRoles.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {role.charAt(0).toUpperCase() + role.slice(1)}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Select
@@ -2735,16 +2779,15 @@ Created Time: ${report.created_time}
                         <SelectItem value="30">30</SelectItem>
                         <SelectItem value="50">50</SelectItem>
                         <SelectItem value="100">100</SelectItem>
-                        
                       </SelectContent>
                     </Select>
-                    {(userSearchTerm || userStatusFilter !== 'all' || userPartnerTypeFilter !== 'all') && (
+                    {(userSearchTerm || userRoleFilter !== 'all' || userPartnerTypeFilter !== 'all') && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => {
                           setUserSearchTerm('');
-                          setUserStatusFilter('all');
+                          setUserRoleFilter('all');
                           setUserPartnerTypeFilter('all');
                         }}
                         className="border-2 border-gray-300 hover:border-primary-500"
@@ -2859,22 +2902,20 @@ Created Time: ${report.created_time}
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    // If filtering by partner type and we don't have enough filtered users for next page, fetch more
-                    const nextPageStartIndex = userCurrentPage * pageLimit;
-                    if (userPartnerTypeFilter !== 'all' && nextPageStartIndex >= allFilteredUsers.length && hasMoreUsers) {
-                      // Fetch next page from API to get more users that might match the filter
-                      setUserCurrentPage(prev => prev + 1);
+                    if (isSearchingOrFiltering) {
+                      // Client-side pagination - check if there are more filtered results
+                      if (endIndex < allFilteredUsers.length) {
+                        setUserCurrentPage(prev => prev + 1);
+                      }
                     } else {
-                      // Normal pagination - move to next page
+                      // API pagination - move to next page
                       setUserCurrentPage(prev => prev + 1);
                     }
                   }}
                   disabled={
                     isSearchingOrFiltering
                       ? (endIndex >= allFilteredUsers.length) // No more filtered users when searching/filtering
-                      : (userPartnerTypeFilter !== 'all'
-                          ? (endIndex >= allFilteredUsers.length && !hasMoreUsers) // No more filtered users AND no more API pages
-                          : !hasMoreUsers) // Normal pagination: disabled when no more pages from API
+                      : !hasMoreUsers // Normal pagination: disabled when no more pages from API
                   }
                   className="border-2 border-gray-300 hover:border-primary-500"
                 >

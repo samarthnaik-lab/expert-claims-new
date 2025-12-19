@@ -44,6 +44,7 @@ const EditRegister = () => {
     age: '',
     username: '',
     role: '',
+    status: 'active', // User status: active, inactive, suspended
     address: '',
     emergency_contact: '',
     employment_status: '',
@@ -321,6 +322,7 @@ const EditRegister = () => {
           age: age,
           username: fetchedUserData.username || '',
           role: fetchedUserData.role || '',
+          status: (fetchedUserData as any).status || 'active', // Get status from API, default to 'active'
           address: address,
           emergency_contact: emergencyContact,
           employment_status: fetchedUserData.role === 'employee' ? fetchedUserData.employees?.employment_status || '' : '',
@@ -485,6 +487,7 @@ const EditRegister = () => {
           password: hashedPassword, // Send hashed password or empty string if no password change
           username: formData.username,
           role: formData.role,
+          status: formData.status || 'active', // Include user status
           mobile_number: formData.mobile,
           emergency_contact: formData.emergency_contact,
           gender: formData.gender,
@@ -558,6 +561,7 @@ const EditRegister = () => {
           password: hashedPassword, // Send hashed password or empty string if no password change
           username: formData.username,
           role: formData.role,
+          status: formData.status || 'active', // Include user status
           mobile_number: formData.mobile,
           emergency_contact: formData.emergency_contact,
           gender: formData.gender,
@@ -616,6 +620,7 @@ const EditRegister = () => {
           password: hashedPassword, // Send hashed password or empty string if no password change
           username: formData.username,
           role: formData.role,
+          status: formData.status || 'active', // Include user status
           designation: formData.designation,
           department: formData.department,
           mobile_number: formData.mobile,
@@ -682,6 +687,7 @@ const EditRegister = () => {
           password: hashedPassword, // Send hashed password or empty string if no password change
           username: formData.username,
           role: formData.role,
+          status: formData.status || 'active', // Include user status
           mobile_number: formData.mobile,
           emergency_contact: formData.emergency_contact,
           gender: formData.gender,
@@ -885,6 +891,22 @@ const EditRegister = () => {
                       <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="partner">Partner</SelectItem>
                       <SelectItem value="customer">Customer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="status">User Status *</Label>
+                  <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
