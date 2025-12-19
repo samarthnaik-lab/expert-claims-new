@@ -2169,11 +2169,11 @@ const TaskDetail = () => {
                                    Payment Date: {new Date(phase.payment_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                  </p>
                                )}
-                               {phase.status === 'pending' && phase.due_date && (
+                             {phase.status === 'pending' && phase.due_date && (
                                  <p className="text-xs text-red-500">
                                    Due by: {new Date(phase.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                                 </p>
-                               )}
+                               </p>
+                             )}
                              </div>
                            </div>
                          </div>

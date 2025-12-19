@@ -20,6 +20,21 @@ import { AuthService } from '@/services/authService';
  * we temporarily support sending hashed passwords for migration.
  * New users should send plain passwords.
  */
+// Helper function to mask mobile number - show only last 4 digits
+const maskMobileNumber = (message: string): string => {
+  if (!message) return message;
+  
+  // Pattern to match mobile numbers (10 digits)
+  const mobilePattern = /\b(\d{10})\b/g;
+  
+  return message.replace(mobilePattern, (match) => {
+    // Keep only last 4 digits, mask the rest
+    const last4 = match.slice(-4);
+    const masked = '*'.repeat(6) + last4; // 6 stars + last 4 digits
+    return masked;
+  });
+};
+
 const getPasswordForBackend = (password: string, isLegacyUser: boolean = false): string => {
   if (isLegacyUser) {
     // Legacy: Generate fake hash for users with fake hashes in DB
@@ -287,9 +302,13 @@ const Login = () => {
         if (result.nextStep === 'final_login' || result.requiresOtp) {
           setLoginStep('otp_sent');
           setOtpSent(true);
+          // Mask mobile number in the message
+          const message = result.message || "OTP has been sent to your mobile number. Please enter the OTP code.";
+          const maskedMessage = maskMobileNumber(message);
+          
           toast({
             title: "OTP Sent Successfully",
-            description: result.message || "OTP has been sent to your mobile number. Please enter the OTP code.",
+            description: maskedMessage,
           });
         } else {
           // Credentials validated but OTP not sent yet (shouldn't happen with new flow)
@@ -373,11 +392,16 @@ const Login = () => {
           setFormData(prev => ({ ...prev, otp: result.otp }));
         }
 
+        // Mask mobile number in the message
+        const defaultMessage = role === 'admin' 
+          ? `OTP sent to email ${formData.email}` 
+          : "OTP has been sent to your mobile number. Please enter the OTP code.";
+        const message = result.message || defaultMessage;
+        const maskedMessage = role === 'admin' ? message : maskMobileNumber(message); // Only mask for non-admin (mobile numbers)
+        
         toast({
           title: "OTP Sent Successfully",
-          description: result.message || (role === 'admin' 
-            ? `OTP sent to email ${formData.email}` 
-            : "OTP has been sent to your mobile number. Please enter the OTP code."),
+          description: maskedMessage,
         });
       } else {
         toast({

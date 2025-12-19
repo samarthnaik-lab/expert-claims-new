@@ -877,7 +877,7 @@ const NewTask = () => {
       case_type: "", // Not used in API
       phase_amount: newPayment.phase_amount, // Not used in API
       due_date: newPayment.due_date,
-      status: "", // Not used in API
+      status: newPayment.status || "pending", // Use status from form
       payment_date: null, // Not used in API
       payment_method: null, // Not used in API
       transaction_reference: null, // Not used in API
@@ -1209,10 +1209,11 @@ const NewTask = () => {
     const taskPayments = paymentStages.map((payment) => {
       // Build payment object with required fields
       const paymentObj: any = {
-        phase_name: payment.phase_name,
-        due_date: payment.due_date,
-        phase_amount: payment.phase_amount,
-        created_by: employeeId,
+      phase_name: payment.phase_name,
+      due_date: payment.due_date,
+      phase_amount: payment.phase_amount,
+      created_by: employeeId,
+      status: payment.status || 'pending' // Include status in payment object
       };
       
       // Only include payment_date if it exists and is different from due_date
@@ -2198,7 +2199,7 @@ const NewTask = () => {
 
           try {
             // Always call uploadDocuments - it will handle the case where files might not be detected
-            await uploadDocuments(caseId);
+          await uploadDocuments(caseId);
             console.log("✅ Document upload completed successfully");
           } catch (error) {
             console.error("❌ Error uploading documents:", error);
@@ -3828,6 +3829,26 @@ const NewTask = () => {
                       }}
                       placeholder="Enter paid amount"
                     />
+                  </div>
+                  <div>
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      value={newPayment.status || "pending"}
+                      onValueChange={(value) =>
+                        setNewPayment({
+                          ...newPayment,
+                          status: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="mt-1" id="status">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <DialogFooter>

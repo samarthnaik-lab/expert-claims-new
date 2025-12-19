@@ -206,7 +206,8 @@ const EditTask = () => {
     const [paymentPhaseForm, setPaymentPhaseForm] = useState({
         phase_name: '',
         due_date: '',
-        phase_amount: 0
+        phase_amount: 0,
+        status: 'pending' as 'paid' | 'pending'
     });
     const [calendarOpen, setCalendarOpen] = useState(false);
     const [paymentDateCalendarOpenIndex, setPaymentDateCalendarOpenIndex] = useState<number | null>(null);
@@ -494,16 +495,22 @@ const EditTask = () => {
         // Populate payment stages if available
         if (taskData.case_payment_phases && Array.isArray(taskData.case_payment_phases)) {
             const transformedPaymentStages = taskData.case_payment_phases.map((payment: any, index: number) => {
-                // Ensure payment_date is only set if it exists and is different from due_date
-                const paymentDate = payment.payment_date && payment.payment_date !== payment.due_date 
-                    ? payment.payment_date 
-                    : (payment.payment_date || null);
+                // Always use payment_date if it exists from the API, regardless of due_date
+                const paymentDate = payment.payment_date || null;
+                
+                console.log(`Payment Phase ${index + 1}:`, {
+                    phase_name: payment.phase_name,
+                    due_date: payment.due_date,
+                    payment_date: payment.payment_date,
+                    paymentDate: paymentDate,
+                    status: payment.status
+                });
                 
                 return {
                     case_phase_id: payment.case_phase_id,
                     phase_name: payment.phase_name,
                     notes: payment.notes,
-                    status: payment.status,
+                    status: payment.status || 'pending', // Ensure status is always set, default to 'pending'
                     case_id: payment.case_id,
                     due_date: payment.due_date,
                     created_by: payment.created_by,
@@ -511,7 +518,7 @@ const EditTask = () => {
                     paid_amount: payment.paid_amount,
                     case_type_id: payment.case_type_id,
                     created_time: payment.created_time,
-                    payment_date: paymentDate, // Only use actual payment_date, not due_date
+                    payment_date: paymentDate, // Always use payment_date from API if it exists
                     phase_amount: payment.phase_amount,
                     updated_time: payment.updated_time,
                     invoice_number: payment.invoice_number,
@@ -525,8 +532,9 @@ const EditTask = () => {
             const editableStages = transformedPaymentStages.map((payment: any) => ({
                 phase_name: payment.phase_name,
                 due_date: payment.due_date,
-                payment_date: payment.payment_date || null, // Use null instead of empty string, and don't default to due_date
+                payment_date: payment.payment_date || null, // Always include payment_date if it exists
                 phase_amount: payment.phase_amount,
+                status: payment.status || 'pending', // Include status from API
                 created_by: payment.created_by || 1 // Default to 1 if not available
             }));
             setEditablePaymentStages(editableStages);
@@ -2025,7 +2033,16 @@ const EditTask = () => {
     };
 
     const handleDateChange = (date: Date | undefined) => {
-        setFormData(prev => ({ ...prev, due_date: date ? date.toISOString().split('T')[0] : '' }));
+        if (date) {
+            // Format date in local timezone (YYYY-MM-DD) to avoid timezone shift
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const formattedDate = `${year}-${month}-${day}`;
+            setFormData(prev => ({ ...prev, due_date: formattedDate }));
+        } else {
+            setFormData(prev => ({ ...prev, due_date: '' }));
+        }
     };
 
     const addStakeholder = () => {
@@ -2256,24 +2273,57 @@ const EditTask = () => {
                 try {
                     const userDetailsData = JSON.parse(userDetailsRaw);
                     const userDetails = Array.isArray(userDetailsData) ? userDetailsData[0] : userDetailsData;
-                    employeeId = userDetails.userid || 1;
+                    employeeId = userDetails.userid || userDetails.employee_id || 1;
                     console.log('Using employee_id from localStorage:', employeeId);
                 } catch (error) {
                     console.error('Error parsing user details:', error);
                 }
             }
 
+            // Get session_id and jwt_token from localStorage
+            const sessionStr = localStorage.getItem('expertclaims_session');
+            let sessionId = '';
+            let jwtToken = '';
+            
+            if (sessionStr) {
+                try {
+                    const sessionData = JSON.parse(sessionStr);
+                    sessionId = sessionData.sessionId || sessionData.session_id || '';
+                    jwtToken = sessionData.jwtToken || sessionData.jwt_token || '';
+                } catch (error) {
+                    console.error('Error parsing session data:', error);
+                }
+            }
+
+            // Prepare payload matching the API format
             const updateData = {
                 case_phase_id: originalPhase.case_phase_id,
-                phase_amount: phase.phase_amount,
+                phase_amount: parseFloat(phase.phase_amount) || 0,
                 updated_by: employeeId,
                 phase_name: phase.phase_name,
-                due_date: phase.due_date
+                due_date: phase.due_date,
+                payment_date: phase.due_date, // Set payment_date same as due_date
+                status: phase.status || 'pending' // Include status in update
             };
 
-            console.log('Updating payment phase:', updateData);
+            console.log('Updating payment phase with payload:', updateData);
+            console.log('API Request URL: http://localhost:3000/support/updatepayment');
 
-            const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/updatepayment', {
+            // Get session_id and jwt_token from localStorage if not already set
+            if (!sessionId || !jwtToken) {
+                const sessionStr = localStorage.getItem('expertclaims_session');
+                if (sessionStr) {
+                    try {
+                        const sessionData = JSON.parse(sessionStr);
+                        sessionId = sessionId || sessionData.sessionId || sessionData.session_id || '';
+                        jwtToken = jwtToken || sessionData.jwtToken || sessionData.jwt_token || '';
+                    } catch (error) {
+                        console.error('Error parsing session data:', error);
+                    }
+                }
+            }
+
+            const response = await fetch('http://localhost:3000/support/updatepayment', {
                 method: 'PATCH',
                 headers: {
                     'accept': '*/*',
@@ -2281,28 +2331,33 @@ const EditTask = () => {
                     'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
                     'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
                     'content-type': 'application/json',
-                    'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k',
-                    'origin': 'http://localhost:8080',
-                    'priority': 'u=1, i',
-                    'referer': 'http://localhost:8080/',
-                    'sec-ch-ua': '"Not;A=Brand";v="99", "Google Chrome";v="139", "Chromium";v="139"',
-                    'sec-ch-ua-mobile': '?0',
-                    'sec-ch-ua-platform': '"Windows"',
-                    'sec-fetch-dest': 'empty',
-                    'sec-fetch-mode': 'cors',
-                    'sec-fetch-site': 'cross-site',
-                    'session_id': 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2',
-                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'
+                    'jwt_token': jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k',
+                    'session_id': sessionId || 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2',
+                    'Connection': 'keep-alive',
+                    'Origin': 'http://localhost:8080',
+                    'Referer': 'http://localhost:8080/',
+                    'Sec-Fetch-Dest': 'empty',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Site': 'same-site',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
                 },
                 body: JSON.stringify(updateData)
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                console.error('Payment phase update failed:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorText
+                });
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
             }
 
             const result = await response.json();
-            console.log('Payment phase update result:', result);
+            console.log('Payment phase update successful. Response:', result);
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
             // Update the local paymentStages with the updated data
             const updatedPaymentStages = [...paymentStages];
@@ -2311,7 +2366,8 @@ const EditTask = () => {
                 phase_name: phase.phase_name,
                 due_date: phase.due_date,
                 payment_date: phase.payment_date || null, // Update payment_date in local state
-                phase_amount: phase.phase_amount
+                phase_amount: phase.phase_amount,
+                status: phase.status || 'pending' // Update status in local state
             };
             setPaymentStages(updatedPaymentStages);
             
@@ -2319,7 +2375,8 @@ const EditTask = () => {
             const updatedEditableStages = [...editablePaymentStages];
             updatedEditableStages[phaseIndex] = {
                 ...updatedEditableStages[phaseIndex],
-                payment_date: phase.payment_date || ''
+                payment_date: phase.payment_date || '',
+                status: phase.status || 'pending' // Update status in editable stages
             };
             setEditablePaymentStages(updatedEditableStages);
 
@@ -2351,7 +2408,8 @@ const EditTask = () => {
         setPaymentPhaseForm({
             phase_name: '',
             due_date: '',
-            phase_amount: 0
+            phase_amount: 0,
+            status: 'pending' as 'paid' | 'pending'
         });
         setShowPaymentPhaseModal(true);
     };
@@ -2363,7 +2421,8 @@ const EditTask = () => {
         setPaymentPhaseForm({
             phase_name: '',
             due_date: '',
-            phase_amount: 0
+            phase_amount: 0,
+            status: 'pending' as 'paid' | 'pending'
         });
     };
 
@@ -2437,6 +2496,7 @@ const EditTask = () => {
                 updated_by: employeeId,
                 case_type_id: caseTypeId,
                 payment_date: paymentPhaseForm.due_date, // Set payment_date to the same as due_date dynamically
+                status: paymentPhaseForm.status || 'pending' // Use status from form
             };
 
             // Create payload with payments array (same format as when creating a task)
@@ -2447,6 +2507,21 @@ const EditTask = () => {
 
             console.log('Creating new payment phase:', createData);
 
+            // Get session_id and jwt_token from localStorage
+            const sessionStr = localStorage.getItem('expertclaims_session');
+            let sessionId = '';
+            let jwtToken = '';
+            
+            if (sessionStr) {
+                try {
+                    const sessionData = JSON.parse(sessionStr);
+                    sessionId = sessionData.sessionId || sessionData.session_id || '';
+                    jwtToken = sessionData.jwtToken || sessionData.jwt_token || '';
+                } catch (error) {
+                    console.error('Error parsing session data:', error);
+                }
+            }
+
             const response = await fetch('http://localhost:3000/support/createcasepaymentphases', {
                 method: 'POST',
                 headers: {
@@ -2455,8 +2530,15 @@ const EditTask = () => {
                     'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
                     'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
                     'content-type': 'application/json',
-                    'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k',
-                    'session_id': 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2'
+                    'jwt_token': jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k',
+                    'session_id': sessionId || 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2',
+                    'Connection': 'keep-alive',
+                    'Origin': 'http://localhost:8080',
+                    'Referer': 'http://localhost:8080/',
+                    'Sec-Fetch-Dest': 'empty',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Site': 'same-site',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
                 },
                 body: JSON.stringify(createData)
             });
@@ -2467,15 +2549,19 @@ const EditTask = () => {
 
             const result = await response.json();
             console.log('Payment phase created:', result);
+            console.log('Created payment phase status:', paymentPhaseForm.status);
 
             toast({
                 title: "Success",
                 description: "Payment phase created successfully!",
             });
             
-            // Refresh task data to get updated payment phases
+            // Refresh task data to get updated payment phases with status
             if (taskId) {
-                fetchTaskData();
+                // Small delay to ensure backend has processed the creation
+                setTimeout(() => {
+                    fetchTaskData();
+                }, 500);
             }
 
             handleClosePaymentPhaseModal();
@@ -3678,21 +3764,33 @@ const EditTask = () => {
                                     
                                 {paymentStages.length > 0 ? (
                                     <>
-                                        {editablePaymentStages.map((phase: any, index: number) => (
+                                        {editablePaymentStages.map((phase: any, index: number) => {
+                                            // Debug logging for payment_date
+                                            if (index === 0) {
+                                                console.log('Payment Phase Debug:', {
+                                                    phase_index: index,
+                                                    phase_name: phase.phase_name,
+                                                    payment_date: phase.payment_date,
+                                                    payment_date_type: typeof phase.payment_date,
+                                                    due_date: phase.due_date,
+                                                    full_phase: phase
+                                                });
+                                            }
+                                            return (
                                             <div key={index} className="border rounded-lg p-4 bg-white shadow-sm">
                                                 <div className="flex justify-between items-start mb-4">
                                                     <h4 className="font-semibold text-gray-900">Payment Phase {index + 1}</h4>
                                                     <div className="flex items-center space-x-2">
                                                         <Badge
-                                                            variant={paymentStages[index]?.status === 'paid' ? 'default' : 'secondary'}
-                                                            className={paymentStages[index]?.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
+                                                            variant={(paymentStages[index]?.status || editablePaymentStages[index]?.status || 'pending') === 'paid' ? 'default' : 'secondary'}
+                                                            className={(paymentStages[index]?.status || editablePaymentStages[index]?.status || 'pending') === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
                                                         >
-                                                            {paymentStages[index]?.status === 'paid' ? 'Paid' : 'Pending'}
+                                                            {(paymentStages[index]?.status || editablePaymentStages[index]?.status || 'pending') === 'paid' ? 'Paid' : 'Pending'}
                                                         </Badge>
                                                     </div>
                                                 </div>
                                                 
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                                                     <div>
                                                         <Label>Phase Name</Label>
                                                         <Popover open={phaseNameComboboxOpenIndex === index} onOpenChange={(open) => setPhaseNameComboboxOpenIndex(open ? index : null)}>
@@ -3796,21 +3894,31 @@ const EditTask = () => {
                                                                     <Input
                                                                         type="text"
                                                                         readOnly
-                                                                        value={phase.payment_date && phase.payment_date !== phase.due_date ? (() => {
+                                                                        value={phase.payment_date ? (() => {
                                                                             try {
                                                                                 // Format date to dd/mm/yyyy
-                                                                                // Only show payment_date if it's different from due_date
+                                                                                // Always show payment_date if it exists from API
                                                                                 const dateStr = phase.payment_date;
-                                                                                let date: Date;
                                                                                 
-                                                                                if (dateStr.includes('T')) {
-                                                                                    date = new Date(dateStr);
-                                                                                } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                                                                                    date = new Date(dateStr + 'T00:00:00');
-                                                                                } else {
-                                                                                    date = new Date(dateStr);
+                                                                                // Parse YYYY-MM-DD format directly to avoid timezone issues
+                                                                                if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                                                    const [year, month, day] = dateStr.split('-').map(Number);
+                                                                                    return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
                                                                                 }
                                                                                 
+                                                                                // Handle ISO format with time
+                                                                                if (dateStr.includes('T')) {
+                                                                                    const date = new Date(dateStr);
+                                                                                    if (!isNaN(date.getTime())) {
+                                                                                        const day = String(date.getDate()).padStart(2, '0');
+                                                                                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                                                        const year = date.getFullYear();
+                                                                                        return `${day}/${month}/${year}`;
+                                                                                    }
+                                                                                }
+                                                                                
+                                                                                // Fallback for other formats
+                                                                                const date = new Date(dateStr);
                                                                                 if (!isNaN(date.getTime())) {
                                                                                     const day = String(date.getDate()).padStart(2, '0');
                                                                                     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -3819,7 +3927,7 @@ const EditTask = () => {
                                                                                 }
                                                                                 return '';
                                                                             } catch (error) {
-                                                                                console.error('Error parsing payment_date:', error);
+                                                                                console.error('Error parsing payment_date:', error, 'dateStr:', phase.payment_date);
                                                                                 return '';
                                                                             }
                                                                         })() : ''}
@@ -3836,16 +3944,23 @@ const EditTask = () => {
                                                                     selected={phase.payment_date ? (() => {
                                                                         try {
                                                                             const dateStr = phase.payment_date;
-                                                                            let date: Date;
                                                                             
-                                                                            if (dateStr.includes('T')) {
-                                                                                date = new Date(dateStr);
-                                                                            } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                                                                                date = new Date(dateStr + 'T00:00:00');
-                                                                            } else {
-                                                                                date = new Date(dateStr);
+                                                                            // Parse YYYY-MM-DD format directly to avoid timezone issues
+                                                                            if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                                                const [year, month, day] = dateStr.split('-').map(Number);
+                                                                                // Create date in local timezone (month is 0-indexed in Date constructor)
+                                                                                const date = new Date(year, month - 1, day);
+                                                                                return !isNaN(date.getTime()) ? date : undefined;
                                                                             }
                                                                             
+                                                                            // Handle ISO format with time
+                                                                            if (dateStr.includes('T')) {
+                                                                                const date = new Date(dateStr);
+                                                                                return !isNaN(date.getTime()) ? date : undefined;
+                                                                            }
+                                                                            
+                                                                            // Fallback for other formats
+                                                                            const date = new Date(dateStr);
                                                                             return !isNaN(date.getTime()) ? date : undefined;
                                                                         } catch {
                                                                             return undefined;
@@ -3853,8 +3968,12 @@ const EditTask = () => {
                                                                     })() : undefined}
                                                                     onSelect={(date) => {
                                                                         if (date) {
-                                                                            // Convert to ISO format (YYYY-MM-DD) for storage
-                                                                            handlePaymentStageChange(index, 'payment_date', date.toISOString().split('T')[0]);
+                                                                            // Format date in local timezone (YYYY-MM-DD) to avoid timezone shift
+                                                                            const year = date.getFullYear();
+                                                                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                                            const day = String(date.getDate()).padStart(2, '0');
+                                                                            const formattedDate = `${year}-${month}-${day}`;
+                                                                            handlePaymentStageChange(index, 'payment_date', formattedDate);
                                                                             setPaymentDateCalendarOpenIndex(null);
                                                                         }
                                                                     }}
@@ -3873,17 +3992,32 @@ const EditTask = () => {
                                                             className="mt-1"
                                                         />
                                                     </div>
+                                                    <div>
+                                                        <Label>Status</Label>
+                                                        <Select
+                                                            value={phase.status || 'pending'}
+                                                            onValueChange={(value: 'paid' | 'pending') => handlePaymentStageChange(index, 'status', value)}
+                                                        >
+                                                            <SelectTrigger className="mt-1 w-full">
+                                                                <SelectValue placeholder="Select status" />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="z-[100]" position="popper">
+                                                                <SelectItem value="pending">Pending</SelectItem>
+                                                                <SelectItem value="paid">Paid</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
                                                 </div>
 
                                                 {/* Individual Action Buttons for each phase */}
                                                 <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                                                     <div className="text-sm text-gray-600 space-y-1">
-                                                        {phase.due_date && (
+                                                        {formData.due_date && (
                                                             <div>
                                                                 <span className="text-red-500">
                                                                     Assign Date: {(() => {
                                                                         try {
-                                                                            const dateStr = phase.due_date;
+                                                                            const dateStr = formData.due_date;
                                                                             let date: Date;
                                                                             
                                                                             if (dateStr.includes('T')) {
@@ -3900,39 +4034,50 @@ const EditTask = () => {
                                                                                 const year = date.getFullYear();
                                                                                 return `${day}/${month}/${year}`;
                                                                             }
-                                                                            return new Date(phase.due_date).toLocaleDateString();
+                                                                            return new Date(formData.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
                                                                         } catch (error) {
-                                                                            return new Date(phase.due_date).toLocaleDateString();
+                                                                            return new Date(formData.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
                                                                         }
                                                                     })()}
                                                                 </span>
                                                             </div>
                                                         )}
-                                                        {phase.payment_date && phase.payment_date !== phase.due_date && (
+                                                        {phase.payment_date && (
                                                             <div>
                                                                 <span className="text-green-600 font-medium">
                                                                     Payment Date: {(() => {
                                                                         try {
                                                                             const dateStr = phase.payment_date;
-                                                                            let date: Date;
                                                                             
-                                                                            if (dateStr.includes('T')) {
-                                                                                date = new Date(dateStr);
-                                                                            } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                                                                                date = new Date(dateStr + 'T00:00:00');
-                                                                            } else {
-                                                                                date = new Date(dateStr);
+                                                                            // Parse YYYY-MM-DD format directly to avoid timezone issues
+                                                                            if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                                                const [year, month, day] = dateStr.split('-').map(Number);
+                                                                                return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
                                                                             }
                                                                             
+                                                                            // Handle ISO format with time
+                                                                            if (dateStr.includes('T')) {
+                                                                                const date = new Date(dateStr);
+                                                                                if (!isNaN(date.getTime())) {
+                                                                                    const day = String(date.getDate()).padStart(2, '0');
+                                                                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                                                    const year = date.getFullYear();
+                                                                                    return `${day}/${month}/${year}`;
+                                                                                }
+                                                                            }
+                                                                            
+                                                                            // Fallback for other formats
+                                                                            const date = new Date(dateStr);
                                                                             if (!isNaN(date.getTime())) {
                                                                                 const day = String(date.getDate()).padStart(2, '0');
                                                                                 const month = String(date.getMonth() + 1).padStart(2, '0');
                                                                                 const year = date.getFullYear();
                                                                                 return `${day}/${month}/${year}`;
                                                                             }
-                                                                            return new Date(phase.payment_date).toLocaleDateString();
+                                                                            return '';
                                                                         } catch (error) {
-                                                                            return new Date(phase.payment_date).toLocaleDateString();
+                                                                            console.error('Error parsing payment_date:', error, 'dateStr:', phase.payment_date);
+                                                                            return '';
                                                                         }
                                                                     })()}
                                                                 </span>
@@ -3959,7 +4104,8 @@ const EditTask = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                        ))}
+                                        );
+                                        })}
 
                                         {/* Payment Summary */}
                                         <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
@@ -3968,27 +4114,43 @@ const EditTask = () => {
                                                 <div className="text-center">
                                                     <p className="text-sm text-gray-600">Total Claim Amount</p>
                                                     <p className="text-2xl font-bold text-gray-900">
-                                                        ₹{editablePaymentStages
-                                                            .reduce((sum: number, phase: any) => sum + (phase.phase_amount || 0), 0)
-                                                            .toLocaleString('en-IN')}
+                                                        ₹{(() => {
+                                                            // Total Claim Amount = claims_amount + service_amount
+                                                            const claimsAmount = parseFloat(formData.claims_amount || '0') || 0;
+                                                            const serviceAmount = parseFloat(formData.service_amount || '0') || 0;
+                                                            const totalClaimAmount = claimsAmount + serviceAmount;
+                                                            return totalClaimAmount.toLocaleString('en-IN');
+                                                        })()}
                                                     </p>
                                                 </div>
                                                 <div className="text-center">
                                                     <p className="text-sm text-gray-600">Pending Amount</p>
                                                     <p className="text-2xl font-bold text-red-600">
-                                                        ₹{editablePaymentStages
-                                                            .filter((phase: any, index: number) => paymentStages[index]?.status === 'pending')
-                                                            .reduce((sum: number, phase: any) => sum + (phase.phase_amount || 0), 0)
-                                                            .toLocaleString('en-IN')}
+                                                        ₹{(() => {
+                                                            // Total Claim Amount = claims_amount + service_amount
+                                                            const claimsAmount = parseFloat(formData.claims_amount || '0') || 0;
+                                                            const serviceAmount = parseFloat(formData.service_amount || '0') || 0;
+                                                            const totalClaimAmount = claimsAmount + serviceAmount;
+                                                            
+                                                            // Sum of all payment phases' phase_amount
+                                                            const totalPaymentPhasesAmount = editablePaymentStages
+                                                                .reduce((sum: number, phase: any) => sum + (parseFloat(phase.phase_amount) || 0), 0);
+                                                            
+                                                            // Pending Amount = Total Claim Amount - all payment phases total
+                                                            const pendingAmount = totalClaimAmount - totalPaymentPhasesAmount;
+                                                            return Math.max(0, pendingAmount).toLocaleString('en-IN'); // Ensure non-negative
+                                                        })()}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="mt-3 text-center">
                                                 <p className="text-sm text-gray-600">
-                                                    Paid Amount: ₹{paymentStages
-                                                        .filter((phase: any) => phase.status === 'paid')
-                                                        .reduce((sum: number, phase: any) => sum + (phase.paid_amount || 0), 0)
-                                                        .toLocaleString('en-IN')}
+                                                    Paid Amount: ₹{(() => {
+                                                        // Paid Amount = sum of all payment phases' phase_amount
+                                                        const paidAmount = editablePaymentStages
+                                                            .reduce((sum: number, phase: any) => sum + (parseFloat(phase.phase_amount) || 0), 0);
+                                                        return paidAmount.toLocaleString('en-IN');
+                                                    })()}
                                                 </p>
                                             </div>
                                         </div>
@@ -4009,14 +4171,15 @@ const EditTask = () => {
                                 handleClosePaymentPhaseModal();
                             }
                         }}>
-                            <DialogContent className="sm:max-w-md">
+                            <DialogContent className="sm:max-w-lg w-[95vw] max-w-[95vw] sm:w-auto">
                                 <DialogHeader>
                                     <DialogTitle>Add Payment Stage</DialogTitle>
                                 </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                    <div>
-                                        <Label htmlFor="modal-phase">Phase</Label>
-                                        <Popover open={phaseNameComboboxOpen} onOpenChange={setPhaseNameComboboxOpen}>
+                                <div className="space-y-4 py-4 overflow-y-auto max-h-[80vh]">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="col-span-1 sm:col-span-2">
+                                            <Label htmlFor="modal-phase">Phase</Label>
+                                            <Popover open={phaseNameComboboxOpen} onOpenChange={setPhaseNameComboboxOpen}>
                                             <PopoverTrigger asChild>
                                                 <Button
                                                     variant="outline"
@@ -4108,70 +4271,96 @@ const EditTask = () => {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="modal-due-date">Payment Date</Label>
-                                        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                                            <PopoverTrigger asChild>
-                                                <div className="relative">
-                                                    <Input
-                                                        id="modal-due-date"
-                                                        type="text"
-                                                        readOnly
-                                                        value={paymentPhaseForm.due_date ? format(new Date(paymentPhaseForm.due_date), 'MM/dd/yyyy') : ''}
-                                                        placeholder="mm/dd/yyyy"
-                                                        onClick={() => setCalendarOpen(true)}
-                                                        className="mt-1 cursor-pointer pr-10"
-                                                    />
-                                                    <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                                                </div>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar 
-                                                    mode="single" 
-                                                    selected={paymentPhaseForm.due_date ? new Date(paymentPhaseForm.due_date) : undefined} 
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="modal-due-date">Payment Date</Label>
+                                            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <div className="relative">
+                                                        <Input
+                                                            id="modal-due-date"
+                                                            type="text"
+                                                            readOnly
+                                                            value={paymentPhaseForm.due_date ? format(new Date(paymentPhaseForm.due_date), 'dd/MM/yyyy') : ''}
+                                                            placeholder="dd/mm/yyyy"
+                                                            onClick={() => setCalendarOpen(true)}
+                                                            className="mt-1 cursor-pointer pr-10 w-full"
+                                                        />
+                                                        <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                                    </div>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0 z-[100]" align="start">
+                                                    <Calendar 
+                                                        mode="single" 
+                                                        selected={paymentPhaseForm.due_date ? new Date(paymentPhaseForm.due_date) : undefined} 
                                                     onSelect={(date) => {
                                                         if (date) {
-                                                            setPaymentPhaseForm(prev => ({ ...prev, due_date: date.toISOString().split('T')[0] }));
+                                                            // Format date in local timezone (YYYY-MM-DD) to avoid timezone shift
+                                                            const year = date.getFullYear();
+                                                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                            const day = String(date.getDate()).padStart(2, '0');
+                                                            const formattedDate = `${year}-${month}-${day}`;
+                                                            setPaymentPhaseForm(prev => ({ ...prev, due_date: formattedDate }));
                                                             setCalendarOpen(false);
                                                         }
-                                                    }} 
-                                                />
-                                                <div className="flex justify-between items-center p-3 border-t">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
+                                                    }}
+                                                    />
+                                                    <div className="flex justify-between items-center p-3 border-t">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
                                                         onClick={() => {
                                                             const today = new Date();
-                                                            setPaymentPhaseForm(prev => ({ ...prev, due_date: today.toISOString().split('T')[0] }));
+                                                            // Format date in local timezone (YYYY-MM-DD) to avoid timezone shift
+                                                            const year = today.getFullYear();
+                                                            const month = String(today.getMonth() + 1).padStart(2, '0');
+                                                            const day = String(today.getDate()).padStart(2, '0');
+                                                            const formattedDate = `${year}-${month}-${day}`;
+                                                            setPaymentPhaseForm(prev => ({ ...prev, due_date: formattedDate }));
                                                             setCalendarOpen(false);
                                                         }}
-                                                        className="text-sm"
-                                                    >
-                                                        Today
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => setCalendarOpen(false)}
-                                                        className="text-sm"
-                                                    >
-                                                        Cancel
-                                                    </Button>
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="modal-amount">Paid Amount (₹)</Label>
-                                        <Input
-                                            id="modal-amount"
-                                            type="number"
-                                            value={paymentPhaseForm.phase_amount || ''}
-                                            onChange={(e) => setPaymentPhaseForm(prev => ({ ...prev, phase_amount: parseFloat(e.target.value) || 0 }))}
-                                            placeholder="Enter paid amount"
-                                            className="mt-1"
-                                        />
+                                                            className="text-sm"
+                                                        >
+                                                            Today
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => setCalendarOpen(false)}
+                                                            className="text-sm"
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="modal-amount">Paid Amount (₹)</Label>
+                                            <Input
+                                                id="modal-amount"
+                                                type="number"
+                                                value={paymentPhaseForm.phase_amount || ''}
+                                                onChange={(e) => setPaymentPhaseForm(prev => ({ ...prev, phase_amount: parseFloat(e.target.value) || 0 }))}
+                                                placeholder="Enter paid amount"
+                                                className="mt-1 w-full"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="modal-status">Status</Label>
+                                            <Select
+                                                value={paymentPhaseForm.status || 'pending'}
+                                                onValueChange={(value: 'paid' | 'pending') => setPaymentPhaseForm(prev => ({ ...prev, status: value }))}
+                                            >
+                                                <SelectTrigger className="mt-1 w-full" id="modal-status">
+                                                    <SelectValue placeholder="Select status" />
+                                                </SelectTrigger>
+                                                <SelectContent className="z-[100]">
+                                                    <SelectItem value="pending">Pending</SelectItem>
+                                                    <SelectItem value="paid">Paid</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
                                 </div>
                                 <DialogFooter>
