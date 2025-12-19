@@ -550,7 +550,7 @@ const Register = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {isLoadingRoles ? (
-                    <SelectItem value="" disabled>Loading roles...</SelectItem>
+                    <div className="px-2 py-1.5 text-sm text-gray-500">Loading roles...</div>
                   ) : (
                     staticRoles.map(role => (
                       <SelectItem key={role.id} value={role.name}>

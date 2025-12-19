@@ -59,6 +59,16 @@ const LeaveManagement = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalLeaves, setTotalLeaves] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  // Summary counts state (for summary cards)
+  const [summaryCounts, setSummaryCounts] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+  });
 
   // Apply Leave Form State
   const [applyLeaveForm, setApplyLeaveForm] = useState({
@@ -123,6 +133,8 @@ const LeaveManagement = () => {
     employees?: { first_name?: string; last_name?: string };
     leave_types?: { type_name?: string };
     emergency_contact?: { name?: string; phone?: string };
+    employee_email?: string;
+    contact_number?: string;
     // ...any other fields you return
   };
 
@@ -145,59 +157,143 @@ const LeaveManagement = () => {
     emergencyContact?: { name?: string; phone?: string };
   };
 
-  const fetchLeaves = async (limit: number = 10, page: number = 1) => {
-    setIsLoading(true);
+  // Fetch all leaves for summary counts (no pagination)
+  const fetchAllLeavesForSummary = async () => {
     try {
       const userDetailsStr = localStorage.getItem("expertclaims_user_details");
-const userDetails = userDetailsStr ? JSON.parse(userDetailsStr) : {};
-const details = Array.isArray(userDetails) ? userDetails[0] : userDetails;
-const employeeId = details?.employee_id;
-const role = details?.role || "employee"; // fallback to employee if not set
+      const userDetails = userDetailsStr ? JSON.parse(userDetailsStr) : {};
+      const details = Array.isArray(userDetails) ? userDetails[0] : userDetails;
+      const employeeId = details?.employee_id;
+      const role = details?.role || "employee";
+      const jwtToken = localStorage.getItem("jwtToken") || "";
 
-  const baseUrl1 = "https://n8n.srv952553.hstgr.cloud/webhook/getleaves";
-    // console.log("Calling API:", baseUrl1); // Debug log
-
-    const baseUrl2 = `https://n8n.srv952553.hstgr.cloud/webhook/getempleaves?employee_id=${employeeId}`;
-    // console.log("Calling API:", baseUrl2); // Debug log
-
-    const url =
-      role === "employee" && employeeId
-        ? `${baseUrl2}&page=${page}&size=${limit}`
-        : `${baseUrl1}?page=${page}&size=${limit}`;
-
-    // console.log("Calling API:", url); // Debug log
+      // Use backend API endpoints - fetch with a large size to get all records
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      const url =
+        role === "employee" && employeeId
+          ? `${baseUrl}/support/getempleaves?employee_id=${employeeId}&page=1&size=10000`
+          : `${baseUrl}/admin/getleaves?page=1&size=10000`;
 
       const response = await fetch(url, {
         method: "GET",
         headers: {
-          accept: "*/*",
-          "accept-language": "en-US,en;q=0.9",
-          "accept-profile": "srtms",
-          apikey:
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-          authorization:
-            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-          "content-type": "application/json",
-          jwt_token:
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjM0IiwiaWF0IjoxNzU2NTUwODUwfQ.Kmh5wQS9CXpRK0TmBXlJJhGlfr9ulMx8ou5nCk7th8g",
-          session_id: "efd005c8-d9a1-4cfa-adeb-1ca2a7f13775",
-          Prefer: "count=exact",
+          "Content-Type": "application/json",
+          ...(jwtToken && { Authorization: `Bearer ${jwtToken}` }),
         },
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
-      // Accept 3 shapes: [{data:[...] }], {data:[...]}, or direct array
-      const payload: ApiLeave[] =
-        (Array.isArray(result) &&
-          Array.isArray(result[0]?.data) &&
-          result[0].data) ||
-        (Array.isArray(result?.data) && result.data) ||
-        (Array.isArray(result) && result) ||
-        [];
+      let responseData;
+      if (Array.isArray(result)) {
+        responseData = result.length > 0 ? result[0] : { status: 'error', message: 'Empty response array' };
+      } else if (result && typeof result === 'object') {
+        responseData = result;
+      } else {
+        throw new Error('Unexpected response format from API');
+      }
+
+      if (responseData.status !== 'success') {
+        throw new Error(responseData.message || 'Failed to fetch leaves');
+      }
+
+      const payload: ApiLeave[] = Array.isArray(responseData.data) ? responseData.data : [];
+      
+      // Calculate summary counts
+      const counts = {
+        total: payload.length,
+        pending: payload.filter((leave) => leave.status === "pending").length,
+        approved: payload.filter((leave) => leave.status === "approved").length,
+        rejected: payload.filter((leave) => leave.status === "rejected").length,
+      };
+
+      setSummaryCounts(counts);
+    } catch (err: any) {
+      console.error("Failed to fetch summary counts:", err);
+      // Don't show error toast for summary fetch failure, just log it
+    }
+  };
+
+  const fetchLeaves = async (limit: number = 10, page: number = 1) => {
+    setIsLoading(true);
+    try {
+      const userDetailsStr = localStorage.getItem("expertclaims_user_details");
+      const userDetails = userDetailsStr ? JSON.parse(userDetailsStr) : {};
+      const details = Array.isArray(userDetails) ? userDetails[0] : userDetails;
+      const employeeId = details?.employee_id;
+      const role = details?.role || "employee"; // fallback to employee if not set
+      const jwtToken = localStorage.getItem("jwtToken") || "";
+
+      // Use backend API endpoints
+      // Vite uses import.meta.env, but fallback to process.env for compatibility
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      const url =
+        role === "employee" && employeeId
+          ? `${baseUrl}/support/getempleaves?employee_id=${employeeId}&page=${page}&size=${limit}`
+          : `${baseUrl}/admin/getleaves?page=${page}&size=${limit}`;
+
+      console.log("=== Leave Fetch Debug ===");
+      console.log("Role:", role);
+      console.log("Employee ID:", employeeId);
+      console.log("Base URL:", baseUrl);
+      console.log("Full URL:", url);
+      console.log("JWT Token present:", !!jwtToken);
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(jwtToken && { Authorization: `Bearer ${jwtToken}` }),
+        },
+      });
+
+      console.log("Response status:", response.status);
+      console.log("Response ok:", response.ok);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error Response:", errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log("Raw API response:", JSON.stringify(result, null, 2));
+      console.log("Response type:", Array.isArray(result) ? 'array' : typeof result);
+      
+      // Backend returns: [{ status: 'success', data: [...], pagination: {...} }]
+      let responseData;
+      if (Array.isArray(result)) {
+        responseData = result.length > 0 ? result[0] : { status: 'error', message: 'Empty response array' };
+      } else if (result && typeof result === 'object') {
+        // Handle case where backend returns object directly
+        responseData = result;
+      } else {
+        throw new Error('Unexpected response format from API');
+      }
+      
+      console.log("Parsed response data:", responseData);
+      console.log("Response status:", responseData.status);
+      
+      if (responseData.status !== 'success') {
+        console.error("API returned error status:", responseData);
+        throw new Error(responseData.message || 'Failed to fetch leaves');
+      }
+
+      const payload: ApiLeave[] = Array.isArray(responseData.data) ? responseData.data : [];
+      console.log("Leave payload:", payload);
+      console.log("Number of leaves:", payload.length);
+      
+      // Update pagination state from backend
+      if (responseData.pagination) {
+        setTotalLeaves(responseData.pagination.total || 0);
+        setTotalPages(responseData.pagination.totalPages || 0);
+        console.log("Pagination info:", responseData.pagination);
+      }
+
+      console.log("Mapped leaves count:", payload.length);
 
       const mapped: UILLeave[] = payload.map((item, idx) => {
         const first = item.employees?.first_name?.trim?.() || "";
@@ -206,10 +302,10 @@ const role = details?.role || "employee"; // fallback to employee if not set
           [first, last].filter(Boolean).join(" ").trim() || "Unknown";
 
         return {
-          id: item.id?.toString() || `LEAVE-${idx + 1}`,
+          id: item.application_id?.toString() || `LEAVE-${idx + 1}`,
           application_id: item.application_id || idx + 1,
           employeeName,
-          employeeId: item.employee_id || "N/A",
+          employeeId: item.employee_id?.toString() || "N/A",
           type: item.leave_types?.type_name || "N/A",
           startDate: item.start_date || "—",
           endDate: item.end_date || "—",
@@ -222,21 +318,27 @@ const role = details?.role || "employee"; // fallback to employee if not set
           appliedDate: item.applied_date || "—",
           approvedBy: null,
           department: item.designation || "N/A",
+          employeeEmail: item.employee_email || "N/A",
+          contactNumber: item.contact_number || "N/A",
           emergencyContact: item.emergency_contact || undefined,
         };
       });
 
       setLeaves(mapped);
-      toast({
-        title: "Leaves Loaded",
-        description: `Fetched ${mapped.length} records.`,
-      });
+      console.log("Mapped leaves set in state:", mapped.length);
+      
+      if (mapped.length === 0 && (responseData.pagination?.total || 0) === 0) {
+        toast({
+          title: "No Leaves Found",
+          description: "There are no leave applications in the system yet.",
+        });
+      }
     } catch (err: any) {
       console.error("Failed to fetch leaves:", err);
       setLeaves([]);
       toast({
         title: "Error",
-        description: "Failed to fetch leaves from API.",
+        description: err.message || "Failed to fetch leaves from API.",
         variant: "destructive",
       });
     } finally {
@@ -247,27 +349,16 @@ const role = details?.role || "employee"; // fallback to employee if not set
   const fetchLeaveTypes = async () => {
     setIsLoadingLeaveTypes(true);
     try {
-      const response = await fetch(
-        "https://n8n.srv952553.hstgr.cloud/webhook/getlevetype",
-        {
-          method: "GET",
-          headers: {
-            accept: "*/*",
-            "accept-language": "en-US,en;q=0.9",
-            "accept-profile": "srtms",
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-            authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-            "content-type": "application/json",
-            jwt_token:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjM0IiwiaWF0IjoxNzU2NTUwODUwfQ.Kmh5wQS9CXpRK0TmBXlJJhGlfr9ulMx8ou5nCk7th8g",
-            session_id: "efd005c8-d9a1-4cfa-adeb-1ca2a7f13775",
-            Prefer: "count=exact",
-            Range: "5-10",
-          },
-        }
-      );
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      const jwtToken = localStorage.getItem("jwtToken") || "";
+
+      const response = await fetch(`${baseUrl}/support/getlevetypes`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(jwtToken && { Authorization: `Bearer ${jwtToken}` }),
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -275,11 +366,8 @@ const role = details?.role || "employee"; // fallback to employee if not set
 
       const result = await response.json();
 
-      // Extract leave types from the API response
-      // Handle both array format [{data: [...]}] and direct format {data: [...]}
-      const leaveTypesData = Array.isArray(result)
-        ? result[0]?.data || []
-        : result?.data || [];
+      // Backend returns: { status: 'success', data: [...] }
+      const leaveTypesData = result.data || [];
       setLeaveTypes(leaveTypesData);
 
       console.log("Leave types loaded:", leaveTypesData);
@@ -287,7 +375,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
       console.error("Failed to fetch leave types:", err);
       toast({
         title: "Error",
-        description: "Failed to fetch leave types from API.",
+        description: err.message || "Failed to fetch leave types from API.",
         variant: "destructive",
       });
     } finally {
@@ -298,6 +386,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
   useEffect(() => {
     fetchLeaves(pageSize, currentPage);
     fetchLeaveTypes();
+    fetchAllLeavesForSummary(); // Fetch all leaves for summary counts
   }, [pageSize, currentPage]);
 
   const getStatusColor = (status: string) => {
@@ -343,7 +432,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
           const details = Array.isArray(parsedDetails)
             ? parsedDetails[0]
             : parsedDetails;
-          approvedBy = details?.userid;
+          approvedBy = details?.userid || details?.user_id;
         } catch (error) {
           console.error("Error parsing user details:", error);
         }
@@ -361,28 +450,27 @@ const role = details?.role || "employee"; // fallback to employee if not set
         currentDate,
       });
 
-      // Call the getstatusleave API for approval
-      const response = await fetch(
-        `https://n8n.srv952553.hstgr.cloud/webhook/getstatusleave?approved_id=${selectedLeave.application_id}&status=approved&approved_by=${approvedBy}&approved_date=${currentDate}`,
-        {
-          method: "POST",
-          headers: {
-            accept: "application/json",
-            "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
-            "accept-profile": "expc",
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            "content-profile": "expc",
-            "content-type": "application/json",
-            session_id: "6790fb34-6dc8-469c-abd4-537e3a29ca02",
-          },
-        }
-      );
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      const jwtToken = localStorage.getItem("jwtToken") || "";
+
+      // Call the backend updateleavestatus API for approval
+      const response = await fetch(`${baseUrl}/admin/updateleavestatus`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(jwtToken && { Authorization: `Bearer ${jwtToken}` }),
+        },
+        body: JSON.stringify({
+          application_id: selectedLeave.application_id,
+          status: "approved",
+          approved_by: approvedBy,
+          approved_date: currentDate,
+        }),
+      });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
@@ -392,12 +480,10 @@ const role = details?.role || "employee"; // fallback to employee if not set
       const responseData = Array.isArray(result) ? result[0] : result;
 
       if (responseData.status === "success") {
+        const employeeName = selectedLeave?.employeeName || "Employee";
         toast({
           title: "Leave Approved",
-          description:
-            responseData.message ||
-            "The leave application has been approved successfully.",
-          className: "bg-green-50 border-green-200 text-green-800",
+          description: `${employeeName}'s leave application has been approved successfully.`,
         });
 
         setShowLeaveDetails(false);
@@ -405,6 +491,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
 
         // Refresh the leaves list to show updated status
         fetchLeaves(pageSize, currentPage);
+        fetchAllLeavesForSummary(); // Refresh summary counts
       } else {
         throw new Error(
           responseData.message || "Failed to approve leave application"
@@ -438,7 +525,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
           const details = Array.isArray(parsedDetails)
             ? parsedDetails[0]
             : parsedDetails;
-          approvedBy = details?.userid;
+          approvedBy = details?.userid || details?.user_id;
         } catch (error) {
           console.error("Error parsing user details:", error);
         }
@@ -455,28 +542,27 @@ const role = details?.role || "employee"; // fallback to employee if not set
         currentDate,
       });
 
-      // Call the getstatusleave API for rejection
-      const response = await fetch(
-        `https://n8n.srv952553.hstgr.cloud/webhook/getstatusleave?approved_id=${selectedLeave.application_id}&status=rejected&approved_by=${approvedBy}&approved_date=${currentDate}`,
-        {
-          method: "POST",
-          headers: {
-            accept: "application/json",
-            "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
-            "accept-profile": "expc",
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o",
-            "content-profile": "expc",
-            "content-type": "application/json",
-            session_id: "6790fb34-6dc8-469c-abd4-537e3a29ca02",
-          },
-        }
-      );
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      const jwtToken = localStorage.getItem("jwtToken") || "";
+
+      // Call the backend updateleavestatus API for rejection
+      const response = await fetch(`${baseUrl}/admin/updateleavestatus`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(jwtToken && { Authorization: `Bearer ${jwtToken}` }),
+        },
+        body: JSON.stringify({
+          application_id: selectedLeave.application_id,
+          status: "rejected",
+          approved_by: approvedBy,
+          approved_date: currentDate,
+        }),
+      });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
@@ -486,11 +572,10 @@ const role = details?.role || "employee"; // fallback to employee if not set
       const responseData = Array.isArray(result) ? result[0] : result;
 
       if (responseData.status === "success") {
+        const employeeName = selectedLeave?.employeeName || "Employee";
         toast({
           title: "Leave Rejected",
-          description:
-            responseData.message || "The leave application has been rejected.",
-          className: "bg-red-50 border-red-200 text-red-800",
+          description: `${employeeName}'s leave application has been rejected.`,
         });
 
         setShowLeaveDetails(false);
@@ -498,6 +583,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
 
         // Refresh the leaves list to show updated status
         fetchLeaves(pageSize, currentPage);
+        fetchAllLeavesForSummary(); // Refresh summary counts
       } else {
         throw new Error(
           responseData.message || "Failed to reject leave application"
@@ -564,9 +650,10 @@ const role = details?.role || "employee"; // fallback to employee if not set
 
     setIsSubmittingLeave(true);
     try {
-      // Get employee_id from localStorage
+      // Get employee_id from localStorage or fetch from backend
       const userDetailsStr = localStorage.getItem("expertclaims_user_details");
       let employeeId = null;
+      let userId = null;
 
       if (userDetailsStr) {
         try {
@@ -576,70 +663,93 @@ const role = details?.role || "employee"; // fallback to employee if not set
             ? userDetails[0]
             : userDetails;
           employeeId = details?.employee_id;
+          userId = details?.userid || details?.user_id;
         } catch (error) {
           console.error("Error parsing user details:", error);
         }
       }
 
-      if (!employeeId) {
-        throw new Error("Employee ID not found. Please log in again.");
+      // If employee_id is not found but user_id is available, fetch it from backend
+      if (!employeeId && userDetailsStr) {
+        try {
+          const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+          const jwtToken = localStorage.getItem("jwtToken") || "";
+          
+          // Parse user details to get email
+          const parsedDetails = JSON.parse(userDetailsStr);
+          const details = Array.isArray(parsedDetails) ? parsedDetails[0] : parsedDetails;
+          const email = details?.email;
+          
+          if (email) {
+            console.log("Fetching employee_id for email:", email);
+            const userDetailsResponse = await fetch(`${baseUrl}/support/getuserdetails?email=${encodeURIComponent(email)}`, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                ...(jwtToken && { Authorization: `Bearer ${jwtToken}` }),
+              },
+            });
+
+            if (userDetailsResponse.ok) {
+              const userDetailsData = await userDetailsResponse.json();
+              const userDetails = Array.isArray(userDetailsData) ? userDetailsData[0] : userDetailsData;
+              employeeId = userDetails?.employee_id;
+              console.log("Fetched employee_id:", employeeId);
+              
+              // Update localStorage with the fetched employee_id
+              if (employeeId) {
+                const updatedDetails = Array.isArray(parsedDetails) 
+                  ? [{ ...parsedDetails[0], employee_id: employeeId }, ...parsedDetails.slice(1)]
+                  : { ...parsedDetails, employee_id: employeeId };
+                localStorage.setItem("expertclaims_user_details", JSON.stringify(updatedDetails));
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching employee_id:", error);
+        }
       }
+
+      if (!employeeId) {
+        throw new Error("Employee ID not found. You must be an employee to apply for leave. Please contact your administrator.");
+      }
+
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      const jwtToken = localStorage.getItem("jwtToken") || "";
 
       const leaveData = {
         employee_id: employeeId,
         leave_type_id: parseInt(applyLeaveForm.leave_type_id),
         start_date: applyLeaveForm.start_date,
         end_date: applyLeaveForm.end_date || applyLeaveForm.start_date,
-        total_days: parseInt(applyLeaveForm.total_days),
+        total_days: parseInt(applyLeaveForm.total_days) || 1,
         reason: applyLeaveForm.reason,
-        emergency_contact: {
-          name: applyLeaveForm.emergency_contact_name || "Not provided",
-          phone: applyLeaveForm.emergency_contact_phone || "Not provided",
-        },
-        status: "pending",
-        applied_date: new Date().toISOString(),
-        approved_by: null,
-        approved_date: null,
-        rejection_reason: null,
-        created_time: new Date().toISOString(),
-        updated_time: new Date().toISOString(),
+        emergency_contact_name: applyLeaveForm.emergency_contact_name || "Not provided",
+        emergency_contact_phone: applyLeaveForm.emergency_contact_phone || "Not provided",
       };
 
       console.log("Submitting leave data:", leaveData);
 
-      // Call the insertleaves API
-      const response = await fetch(
-        "https://n8n.srv952553.hstgr.cloud/webhook/insertleaves",
-        {
-          method: "POST",
-          headers: {
-            accept: "*/*",
-            "accept-language": "en-US,en;q=0.9",
-            "accept-profile": "srtms",
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-            authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-            "content-type": "application/json",
-            jwt_token:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjM0IiwiaWF0IjoxNzU2NTUwODUwfQ.Kmh5wQS9CXpRK0TmBXlJJhGlfr9ulMx8ou5nCk7th8g",
-            session_id: "efd005c8-d9a1-4cfa-adeb-1ca2a7f13775",
-            Prefer: "count=exact",
-            Range: "5-10",
-          },
-          body: JSON.stringify(leaveData),
-        }
-      );
+      // Call the backend apply-leave API
+      const response = await fetch(`${baseUrl}/support/apply-leave`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(jwtToken && { Authorization: `Bearer ${jwtToken}` }),
+        },
+        body: JSON.stringify(leaveData),
+      });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
       console.log("API Response:", result);
 
       // Check if the API call was successful
-      if (result.status === "success" || response.ok) {
+      if (result.status === "success") {
         toast({
           title: "Leave Applied Successfully",
           description:
@@ -661,6 +771,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
 
         // Refresh the leaves list
         fetchLeaves(pageSize, currentPage);
+        fetchAllLeavesForSummary(); // Refresh summary counts
       } else {
         throw new Error(result.message || "Failed to submit leave application");
       }
@@ -695,23 +806,18 @@ const role = details?.role || "employee"; // fallback to employee if not set
     return matchesStatus && matchesSearch;
   });
 
-  // For server-side pagination, we'll use the API data directly
-  // The API handles pagination, so we don't need to slice the results
-  // Since we don't know the total count, we'll assume there are more pages if we get a full page
-  const totalPages = leaves.length === pageSize ? currentPage + 1 : currentPage;
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
+  // Use backend pagination data
+  const calculatedTotalPages = totalPages || (leaves.length === pageSize ? currentPage + 1 : currentPage);
   const paginatedLeaves = filteredLeaves; // Use filtered results directly since API handles pagination
 
   // Debug logging
   console.log("Pagination Debug:", {
-    totalLeaves: leaves.length,
+    totalLeaves: totalLeaves,
+    currentLeaves: leaves.length,
     filteredLeaves: filteredLeaves.length,
     currentPage,
     pageSize,
-    totalPages,
-    startIndex,
-    endIndex,
+    totalPages: calculatedTotalPages,
     paginatedLeaves: paginatedLeaves.length,
   });
 
@@ -729,7 +835,10 @@ const role = details?.role || "employee"; // fallback to employee if not set
 
   // Handle next page
   const handleNextPage = () => {
-    setCurrentPage((prev) => prev + 1);
+    setCurrentPage((prev) => {
+      const next = prev + 1;
+      return next <= (totalPages || 1) ? next : prev;
+    });
   };
 
   // Handle previous page
@@ -793,8 +902,8 @@ const role = details?.role || "employee"; // fallback to employee if not set
                 <span>{isLoading ? 'Refreshing...' : 'Refresh'}</span>
               </Button> */}
 
-              {/* Apply Leave Button - Only for Employees */}
-              {/* {!isHR && ( */}
+              {/* Apply Leave Button - Only for Employees (not Admin) */}
+              {!isAdmin && (
               <Button
                 onClick={() => setShowApplyLeaveForm(true)}
                 className="flex items-center space-x-2 bg-white text-primary-600 hover:bg-gray-50 rounded-xl transition-all duration-300 font-semibold"
@@ -802,7 +911,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
                 <Plus className="h-4 w-4" />
                 <span>Apply Leave</span>
               </Button>
-              {/* )} */}
+              )}
             </div>
           </div>
         </div>
@@ -819,7 +928,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
                     Total Applications
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {isLoading ? "..." : leaves.length}
+                    {isLoading ? "..." : summaryCounts.total}
                   </p>
                 </div>
                 <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -835,7 +944,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
                 <div>
                   <p className="text-sm font-medium text-gray-600">Pending</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {isLoading ? "..." : pendingLeaves.length}
+                    {isLoading ? "..." : summaryCounts.pending}
                   </p>
                 </div>
                 <div className="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
@@ -851,7 +960,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
                 <div>
                   <p className="text-sm font-medium text-gray-600">Approved</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {isLoading ? "..." : approvedLeaves.length}
+                    {isLoading ? "..." : summaryCounts.approved}
                   </p>
                 </div>
                 <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -867,7 +976,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
                 <div>
                   <p className="text-sm font-medium text-gray-600">Rejected</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {isLoading ? "..." : rejectedLeaves.length}
+                    {isLoading ? "..." : summaryCounts.rejected}
                   </p>
                 </div>
                 <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center">
@@ -1068,8 +1177,8 @@ const role = details?.role || "employee"; // fallback to employee if not set
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 {/* Pagination Info */}
                 <div className="text-sm text-gray-600">
-                  Page {currentPage} - Showing {filteredLeaves.length} of{" "}
-                  {leaves.length} entries
+                  Page {currentPage} of {calculatedTotalPages} - Showing {filteredLeaves.length} of{" "}
+                  {totalLeaves || leaves.length} entries
                 </div>
 
                 {/* Pagination Navigation */}
@@ -1078,6 +1187,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
                     variant="outline"
                     size="sm"
                     onClick={handlePreviousPage}
+                    disabled={currentPage <= 1}
                     className="flex items-center space-x-1"
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -1086,14 +1196,14 @@ const role = details?.role || "employee"; // fallback to employee if not set
 
                   {/* Page Numbers */}
                   <div className="flex items-center space-x-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    {Array.from({ length: Math.min(5, calculatedTotalPages) }, (_, i) => {
                       let pageNum;
-                      if (totalPages <= 5) {
+                      if (calculatedTotalPages <= 5) {
                         pageNum = i + 1;
                       } else if (currentPage <= 3) {
                         pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
+                      } else if (currentPage >= calculatedTotalPages - 2) {
+                        pageNum = calculatedTotalPages - 4 + i;
                       } else {
                         pageNum = currentPage - 2 + i;
                       }
@@ -1107,6 +1217,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
                           size="sm"
                           onClick={() => handlePageChange(pageNum)}
                           className="w-8 h-8 p-0"
+                          disabled={pageNum > calculatedTotalPages}
                         >
                           {pageNum}
                         </Button>
@@ -1118,6 +1229,7 @@ const role = details?.role || "employee"; // fallback to employee if not set
                     variant="outline"
                     size="sm"
                     onClick={handleNextPage}
+                    disabled={currentPage >= calculatedTotalPages}
                     className="flex items-center space-x-1"
                   >
                     <span>Next</span>
@@ -1174,17 +1286,19 @@ const role = details?.role || "employee"; // fallback to employee if not set
                       </span>
                     </div>
                     <div>
-                      <span className="text-blue-700 font-medium">Email:</span>
+                      <span className="text-blue-700 font-medium">
+                        Email:
+                      </span>
                       <span className="ml-2 text-blue-600">
-                        {selectedLeave.employeeEmail}
+                        {selectedLeave.employeeEmail || "N/A"}
                       </span>
                     </div>
                     <div>
                       <span className="text-blue-700 font-medium">
-                        Contact:
+                        Contact Number:
                       </span>
                       <span className="ml-2 text-blue-600">
-                        {selectedLeave.contactNumber || "Not provided"}
+                        {selectedLeave.contactNumber || "N/A"}
                       </span>
                     </div>
                     <div>
@@ -1290,25 +1404,26 @@ const role = details?.role || "employee"; // fallback to employee if not set
                     >
                       Cancel
                     </Button>
-                    <Button
-                      variant="outline"
-                      className="border-2 border-red-300 hover:border-red-400 text-red-600 hover:text-red-700 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => handleRejectLeave()}
-                      disabled={isProcessing || selectedLeave.status === "rejected"}
-                    >
-                      {isProcessing ? "Processing..." : "Reject Leave"}
-                    </Button>
-                    <Button
-                      className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => handleApproveLeave()}
-                      disabled={isProcessing || selectedLeave.status === "approved"}
-                    >
-                      {isProcessing ? "Processing..." : "Approve Leave"}
-                    </Button>
-                    {selectedLeave.status !== "pending" && (
-                      <span className="text-sm text-gray-500 self-center">
-                        (Status: {selectedLeave.status})
-                      </span>
+                    {/* Show reject button if status is pending or approved */}
+                    {(selectedLeave.status === "pending" || selectedLeave.status === "approved") && (
+                      <Button
+                        variant="outline"
+                        className="border-2 border-red-300 hover:border-red-400 text-red-600 hover:text-red-700 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => handleRejectLeave()}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? "Processing..." : "Reject Leave"}
+                      </Button>
+                    )}
+                    {/* Show approve button if status is pending or rejected */}
+                    {(selectedLeave.status === "pending" || selectedLeave.status === "rejected") && (
+                      <Button
+                        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => handleApproveLeave()}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? "Processing..." : "Approve Leave"}
+                      </Button>
                     )}
                   </div>
                 )}
