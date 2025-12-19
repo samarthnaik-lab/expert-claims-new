@@ -3291,7 +3291,7 @@ const NewTask = () => {
               <h3 className="text-lg font-semibold border-b pb-2">
                 Priority & Status
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Priority</Label>
                   <Select
@@ -3300,7 +3300,7 @@ const NewTask = () => {
                       handleSelectChange("priority", value)
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full min-w-[300px]">
                       <SelectValue placeholder="Select priority" />
                     </SelectTrigger>
                     <SelectContent>
@@ -3319,7 +3319,7 @@ const NewTask = () => {
                       handleSelectChange("ticket_stage", value)
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full min-w-[300px]">
                       <SelectValue placeholder="Select stage" />
                     </SelectTrigger>
                     <SelectContent>
