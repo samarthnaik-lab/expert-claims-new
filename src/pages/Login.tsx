@@ -1052,7 +1052,7 @@ const Login = () => {
               </SelectTrigger>
               <SelectContent className="bg-white border-gray-200 rounded-xl shadow-lg">
                 {isLoadingRoles ? (
-                  <SelectItem value="" disabled className="rounded-lg">Loading roles...</SelectItem>
+                  <div className="px-2 py-1.5 text-sm text-gray-500">Loading roles...</div>
                 ) : (
                   roles.map(r => (
                     <SelectItem key={r.id} value={r.name} className="rounded-lg">

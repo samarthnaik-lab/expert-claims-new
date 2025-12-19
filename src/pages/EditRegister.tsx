@@ -288,13 +288,36 @@ const EditRegister = () => {
           companyName = fetchedUserData.customers.company_name || '';
           source = fetchedUserData.customers.source || '';
           notes = fetchedUserData.customers.notes || '';
+          
+          // Keep language preference as-is from API (may be capitalized like "Telugu")
           languagePreference = fetchedUserData.customers.language_preference || '';
-          communicationPreferences = fetchedUserData.customers.communication_preferences || '';
+          
+          // Normalize communication preferences - API may send capitalized values like "Email"
+          const rawCommPref = fetchedUserData.customers.communication_preferences || '';
+          // Map API values to form values (form uses lowercase)
+          if (rawCommPref.toLowerCase() === 'email') {
+            communicationPreferences = 'email';
+          } else if (rawCommPref.toLowerCase() === 'phone') {
+            communicationPreferences = 'phone';
+          } else if (rawCommPref.toLowerCase() === 'sms') {
+            communicationPreferences = 'sms';
+          } else if (rawCommPref.toLowerCase() === 'whatsapp') {
+            communicationPreferences = 'whatsApp';
+          } else if (rawCommPref.toLowerCase() === 'postal mail' || rawCommPref.toLowerCase() === 'postal') {
+            communicationPreferences = 'postal';
+          } else {
+            communicationPreferences = rawCommPref.toLowerCase();
+          }
+          
           // Extract GSTIN, PAN, State, Pincode for customer role
+          // Check both 'pan' and 'pan_number' fields from API
           gstin = (fetchedUserData.customers as any).gstin || '';
-          panNumber = (fetchedUserData.customers as any).pan_number || '';
+          panNumber = (fetchedUserData.customers as any).pan || (fetchedUserData.customers as any).pan_number || '';
           state = (fetchedUserData.customers as any).state || '';
           pincode = (fetchedUserData.customers as any).pincode || '';
+          
+          // Keep customer_type as-is from API (may be capitalized like "Individual")
+          // Form will match by value, and we've added both lowercase and capitalized options
         } else if (fetchedUserData.role === 'admin' && fetchedUserData.admin) {
           firstName = fetchedUserData.admin.first_name || '';
           lastName = fetchedUserData.admin.last_name || '';
@@ -1126,7 +1149,13 @@ const EditRegister = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="individual">Individual</SelectItem>
+                        <SelectItem value="Individual">Individual</SelectItem>
                         <SelectItem value="corporate">Corporate</SelectItem>
+                        <SelectItem value="Corporate">Corporate</SelectItem>
+                        <SelectItem value="enterprise">Enterprise</SelectItem>
+                        <SelectItem value="Enterprise">Enterprise</SelectItem>
+                        <SelectItem value="government">Government</SelectItem>
+                        <SelectItem value="Government">Government</SelectItem>
                         <SelectItem value="sme">SME</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1222,7 +1251,15 @@ const EditRegister = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="english">English</SelectItem>
+                        <SelectItem value="English">English</SelectItem>
                         <SelectItem value="hindi">Hindi</SelectItem>
+                        <SelectItem value="Hindi">Hindi</SelectItem>
+                        <SelectItem value="telugu">Telugu</SelectItem>
+                        <SelectItem value="Telugu">Telugu</SelectItem>
+                        <SelectItem value="kannada">Kannada</SelectItem>
+                        <SelectItem value="Kannada">Kannada</SelectItem>
+                        <SelectItem value="tamil">Tamil</SelectItem>
+                        <SelectItem value="Tamil">Tamil</SelectItem>
                         <SelectItem value="spanish">Spanish</SelectItem>
                         <SelectItem value="french">French</SelectItem>
                         <SelectItem value="german">German</SelectItem>

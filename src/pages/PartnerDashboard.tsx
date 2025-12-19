@@ -1783,7 +1783,7 @@ const PartnerDashboard = () => {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full" style={{ tableLayout: 'auto' }}>
                       <thead>
                         <tr className="border-b border-gray-200">
                           <SortableTableHeader
@@ -1792,6 +1792,7 @@ const PartnerDashboard = () => {
                             sortColumn={backlogSortConfig?.column || ''}
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
+                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                           />
                           <SortableTableHeader
                             column="case_summary"
@@ -1800,6 +1801,7 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
+                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]"
                           />
                           <SortableTableHeader
                             column="case_description"
@@ -1808,6 +1810,7 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
+                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[150px]"
                           />
                           <SortableTableHeader
                             column="backlog_referral_date"
@@ -1816,6 +1819,7 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
+                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                           />
                           <SortableTableHeader
                             column="status"
@@ -1824,11 +1828,12 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
+                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                           />
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[120px]">
                             Assigned Expert
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[180px]">
                             Actions
                           </th>
                         </tr>
@@ -1882,23 +1887,25 @@ const PartnerDashboard = () => {
                               key={item.backlog_id || index}
                               className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors duration-200"
                             >
-                              <td className="p-4">
+                              <td className="px-2 sm:px-3 py-3">
                                 <span 
-                                  className="font-mono text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                                  className="font-mono text-xs sm:text-sm text-blue-600 hover:text-blue-800 cursor-pointer break-words"
+                                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                                   onClick={() => navigate(`/partner-backlog-detail/${item.backlog_id}`)}
+                                  title={item.backlog_id}
                                 >
                                   {item.backlog_id}
                                 </span>
                               </td>
-                              <td className="p-4">
-                                <div className="font-medium text-gray-900">
+                              <td className="px-2 sm:px-3 py-3">
+                                <div className="font-medium text-xs sm:text-sm text-gray-900 break-words max-w-[120px] sm:max-w-none" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.case_summary || "No Summary"}>
                                   {item.case_summary || "No Summary"}
                                 </div>
                               </td>
-                              <td className="p-4 text-gray-700">
+                              <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-700 break-words hidden lg:table-cell max-w-[150px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.case_description || "No Description"}>
                                 {item.case_description || "No Description"}
                               </td>
-                              <td className="p-4 text-sm text-gray-600">
+                              <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 whitespace-nowrap">
                                 {item.backlog_referral_date
                                   ? new Date(item.backlog_referral_date).toLocaleDateString("en-GB", {
                                       day: "2-digit",
@@ -1908,7 +1915,7 @@ const PartnerDashboard = () => {
                                   : "N/A"}
                               </td>
 
-                              <td className="p-4">
+                              <td className="px-2 sm:px-3 py-3 whitespace-nowrap">
                               <Badge
                                 className={`${
                                   item.status?.toLowerCase() === "new"
@@ -1918,38 +1925,40 @@ const PartnerDashboard = () => {
                                   : item.status?.toLowerCase() === "complete"
                                   ? "bg-green-100 text-green-800"
                                   : "bg-gray-100 text-gray-800"
-                              } px-3 py-1 rounded-full font-medium`}
+                              } px-2 sm:px-3 py-1 rounded-full text-xs font-medium`}
                               >
                                   {item.status ? item.status : "N/A"}
                                 </Badge>
                               </td>
-                              <td className="p-4">
+                              <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.assigned_consultant_name || 'Not Assigned'}>
                                 {item.assigned_consultant_name ? item.assigned_consultant_name : 'Not Assigned'}
                               </td>
-                              <td className="p-4">
-                                <div className="flex items-center space-x-2">
+                              <td className="px-2 sm:px-3 py-3 whitespace-nowrap min-w-[180px]">
+                                <div className="flex items-center gap-1 sm:gap-2">
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                                    className="border-gray-300 text-gray-700 hover:bg-gray-50 h-7 sm:h-8 px-2 sm:px-3 text-xs"
                                     onClick={() => {
                                       navigate(`/partner-backlog-detail/${item.backlog_id}`);
                                     }}
+                                    title="View"
                                   >
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    View
+                                    <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    <span className="hidden sm:inline ml-1">View</span>
                                   </Button>
                                   
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                                    className="border-blue-500 text-blue-600 hover:bg-blue-50 h-7 sm:h-8 px-2 sm:px-3 text-xs"
                                     onClick={() => {
                                       navigate(`/partner-backlog-edit/${item.backlog_id}`);
                                     }}
+                                    title="Transact"
                                   >
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Transact
+                                    <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    <span className="hidden sm:inline ml-1">Transact</span>
                                   </Button>
                                 </div>
                               </td>

@@ -375,47 +375,74 @@ const PartnerBacklogEdit = () => {
         return;
       }
 
+      // Get content type from headers first
+      const contentType = response.headers.get('content-type') || '';
+      console.log('Content-Type from header:', contentType);
+
       // Clone the response to allow multiple reads
       const responseClone = response.clone();
-      
-      // First, try to read as text to check for errors or URLs
-      const responseText = await response.text();
-      console.log('Response text length:', responseText.length);
-      console.log('Response text preview:', responseText.substring(0, 200));
-      
-      // Check if response is a simple error message (like "1" or short numeric string)
-      if (responseText.length < 50 && /^\d+$/.test(responseText.trim())) {
-        toast({
-          title: "Error",
-          description: `Document not available. The API returned: ${responseText}. Please check if the document exists.`,
-          variant: "destructive",
-        });
-        return;
+
+      // Check if content type suggests text-based content
+      const isTextBased = contentType.includes('text/') || 
+                          contentType.includes('application/json') || 
+                          contentType.includes('application/xml') ||
+                          contentType === ''; // If no content-type, might be text
+
+      let blob: Blob;
+      let responseText: string = '';
+
+      if (isTextBased) {
+        // Read as text first for text-based responses
+        responseText = await response.text();
+        console.log('Response text length:', responseText.length);
+        console.log('Response text preview:', responseText.substring(0, 200));
+
+        // Check if response is a simple error message (like "1" or short numeric string)
+        if (responseText.length < 50 && /^\d+$/.test(responseText.trim())) {
+          toast({
+            title: "Error",
+            description: `Document not available. The API returned: ${responseText}. Please check if the document exists.`,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Check if response is a URL
+        if (responseText.trim().startsWith('http')) {
+          console.log('Response is a URL:', responseText.trim());
+          setDocumentUrl(responseText.trim());
+          setDocumentType('url');
+          setShowDocumentModal(true);
+          toast({
+            title: "Success",
+            description: "Document opened successfully",
+          });
+          return;
+        }
+
+        // Check if response is SVG XML
+        const isSVG = responseText.includes('<svg') || (responseText.includes('<?xml') && responseText.includes('<svg'));
+        if (isSVG) {
+          console.log('Detected SVG content');
+          blob = new Blob([responseText], { type: 'image/svg+xml' });
+          const svgUrl = URL.createObjectURL(blob);
+          setDocumentUrl(svgUrl);
+          setDocumentType('image/svg+xml');
+          setShowDocumentModal(true);
+          toast({
+            title: "Success",
+            description: "Document opened successfully",
+          });
+          return;
+        }
+
+        // If text but not URL/SVG, create blob from text
+        blob = new Blob([responseText], { type: contentType || 'text/plain' });
+      } else {
+        // Read as blob directly for binary content
+        blob = await responseClone.blob();
       }
-      
-      // Check if response is a URL
-      if (responseText.trim().startsWith('http')) {
-        console.log('Response is a URL:', responseText.trim());
-        setDocumentUrl(responseText.trim());
-        setDocumentType('url');
-        setShowDocumentModal(true);
-        return;
-      }
-      
-      // Check if response is SVG XML
-      const isSVG = responseText.includes('<svg') || (responseText.includes('<?xml') && responseText.includes('<svg'));
-      if (isSVG) {
-        console.log('Detected SVG content');
-        const svgBlob = new Blob([responseText], { type: 'image/svg+xml' });
-        const svgUrl = URL.createObjectURL(svgBlob);
-        setDocumentUrl(svgUrl);
-        setDocumentType('image/svg+xml');
-        setShowDocumentModal(true);
-        return;
-      }
-      
-      // Read as blob for binary data
-      const blob = await responseClone.blob();
+
       console.log('Blob created, size:', blob.size, 'bytes');
       console.log('Blob type:', blob.type);
       
@@ -429,49 +456,64 @@ const PartnerBacklogEdit = () => {
         return;
       }
       
-      // Get content type from response header or blob
-      const contentType = response.headers.get('content-type') || blob.type;
-      console.log('Content-Type:', contentType);
+      // Use content type from header or blob, or detect from magic bytes
+      let detectedType = contentType || blob.type;
+      console.log('Initial detected type:', detectedType);
       
       // Detect file type from magic bytes if content-type is not reliable
-      let detectedType = contentType;
-      if (!contentType || contentType === 'application/octet-stream' || contentType.includes('text/plain')) {
-        const arrayBuffer = await blob.slice(0, 10).arrayBuffer();
-        const bytes = new Uint8Array(arrayBuffer);
-        const hexString = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
-        console.log('Magic bytes:', hexString);
-        
-        // Check for JPEG
-        if (hexString.startsWith('FF D8 FF')) {
-          detectedType = 'image/jpeg';
-        }
-        // Check for PNG
-        else if (hexString.startsWith('89 50 4E 47')) {
-          detectedType = 'image/png';
-        }
-        // Check for PDF
-        else if (hexString.startsWith('25 50 44 46')) {
-          detectedType = 'application/pdf';
-        }
-        // Check for GIF
-        else if (hexString.startsWith('47 49 46 38')) {
-          detectedType = 'image/gif';
-        }
-        // Check for WebP (RIFF...WEBP)
-        else if (hexString.startsWith('52 49 46 46')) {
-          const moreBytes = await blob.slice(0, 12).arrayBuffer();
-          const moreHex = Array.from(new Uint8Array(moreBytes)).map(b => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
-          if (moreHex.includes('57 45 42 50')) {
-            detectedType = 'image/webp';
+      if (!detectedType || detectedType === 'application/octet-stream' || detectedType.includes('text/plain')) {
+        try {
+          const arrayBuffer = await blob.slice(0, 12).arrayBuffer();
+          const bytes = new Uint8Array(arrayBuffer);
+          const hexString = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
+          console.log('Magic bytes:', hexString);
+          
+          // Check for JPEG
+          if (hexString.startsWith('FF D8 FF')) {
+            detectedType = 'image/jpeg';
           }
+          // Check for PNG
+          else if (hexString.startsWith('89 50 4E 47')) {
+            detectedType = 'image/png';
+          }
+          // Check for PDF
+          else if (hexString.startsWith('25 50 44 46')) {
+            detectedType = 'application/pdf';
+          }
+          // Check for GIF
+          else if (hexString.startsWith('47 49 46 38')) {
+            detectedType = 'image/gif';
+          }
+          // Check for WebP (RIFF...WEBP)
+          else if (hexString.startsWith('52 49 46 46')) {
+            const moreBytes = await blob.slice(0, 12).arrayBuffer();
+            const moreHex = Array.from(new Uint8Array(moreBytes)).map(b => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
+            if (moreHex.includes('57 45 42 50')) {
+              detectedType = 'image/webp';
+            }
+          }
+          // Check for Word documents (DOCX - PK...)
+          else if (hexString.startsWith('50 4B')) {
+            // Could be DOCX, XLSX, PPTX, or ZIP - check further
+            detectedType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          }
+          // Check for older Word documents (DOC - D0 CF 11 E0)
+          else if (hexString.startsWith('D0 CF 11 E0')) {
+            detectedType = 'application/msword';
+          }
+          
+          console.log('Detected type from magic bytes:', detectedType);
+        } catch (error) {
+          console.error('Error reading magic bytes:', error);
+          // Fallback to default
+          detectedType = detectedType || 'application/pdf';
         }
-        
-        console.log('Detected type from magic bytes:', detectedType);
       }
       
       // Create blob URL
       const fileUrl = URL.createObjectURL(blob);
       console.log('Created blob URL:', fileUrl);
+      console.log('Final document type:', detectedType);
       
       // Set document URL and type for modal display
       setDocumentUrl(fileUrl);

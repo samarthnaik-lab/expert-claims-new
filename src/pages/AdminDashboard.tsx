@@ -2434,7 +2434,7 @@ Created Time: ${report.created_time}
             <div>
               <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
               <p className="text-white/80 mt-1">
-                Welcome, {adminName} • Manage tasks, users, and system settings
+                Welcome, {adminName} • Manage Tasks, Users, Leave Management And Gap Analysis  
               </p>
             </div>
             <div className="flex items-center space-x-3">
@@ -2646,7 +2646,7 @@ Created Time: ${report.created_time}
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-hidden">
+                <div className="overflow-x-auto">
                   <table className="w-full" style={{ tableLayout: 'auto' }}>
                     <thead className="bg-gray-50 border-b">
                       <tr>
@@ -2656,66 +2656,72 @@ Created Time: ${report.created_time}
                           sortColumn={taskSortConfig?.column || ''}
                           sortDirection={taskSortConfig?.direction || 'asc'}
                           onSort={handleTaskSort}
-                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                         />
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Task Name</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[100px]">Assignee</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[120px]">Customer</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Due Date</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[160px]">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {sortedTasks.map((task: any) => (
                         <tr key={task.id} className="hover:bg-gray-50">
                           <td
-                            className="px-4 py-4 min-w-0 break-words text-sm font-medium text-blue-600 cursor-pointer hover:underline"
-                            style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                            className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm font-medium text-blue-600 cursor-pointer hover:underline"
                             onClick={() => navigate(`/task/${task.task_id}`)}
+                            title={task.task_id}
                           >
                             {task.task_id}
                           </td>
-                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-900" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{task.title}</td>
-                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-900 break-words max-w-[120px] sm:max-w-none" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.title}>
+                            {task.title}
+                          </td>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.assigned_employee_name || 'Unassigned'}>
                             {task.assigned_employee_name || 'Unassigned'}
                           </td>
-                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.customer_profile?.full_name || 'N/A'}>
                             {task.customer_profile?.full_name || 'N/A'}
                           </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap">
                             <Badge className={getStatusColor(task.current_status)}>
-                              {task.current_status}
+                              <span className="text-xs">{task.current_status}</span>
                             </Badge>
                           </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
                             {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
                           </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigate(`/task/${task.task_id}`)}
-                              className="border-2 border-gray-300 hover:border-primary-500"
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditTask(task)}
-                              className="border-2 border-gray-300 hover:border-primary-500"
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 min-w-[160px]">
+                            <div className="flex items-center gap-1 sm:gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate(`/task/${task.task_id}`)}
+                                className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3 text-xs"
+                                title="View"
+                              >
+                                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="hidden sm:inline ml-1">View</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditTask(task)}
+                                className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3 text-xs"
+                                title="Edit"
+                              >
+                                <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="hidden sm:inline ml-1">Edit</span>
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
                       {sortedTasks.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="px-4 py-4 text-center text-gray-500">
+                          <td colSpan={7} className="px-2 sm:px-3 py-4 text-center text-gray-500">
                             No tasks found
                           </td>
                         </tr>
@@ -2856,7 +2862,7 @@ Created Time: ${report.created_time}
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-hidden">
+                <div className="overflow-x-auto">
                   <table className="w-full" style={{ tableLayout: 'auto' }}>
                     <thead className="bg-gray-50 border-b">
                       <tr>
@@ -2866,64 +2872,64 @@ Created Time: ${report.created_time}
                           sortColumn={userSortConfig?.column || ''}
                           sortDirection={userSortConfig?.direction || 'asc'}
                           onSort={handleUserSort}
-                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                         />
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entity</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Role</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Department</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">Email</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Entity</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Partner Type</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {sortedUsers.map(user => (
                         <tr key={user.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{user.id}</td>
-                          <td className="px-4 py-4 min-w-0 break-words text-sm font-medium text-gray-900" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{user.name}</td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{user.role}</td>
-                          <td className="px-4 py-4 whitespace-nowrap">
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">{user.id}</td>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm font-medium text-gray-900 break-words max-w-[120px] sm:max-w-none" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={user.name}>{user.name}</td>
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">{user.role}</td>
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap">
                             <Badge className={getStatusColor(user.status)}>
-                              {user.status}
+                              <span className="text-xs">{user.status}</span>
                             </Badge>
                           </td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">{user.department || 'N/A'}</td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden lg:table-cell break-all">{user.email || 'N/A'}</td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden lg:table-cell">{(user as any).entity || 'N/A'}</td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">{formatPartnerType((user as any).partner_type)}</td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div className="flex flex-col sm:flex-row gap-2">
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={user.department || 'N/A'}>{user.department || 'N/A'}</td>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-all hidden xl:table-cell max-w-[180px]" style={{ wordBreak: 'break-all' }} title={user.email || 'N/A'}>{user.email || 'N/A'}</td>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={(user as any).entity || 'N/A'}>{(user as any).entity || 'N/A'}</td>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={formatPartnerType((user as any).partner_type)}>{formatPartnerType((user as any).partner_type)}</td>
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                            <div className="flex items-center gap-1 sm:gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleViewUser(user)}
-                                className="border-2 border-gray-300 hover:border-primary-500 w-full sm:w-auto"
+                                className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
+                                title="View"
                               >
-                                <Eye className="h-4 w-4 mr-1" />
-                                <span className="hidden sm:inline">View</span>
-                                <span className="sm:hidden">View</span>
+                                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="hidden sm:inline ml-1">View</span>
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleEditUser(user)}
-                                className="border-2 border-gray-300 hover:border-primary-500 w-full sm:w-auto"
+                                className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
+                                title="Edit"
                               >
-                                <Edit className="h-4 w-4 mr-1" />
-                                <span className="hidden sm:inline">Edit</span>
-                                <span className="sm:hidden">Edit</span>
+                                <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="hidden sm:inline ml-1">Edit</span>
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleDeleteUser(user)}
-                                className="border-2 border-gray-300 hover:border-primary-500 w-full sm:w-auto"
+                                className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
+                                title="Delete"
                               >
-                                <Trash className="h-4 w-4 mr-1" />
-                                <span className="hidden sm:inline">Delete</span>
-                                <span className="sm:hidden">Del</span>
+                                <Trash className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="hidden sm:inline ml-1">Delete</span>
                               </Button>
                             </div>
                           </td>
