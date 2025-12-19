@@ -507,23 +507,23 @@ const EditTask = () => {
                 });
                 
                 return {
-                    case_phase_id: payment.case_phase_id,
-                    phase_name: payment.phase_name,
-                    notes: payment.notes,
+                case_phase_id: payment.case_phase_id,
+                phase_name: payment.phase_name,
+                notes: payment.notes,
                     status: payment.status || 'pending', // Ensure status is always set, default to 'pending'
-                    case_id: payment.case_id,
-                    due_date: payment.due_date,
-                    created_by: payment.created_by,
-                    updated_by: payment.updated_by,
-                    paid_amount: payment.paid_amount,
-                    case_type_id: payment.case_type_id,
-                    created_time: payment.created_time,
+                case_id: payment.case_id,
+                due_date: payment.due_date,
+                created_by: payment.created_by,
+                updated_by: payment.updated_by,
+                paid_amount: payment.paid_amount,
+                case_type_id: payment.case_type_id,
+                created_time: payment.created_time,
                     payment_date: paymentDate, // Always use payment_date from API if it exists
-                    phase_amount: payment.phase_amount,
-                    updated_time: payment.updated_time,
-                    invoice_number: payment.invoice_number,
-                    payment_method: payment.payment_method,
-                    transaction_reference: payment.transaction_reference
+                phase_amount: payment.phase_amount,
+                updated_time: payment.updated_time,
+                invoice_number: payment.invoice_number,
+                payment_method: payment.payment_method,
+                transaction_reference: payment.transaction_reference
                 };
             });
             setPaymentStages(transformedPaymentStages);
@@ -1914,16 +1914,24 @@ const EditTask = () => {
             };
             console.log('Request body:', requestBody);
             
+            // Supabase service role key
+            const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+            
             const response = await fetch('http://localhost:3000/support/view', {
                 method: 'POST',
                 headers: {
-                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-                    'Content-Profile': 'expc',
+                    'Accept': '*/*',
+                    'Accept-Language': 'en-US,en;q=0.9',
                     'Accept-Profile': 'expc',
-                    'session_id': 'a9bfe0a4-1e6c-4c69-860f-ec50846a7da6',
-                    'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc',
-                    'Content-Type': 'application/json'
+                    'Authorization': `Bearer ${supabaseServiceRoleKey}`,
+                    'Connection': 'keep-alive',
+                    'Content-Profile': 'expc',
+                    'Content-Type': 'application/json',
+                    'Origin': 'http://localhost:8080',
+                    'Referer': 'http://localhost:8080/',
+                    'apikey': supabaseServiceRoleKey,
+                    'jwt_token': jwtToken,
+                    'session_id': sessionId,
                 },
                 body: JSON.stringify(requestBody)
             });
@@ -1932,46 +1940,34 @@ const EditTask = () => {
             console.log('Response headers:', response.headers);
             
             if (!response.ok) {
-                console.error('Failed to call view webhook:', response.status, response.statusText);
-                
-                // Try to get error details
-                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-                try {
-                    const errorData = await response.text();
-                    console.error('Error response body:', errorData);
-                    errorMessage += ` - ${errorData}`;
-                } catch (e) {
-                    console.error('Could not parse error response');
-                }
-                
+                const errorText = await response.text();
+                console.error('API Error:', response.status, errorText);
                 toast({
                     title: "Error",
-                    description: `Failed to get document view URL: ${errorMessage}`,
+                    description: `Failed to get document view: ${response.status} ${response.statusText}`,
                     variant: "destructive",
                 });
                 return;
             }
 
-            // Since the API returns binary image data (as shown in Postman), handle it directly
-            console.log('Response received, processing binary data...');
-            
-            try {
-                // Get the response as a blob (binary data)
-                const blob = await response.blob();
-                console.log('Blob created, size:', blob.size, 'bytes');
-                console.log('Blob type:', blob.type);
+            // Check the content type to determine response format
+            const contentType = response.headers.get('content-type');
+            console.log('Content-Type:', contentType);
+
+            // Clone the response so we can read it multiple times
+            const responseClone = response.clone();
+
+            // Handle JSON response (contains URL or data)
+            if (contentType && contentType.includes('application/json')) {
+                const data = await response.json();
+                console.log('JSON response:', data);
                 
-                // Create a URL for the blob
-                const fileUrl = URL.createObjectURL(blob);
-                console.log('Created blob URL:', fileUrl);
+                // Extract URL from response (check multiple possible field names)
+                const url = data.url || data.document_url || data.image_url || data.file_url || data.data?.url;
                 
-                // Determine file type based on blob type or try to detect from content
-                const blobType = blob.type;
-                console.log('Detected blob type:', blobType);
-                
-                // Set document data for modal
-                setDocumentUrl(fileUrl);
-                setDocumentType(blobType);
+                if (url) {
+                    setDocumentUrl(url);
+                    setDocumentType('url');
                 setShowDocumentModal(true);
                 setZoomLevel(100);
                 setPanX(0);
@@ -1981,25 +1977,40 @@ const EditTask = () => {
                     title: "Success",
                     description: "Document loaded successfully",
                 });
-                
-                // Clean up the blob URL after some time to free memory
-                setTimeout(() => {
-                    URL.revokeObjectURL(fileUrl);
-                    console.log('Blob URL cleaned up');
-                }, 30000); // 30 seconds
-                
-            } catch (blobError) {
-                console.error('Error creating blob from response:', blobError);
-                
-                // Fallback: try to get response as text first
+                } else {
+                    toast({
+                        title: "Error",
+                        description: "No document URL found in response",
+                        variant: "destructive",
+                    });
+                }
+            } 
+            // Handle binary/blob response or text response
+            else {
                 try {
-                    const textResponse = await response.text();
-                    console.log('Response as text (first 200 chars):', textResponse.substring(0, 200));
+                    // First, read as text to check if it's a simple error response or SVG
+                    const responseText = await response.text();
+                    console.log('Response as text (first 500 chars):', responseText.substring(0, 500));
+                    console.log('Response length:', responseText.length);
                     
-                    // If it looks like a URL, try to open it
-                    if (textResponse.startsWith('http')) {
-                        console.log('Opening URL from response:', textResponse);
-                        setDocumentUrl(textResponse);
+                    // If response is just a number or very short text, it's likely an error
+                    if (responseText.length < 50 && /^\d+$/.test(responseText.trim())) {
+                        console.error('API returned numeric response (possibly error):', responseText);
+                        toast({
+                            title: "Error",
+                            description: `Document not available. The API returned: ${responseText}. Please check if the document exists.`,
+                            variant: "destructive",
+                        });
+                        return;
+                    }
+                    
+                    // Check if response is SVG XML
+                    const isSVG = responseText.trim().startsWith('<svg') || responseText.trim().startsWith('<?xml') && responseText.includes('<svg');
+                    
+                    // If it looks like a URL, use it directly
+                    if (responseText.trim().startsWith('http')) {
+                        console.log('Opening URL from response:', responseText.trim());
+                        setDocumentUrl(responseText.trim());
                         setDocumentType('url');
                         setShowDocumentModal(true);
                         setZoomLevel(100);
@@ -2010,14 +2021,108 @@ const EditTask = () => {
                             title: "Success",
                             description: "Document loaded successfully",
                         });
-                    } else {
-                        throw new Error('Response is not a URL');
+                        return;
                     }
-                } catch (textError) {
-                    console.error('Error handling response as text:', textError);
+                    
+                    // Handle SVG XML response
+                    if (isSVG || contentType?.includes('image/svg+xml') || contentType?.includes('text/xml')) {
+                        console.log('Detected SVG content, creating blob URL');
+                        // Create blob from SVG text
+                        const svgBlob = new Blob([responseText], { type: 'image/svg+xml' });
+                        const svgUrl = URL.createObjectURL(svgBlob);
+                        setDocumentUrl(svgUrl);
+                        setDocumentType('image/svg+xml');
+                        setShowDocumentModal(true);
+                        setZoomLevel(100);
+                        setPanX(0);
+                        setPanY(0);
+                        
+                        toast({
+                            title: "Success",
+                            description: "Document loaded successfully",
+                        });
+                        return;
+                    }
+                    
+                    // If response is text but not a URL or SVG, try to convert to blob
+                    // Use the cloned response to get as blob
+                    const blob = await responseClone.blob();
+                    console.log('Blob created, size:', blob.size, 'bytes');
+                    console.log('Blob type:', blob.type);
+                    
+                    // Check if blob is too small (likely not valid image data)
+                    if (blob.size < 100) {
+                        console.error('Blob too small, likely not valid image data');
                     toast({
                         title: "Error",
-                        description: "Failed to process document response",
+                            description: `Document not available. Response size: ${blob.size} bytes. Please check if the document exists.`,
+                        variant: "destructive",
+                    });
+                        return;
+                    }
+                    
+                    // Create object URL from blob
+                    const objectUrl = URL.createObjectURL(blob);
+                    console.log('Created blob URL:', objectUrl);
+                    
+                    // Determine document type from content-type header or blob type
+                    let docType = contentType || blob.type || 'application/octet-stream';
+                    
+                    if (contentType?.includes('image/')) {
+                        docType = contentType;
+                    } else if (contentType?.includes('application/pdf')) {
+                        docType = 'application/pdf';
+                    } else if (!blob.type && blob.size > 0) {
+                        // Try to detect file type from blob content
+                        // Check first bytes for file signatures
+                        const arrayBuffer = await blob.arrayBuffer();
+                        const uint8Array = new Uint8Array(arrayBuffer);
+                        
+                        // JPEG: FF D8 FF
+                        if (uint8Array[0] === 0xFF && uint8Array[1] === 0xD8 && uint8Array[2] === 0xFF) {
+                            docType = 'image/jpeg';
+                        }
+                        // PNG: 89 50 4E 47
+                        else if (uint8Array[0] === 0x89 && uint8Array[1] === 0x50 && uint8Array[2] === 0x4E && uint8Array[3] === 0x47) {
+                            docType = 'image/png';
+                        }
+                        // PDF: 25 50 44 46 (%PDF)
+                        else if (uint8Array[0] === 0x25 && uint8Array[1] === 0x50 && uint8Array[2] === 0x44 && uint8Array[3] === 0x46) {
+                            docType = 'application/pdf';
+                        }
+                        // GIF: 47 49 46 38 (GIF8)
+                        else if (uint8Array[0] === 0x47 && uint8Array[1] === 0x49 && uint8Array[2] === 0x46 && uint8Array[3] === 0x38) {
+                            docType = 'image/gif';
+                        }
+                        // WebP: Check for RIFF...WEBP
+                        else if (uint8Array[0] === 0x52 && uint8Array[1] === 0x49 && uint8Array[2] === 0x46 && uint8Array[3] === 0x46) {
+                            // Check further for WEBP signature
+                            const textDecoder = new TextDecoder();
+                            const header = textDecoder.decode(uint8Array.slice(0, 12));
+                            if (header.includes('WEBP')) {
+                                docType = 'image/webp';
+                            }
+                        }
+                    }
+                    
+                    // Set document URL and type
+                    setDocumentUrl(objectUrl);
+                    setDocumentType(docType);
+                    setShowDocumentModal(true);
+                    setZoomLevel(100);
+                    setPanX(0);
+                    setPanY(0);
+                    
+                    toast({
+                        title: "Success",
+                        description: "Document opened successfully",
+                    });
+                    
+                } catch (blobError) {
+                    console.error('Error handling response as blob:', blobError);
+                    toast({
+                        title: "Error",
+                        description: "Failed to process document response. Please check if the document exists.",
                         variant: "destructive",
                     });
                 }
@@ -2560,7 +2665,7 @@ const EditTask = () => {
             if (taskId) {
                 // Small delay to ensure backend has processed the creation
                 setTimeout(() => {
-                    fetchTaskData();
+                fetchTaskData();
                 }, 500);
             }
 
@@ -2709,8 +2814,8 @@ const EditTask = () => {
         if (paymentsData) {
             taskData.payments = paymentsData; // Include payments if payment phases exist
         }
-        
-        console.log('Task update data prepared:', taskData);
+
+            console.log('Task update data prepared:', taskData);
         console.log('Claims amount value:', taskData.claims_amount);
         console.log('Claims amount type:', typeof taskData.claims_amount);
         console.log('FormData claims_amount:', formData.claims_amount);
@@ -4014,32 +4119,32 @@ const EditTask = () => {
                                                     <div className="text-sm text-gray-600 space-y-1">
                                                         {formData.due_date && (
                                                             <div>
-                                                                <span className="text-red-500">
-                                                                    Assign Date: {(() => {
-                                                                        try {
+                                                            <span className="text-red-500">
+                                                                Assign Date: {(() => {
+                                                                    try {
                                                                             const dateStr = formData.due_date;
-                                                                            let date: Date;
-                                                                            
-                                                                            if (dateStr.includes('T')) {
-                                                                                date = new Date(dateStr);
-                                                                            } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                                                                                date = new Date(dateStr + 'T00:00:00');
-                                                                            } else {
-                                                                                date = new Date(dateStr);
-                                                                            }
-                                                                            
-                                                                            if (!isNaN(date.getTime())) {
-                                                                                const day = String(date.getDate()).padStart(2, '0');
-                                                                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                                                                const year = date.getFullYear();
-                                                                                return `${day}/${month}/${year}`;
-                                                                            }
-                                                                            return new Date(formData.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                                                                        } catch (error) {
-                                                                            return new Date(formData.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                                                                        let date: Date;
+                                                                        
+                                                                        if (dateStr.includes('T')) {
+                                                                            date = new Date(dateStr);
+                                                                        } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                                            date = new Date(dateStr + 'T00:00:00');
+                                                                        } else {
+                                                                            date = new Date(dateStr);
                                                                         }
-                                                                    })()}
-                                                                </span>
+                                                                        
+                                                                        if (!isNaN(date.getTime())) {
+                                                                            const day = String(date.getDate()).padStart(2, '0');
+                                                                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                                            const year = date.getFullYear();
+                                                                            return `${day}/${month}/${year}`;
+                                                                        }
+                                                                            return new Date(formData.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                                                                    } catch (error) {
+                                                                            return new Date(formData.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                                                                    }
+                                                                })()}
+                                                            </span>
                                                             </div>
                                                         )}
                                                         {phase.payment_date && (
@@ -4178,8 +4283,8 @@ const EditTask = () => {
                                 <div className="space-y-4 py-4 overflow-y-auto max-h-[80vh]">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="col-span-1 sm:col-span-2">
-                                            <Label htmlFor="modal-phase">Phase</Label>
-                                            <Popover open={phaseNameComboboxOpen} onOpenChange={setPhaseNameComboboxOpen}>
+                                        <Label htmlFor="modal-phase">Phase</Label>
+                                        <Popover open={phaseNameComboboxOpen} onOpenChange={setPhaseNameComboboxOpen}>
                                             <PopoverTrigger asChild>
                                                 <Button
                                                     variant="outline"
@@ -4271,28 +4376,28 @@ const EditTask = () => {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="modal-due-date">Payment Date</Label>
-                                            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                                                <PopoverTrigger asChild>
-                                                    <div className="relative">
-                                                        <Input
-                                                            id="modal-due-date"
-                                                            type="text"
-                                                            readOnly
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="modal-due-date">Payment Date</Label>
+                                        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                                            <PopoverTrigger asChild>
+                                                <div className="relative">
+                                                    <Input
+                                                        id="modal-due-date"
+                                                        type="text"
+                                                        readOnly
                                                             value={paymentPhaseForm.due_date ? format(new Date(paymentPhaseForm.due_date), 'dd/MM/yyyy') : ''}
                                                             placeholder="dd/mm/yyyy"
-                                                            onClick={() => setCalendarOpen(true)}
+                                                        onClick={() => setCalendarOpen(true)}
                                                             className="mt-1 cursor-pointer pr-10 w-full"
-                                                        />
-                                                        <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                                                    </div>
-                                                </PopoverTrigger>
+                                                    />
+                                                    <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                                </div>
+                                            </PopoverTrigger>
                                                 <PopoverContent className="w-auto p-0 z-[100]" align="start">
-                                                    <Calendar 
-                                                        mode="single" 
-                                                        selected={paymentPhaseForm.due_date ? new Date(paymentPhaseForm.due_date) : undefined} 
+                                                <Calendar 
+                                                    mode="single" 
+                                                    selected={paymentPhaseForm.due_date ? new Date(paymentPhaseForm.due_date) : undefined} 
                                                     onSelect={(date) => {
                                                         if (date) {
                                                             // Format date in local timezone (YYYY-MM-DD) to avoid timezone shift
@@ -4303,12 +4408,12 @@ const EditTask = () => {
                                                             setPaymentPhaseForm(prev => ({ ...prev, due_date: formattedDate }));
                                                             setCalendarOpen(false);
                                                         }
-                                                    }}
-                                                    />
-                                                    <div className="flex justify-between items-center p-3 border-t">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
+                                                    }} 
+                                                />
+                                                <div className="flex justify-between items-center p-3 border-t">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
                                                         onClick={() => {
                                                             const today = new Date();
                                                             // Format date in local timezone (YYYY-MM-DD) to avoid timezone shift
@@ -4319,32 +4424,32 @@ const EditTask = () => {
                                                             setPaymentPhaseForm(prev => ({ ...prev, due_date: formattedDate }));
                                                             setCalendarOpen(false);
                                                         }}
-                                                            className="text-sm"
-                                                        >
-                                                            Today
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => setCalendarOpen(false)}
-                                                            className="text-sm"
-                                                        >
-                                                            Cancel
-                                                        </Button>
-                                                    </div>
-                                                </PopoverContent>
-                                            </Popover>
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="modal-amount">Paid Amount (₹)</Label>
-                                            <Input
-                                                id="modal-amount"
-                                                type="number"
-                                                value={paymentPhaseForm.phase_amount || ''}
-                                                onChange={(e) => setPaymentPhaseForm(prev => ({ ...prev, phase_amount: parseFloat(e.target.value) || 0 }))}
-                                                placeholder="Enter paid amount"
+                                                        className="text-sm"
+                                                    >
+                                                        Today
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setCalendarOpen(false)}
+                                                        className="text-sm"
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="modal-amount">Paid Amount (₹)</Label>
+                                        <Input
+                                            id="modal-amount"
+                                            type="number"
+                                            value={paymentPhaseForm.phase_amount || ''}
+                                            onChange={(e) => setPaymentPhaseForm(prev => ({ ...prev, phase_amount: parseFloat(e.target.value) || 0 }))}
+                                            placeholder="Enter paid amount"
                                                 className="mt-1 w-full"
-                                            />
+                                        />
                                         </div>
                                         <div>
                                             <Label htmlFor="modal-status">Status</Label>
@@ -4476,7 +4581,7 @@ const EditTask = () => {
                         
                         {/* Modal Content */}
                         <div className="flex-1 p-2 overflow-hidden">
-                            {documentType.includes('image/') ? (
+                            {documentType.includes('image/') || documentType === 'image/svg+xml' ? (
                                 <div 
                                     className="flex items-center justify-center h-full min-h-full cursor-grab overflow-hidden"
                                     style={{ cursor: zoomLevel > 100 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
@@ -4498,6 +4603,14 @@ const EditTask = () => {
                                             transformOrigin: 'center center'
                                         }}
                                         draggable={false}
+                                        onError={(e) => {
+                                            console.error('Error loading image:', e);
+                                            toast({
+                                                title: "Error",
+                                                description: "Failed to load document image",
+                                                variant: "destructive",
+                                            });
+                                        }}
                                     />
                                 </div>
                             ) : documentType.includes('application/pdf') || documentType === 'url' ? (

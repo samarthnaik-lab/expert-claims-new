@@ -113,8 +113,13 @@ const PartnerDashboard = () => {
   const [currentPageBacklog, setCurrentPageBacklog] = useState(1);
   const [pageSizeBacklog, setPageSizeBacklog] = useState(10);
 
-  // Sorting for backlog data
-  const { sortedData: sortedBacklogData, sortConfig: backlogSortConfig, handleSort: handleBacklogSort } = useTableSort(backlogData);
+  // Sorting for backlog data - use allBacklogData for searching across all records
+  const { sortedData: sortedBacklogData, sortConfig: backlogSortConfig, handleSort: handleBacklogSort } = useTableSort(allBacklogData.length > 0 ? allBacklogData : backlogData);
+
+  // Reset page to 1 when search term or filters change
+  useEffect(() => {
+    setCurrentPageBacklog(1);
+  }, [backlogSearchTerm, backlogStatusFilter, backlogStartDate, backlogEndDate]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -1676,7 +1681,7 @@ const PartnerDashboard = () => {
                     <div className="relative">
                       <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                       <Input
-                        placeholder="Search by case summary, description, or ID..."
+                        placeholder="Search across all records by case summary, description, ID, status, expert, or case type..."
                         value={backlogSearchTerm}
                         onChange={(e) => setBacklogSearchTerm(e.target.value)}
                         className="pl-10 max-w-sm border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:ring-purple-500 transition-all duration-300"
@@ -1831,14 +1836,17 @@ const PartnerDashboard = () => {
                       <tbody>
                         {sortedBacklogData
                           .filter((item) => {
-                            // Search filter
+                            // Search filter - search across all fields
                             const searchMatch = !backlogSearchTerm || (() => {
                               const searchLower = backlogSearchTerm.toLowerCase();
                               return (
                                 item.case_summary?.toLowerCase().includes(searchLower) ||
                                 item.case_description?.toLowerCase().includes(searchLower) ||
                                 item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower)
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.status?.toLowerCase().includes(searchLower) ||
+                                item.assigned_consultant_name?.toLowerCase().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
                               );
                             })();
 

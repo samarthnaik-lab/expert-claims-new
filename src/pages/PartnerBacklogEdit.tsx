@@ -315,7 +315,7 @@ const PartnerBacklogEdit = () => {
       setViewingDocumentId(documentId.toString());
       console.log('Viewing document with ID:', documentId);
       
-      // Get session data from localStorage
+      // Get session data from localStorage dynamically
       const sessionData = localStorage.getItem('expertclaims_session');
       if (!sessionData) {
         toast({
@@ -327,8 +327,8 @@ const PartnerBacklogEdit = () => {
       }
 
       const session = JSON.parse(sessionData);
-      const sessionId = session.sessionId;
-      const jwtToken = session.jwtToken;
+      const sessionId = session.sessionId || session.session_id;
+      const jwtToken = session.jwtToken || session.jwt_token;
 
       if (!sessionId || !jwtToken) {
         toast({
@@ -339,21 +339,19 @@ const PartnerBacklogEdit = () => {
         return;
       }
 
-      // Call the new API to get document view
-      console.log('Calling document view API...');
-      console.log('Document ID:', documentId);
+      // Supabase service role key
+      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
       
       const requestBody = {
         document_id: documentId
       };
-      console.log('Request body:', requestBody);
-      
-      // Supabase service role key
-      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+      console.log('Calling partnerdocumentview API with:', requestBody);
       
       const response = await fetch('http://localhost:3000/support/partnerdocumentview', {
         method: 'POST',
         headers: {
+          'Accept': '*/*',
+          'Accept-Language': 'en-US,en;q=0.9',
           'session_id': sessionId,
           'jwt_token': jwtToken,
           'apikey': supabaseServiceRoleKey,
@@ -364,110 +362,132 @@ const PartnerBacklogEdit = () => {
       });
 
       console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
-        console.error('Failed to call view webhook:', response.status, response.statusText);
-        
-        // Try to get error details for logging
-        let userFriendlyMessage = "Unable to view document. Please try again.";
-        try {
-          const errorText = await response.text();
-          console.error('Error response body:', errorText);
-          
-          // Try to parse JSON error response
-          try {
-            const errorData = JSON.parse(errorText);
-            if (errorData.error) {
-              // Show user-friendly message based on error type
-              if (errorData.error.includes("File not found") || errorData.error.includes("not found")) {
-                userFriendlyMessage = "Document not found.";
-              } else if (errorData.error.includes("Invalid session")) {
-                userFriendlyMessage = "Session expired. Please log in again.";
-              } else {
-                userFriendlyMessage = "Unable to view document. Please try again.";
-              }
-            }
-          } catch (parseError) {
-            // If not JSON, use default message
-            console.error('Error is not JSON format');
-          }
-        } catch (e) {
-          console.error('Could not parse error response');
-        }
-        
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
         toast({
           title: "Error",
-          description: userFriendlyMessage,
+          description: errorText || "Failed to load document",
           variant: "destructive",
         });
         return;
       }
 
-      // Since the API returns binary image data (as shown in Postman), handle it directly
-      console.log('Response received, processing binary data...');
+      // Clone the response to allow multiple reads
+      const responseClone = response.clone();
       
-      try {
-        // Get the response as a blob (binary data)
-        const blob = await response.blob();
-        console.log('Blob created, size:', blob.size, 'bytes');
-        console.log('Blob type:', blob.type);
-        
-        // Create a URL for the blob
-        const fileUrl = URL.createObjectURL(blob);
-        console.log('Created blob URL:', fileUrl);
-        
-        // Determine file type based on blob type or try to detect from content
-        const blobType = blob.type;
-        console.log('Detected blob type:', blobType);
-        
-        // Set document URL and type for modal display
-        setDocumentUrl(fileUrl);
-        setDocumentType(blobType || 'unknown');
-        setShowDocumentModal(true);
-        
+      // First, try to read as text to check for errors or URLs
+      const responseText = await response.text();
+      console.log('Response text length:', responseText.length);
+      console.log('Response text preview:', responseText.substring(0, 200));
+      
+      // Check if response is a simple error message (like "1" or short numeric string)
+      if (responseText.length < 50 && /^\d+$/.test(responseText.trim())) {
         toast({
-          title: "Success",
-          description: "Document opened successfully",
+          title: "Error",
+          description: `Document not available. The API returned: ${responseText}. Please check if the document exists.`,
+          variant: "destructive",
         });
-        
-        // Clean up the blob URL after some time to free memory
-        setTimeout(() => {
-          URL.revokeObjectURL(fileUrl);
-          console.log('Blob URL cleaned up');
-        }, 30000); // 30 seconds
-        
-      } catch (blobError) {
-        console.error('Error creating blob from response:', blobError);
-        
-        // Fallback: try to get response as text first
-        try {
-          const textResponse = await response.text();
-          console.log('Response as text (first 200 chars):', textResponse.substring(0, 200));
-          
-          // If it looks like a URL, try to open it
-          if (textResponse.startsWith('http')) {
-            console.log('Opening URL from response:', textResponse);
-            setDocumentUrl(textResponse);
-            setDocumentType('url');
-            setShowDocumentModal(true);
-          } else {
-            throw new Error('Response is not a URL');
-          }
-        } catch (textError) {
-          console.error('Error handling response as text:', textError);
-          toast({
-            title: "Error",
-            description: "Failed to process document response",
-            variant: "destructive",
-          });
-        }
+        return;
       }
+      
+      // Check if response is a URL
+      if (responseText.trim().startsWith('http')) {
+        console.log('Response is a URL:', responseText.trim());
+        setDocumentUrl(responseText.trim());
+        setDocumentType('url');
+        setShowDocumentModal(true);
+        return;
+      }
+      
+      // Check if response is SVG XML
+      const isSVG = responseText.includes('<svg') || (responseText.includes('<?xml') && responseText.includes('<svg'));
+      if (isSVG) {
+        console.log('Detected SVG content');
+        const svgBlob = new Blob([responseText], { type: 'image/svg+xml' });
+        const svgUrl = URL.createObjectURL(svgBlob);
+        setDocumentUrl(svgUrl);
+        setDocumentType('image/svg+xml');
+        setShowDocumentModal(true);
+        return;
+      }
+      
+      // Read as blob for binary data
+      const blob = await responseClone.blob();
+      console.log('Blob created, size:', blob.size, 'bytes');
+      console.log('Blob type:', blob.type);
+      
+      // Validate blob size
+      if (blob.size < 100) {
+        toast({
+          title: "Error",
+          description: "Document data is too small or invalid",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Get content type from response header or blob
+      const contentType = response.headers.get('content-type') || blob.type;
+      console.log('Content-Type:', contentType);
+      
+      // Detect file type from magic bytes if content-type is not reliable
+      let detectedType = contentType;
+      if (!contentType || contentType === 'application/octet-stream' || contentType.includes('text/plain')) {
+        const arrayBuffer = await blob.slice(0, 10).arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        const hexString = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
+        console.log('Magic bytes:', hexString);
+        
+        // Check for JPEG
+        if (hexString.startsWith('FF D8 FF')) {
+          detectedType = 'image/jpeg';
+        }
+        // Check for PNG
+        else if (hexString.startsWith('89 50 4E 47')) {
+          detectedType = 'image/png';
+        }
+        // Check for PDF
+        else if (hexString.startsWith('25 50 44 46')) {
+          detectedType = 'application/pdf';
+        }
+        // Check for GIF
+        else if (hexString.startsWith('47 49 46 38')) {
+          detectedType = 'image/gif';
+        }
+        // Check for WebP (RIFF...WEBP)
+        else if (hexString.startsWith('52 49 46 46')) {
+          const moreBytes = await blob.slice(0, 12).arrayBuffer();
+          const moreHex = Array.from(new Uint8Array(moreBytes)).map(b => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
+          if (moreHex.includes('57 45 42 50')) {
+            detectedType = 'image/webp';
+          }
+        }
+        
+        console.log('Detected type from magic bytes:', detectedType);
+      }
+      
+      // Create blob URL
+      const fileUrl = URL.createObjectURL(blob);
+      console.log('Created blob URL:', fileUrl);
+      
+      // Set document URL and type for modal display
+      setDocumentUrl(fileUrl);
+      setDocumentType(detectedType || 'application/pdf');
+      setShowDocumentModal(true);
+      
+      toast({
+        title: "Success",
+        description: "Document opened successfully",
+      });
+      
     } catch (error) {
       console.error('Error viewing document:', error);
       toast({
         title: "Error",
-        description: "Failed to view document",
+        description: "Failed to view document. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -1949,6 +1969,10 @@ const PartnerBacklogEdit = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    // Clean up blob URL before closing
+                    if (documentUrl && documentUrl.startsWith('blob:')) {
+                      URL.revokeObjectURL(documentUrl);
+                    }
                     setShowDocumentModal(false);
                     setDocumentUrl('');
                     setDocumentType('');
@@ -1956,10 +1980,6 @@ const PartnerBacklogEdit = () => {
                     setPanX(0);
                     setPanY(0);
                     setIsDragging(false);
-                    // Clean up blob URL
-                    if (documentUrl.startsWith('blob:')) {
-                      URL.revokeObjectURL(documentUrl);
-                    }
                   }}
                   className="text-gray-600 hover:text-gray-800 border-2 border-gray-300 hover:border-red-400 hover:bg-red-50 px-3 py-2 text-sm sm:text-base"
                 >
@@ -1972,7 +1992,7 @@ const PartnerBacklogEdit = () => {
             
             {/* Modal Content */}
             <div className="flex-1 p-2 overflow-hidden">
-              {documentType.includes('image/') ? (
+              {documentType.includes('image/') || documentType === 'image/svg+xml' ? (
                 <div 
                   className="flex items-center justify-center h-full min-h-full cursor-grab overflow-hidden"
                   style={{ cursor: zoomLevel > 100 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
@@ -1994,6 +2014,14 @@ const PartnerBacklogEdit = () => {
                       transformOrigin: 'center center'
                     }}
                     draggable={false}
+                    onError={(e) => {
+                      console.error('Image failed to load:', e);
+                      toast({
+                        title: "Error",
+                        description: "Failed to load image. The file may be corrupted or in an unsupported format.",
+                        variant: "destructive",
+                      });
+                    }}
                   />
                 </div>
               ) : documentType.includes('application/pdf') || documentType === 'url' ? (

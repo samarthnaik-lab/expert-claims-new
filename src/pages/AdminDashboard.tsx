@@ -73,6 +73,7 @@ const AdminDashboard = () => {
   const [isLoadingCases, setIsLoadingCases] = useState(false);
   const [loadingAllCases, setLoadingAllCases] = useState(false);
   const [casesSearchTerm, setCasesSearchTerm] = useState('');
+  const [casesAssignedExpertFilter, setCasesAssignedExpertFilter] = useState('all');
   const [currentPageCases, setCurrentPageCases] = useState(1);
   const [pageSizeCases, setPageSizeCases] = useState(10);
   
@@ -388,6 +389,28 @@ const AdminDashboard = () => {
     return Array.from(statusSet).sort();
   }, [allTasks]);
 
+  // Extract unique assigned experts from all cases for dropdown (dynamic filter)
+  const availableAssignedExperts = useMemo(() => {
+    const expertSet = new Set<string>();
+    let hasUnassigned = false;
+    
+    allCasesData.forEach((caseItem: any) => {
+      if (caseItem.assigned_consultant_name && caseItem.assigned_consultant_name.trim() !== '') {
+        expertSet.add(caseItem.assigned_consultant_name);
+      } else {
+        hasUnassigned = true;
+      }
+    });
+    
+    const experts = Array.from(expertSet).sort();
+    // Add "Not Assigned" at the end if there are any unassigned cases
+    if (hasUnassigned) {
+      experts.push('Not Assigned');
+    }
+    
+    return experts;
+  }, [allCasesData]);
+
   // Filter tasks based on search term and status
   // When searching/filtering, use allTasks; otherwise use paginated tasks
   const isSearchingOrFilteringTasks = searchTerm || statusFilter !== 'all';
@@ -586,7 +609,10 @@ const AdminDashboard = () => {
     if (activeTab === 'tasks' && (searchTerm || statusFilter !== 'all')) {
       setTaskCurrentPage(1);
     }
-  }, [searchTerm, statusFilter, activeTab]);
+    if (activeTab === 'cases' && (casesSearchTerm || casesAssignedExpertFilter !== 'all')) {
+      setCurrentPageCases(1);
+    }
+  }, [searchTerm, statusFilter, activeTab, casesSearchTerm, casesAssignedExpertFilter]);
 
 
   const fetchDashboardData = async () => {
@@ -2604,37 +2630,37 @@ Created Time: ${report.created_time}
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Assignee</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Customer</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Due Date</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredTasks.map((task: any) => (
                         <tr key={task.id} className="hover:bg-gray-50">
                           <td
-                            className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 cursor-pointer hover:underline"
+                            className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 cursor-pointer hover:underline"
                             onClick={() => navigate(`/task/${task.task_id}`)}
                           >
                             {task.task_id}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.title}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-3 sm:px-6 py-4 text-sm text-gray-900 break-words max-w-xs">{task.title}</td>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">
                             {task.assigned_employee_name || 'Unassigned'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden lg:table-cell">
                             {task.customer_profile?.full_name || 'N/A'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                             <Badge className={getStatusColor(task.current_status)}>
                               {task.current_status}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">
                             {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
@@ -2661,7 +2687,7 @@ Created Time: ${report.created_time}
                       ))}
                       {filteredTasks.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                          <td colSpan={7} className="px-3 sm:px-6 py-4 text-center text-gray-500">
                             No tasks found
                           </td>
                         </tr>
@@ -2806,60 +2832,65 @@ Created Time: ${report.created_time}
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User ID</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entity</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner Type</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User ID</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Department</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Email</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Entity</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Partner Type</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredUsers.map(user => (
                         <tr key={user.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.id}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.role}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.id}</td>
+                          <td className="px-3 sm:px-6 py-4 text-sm font-medium text-gray-900 break-words max-w-xs">{user.name}</td>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.role}</td>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                             <Badge className={getStatusColor(user.status)}>
                               {user.status}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.department || 'N/A'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.email || 'N/A'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{(user as any).entity || 'N/A'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatPartnerType((user as any).partner_type)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewUser(user)}
-                              className="border-2 border-gray-300 hover:border-primary-500"
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditUser(user)}
-                              className="border-2 border-gray-300 hover:border-primary-500"
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteUser(user)}
-                              className="border-2 border-gray-300 hover:border-primary-500"
-                            >
-                              <Trash className="h-4 w-4 mr-1" />
-                              Delete
-                            </Button>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">{user.department || 'N/A'}</td>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden lg:table-cell break-all">{user.email || 'N/A'}</td>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden lg:table-cell">{(user as any).entity || 'N/A'}</td>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">{formatPartnerType((user as any).partner_type)}</td>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewUser(user)}
+                                className="border-2 border-gray-300 hover:border-primary-500 w-full sm:w-auto"
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                <span className="hidden sm:inline">View</span>
+                                <span className="sm:hidden">View</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditUser(user)}
+                                className="border-2 border-gray-300 hover:border-primary-500 w-full sm:w-auto"
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                <span className="hidden sm:inline">Edit</span>
+                                <span className="sm:hidden">Edit</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteUser(user)}
+                                className="border-2 border-gray-300 hover:border-primary-500 w-full sm:w-auto"
+                              >
+                                <Trash className="h-4 w-4 mr-1" />
+                                <span className="hidden sm:inline">Delete</span>
+                                <span className="sm:hidden">Del</span>
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -3113,23 +3144,53 @@ Created Time: ${report.created_time}
                     </div>
                   )}
                 </div>
-                <div className="flex items-center space-x-2 mt-4">
-                  <div className="relative">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-4">
+                  <div className="relative flex-1 w-full sm:max-w-sm">
                     <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                     <Input
                       placeholder="Search by case summary, description, case type, or ID..."
                       value={casesSearchTerm}
                       onChange={(e) => setCasesSearchTerm(e.target.value)}
-                      className="pl-10 max-w-sm border-2 border-blue-300 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-300"
+                      className="pl-10 w-full border-2 border-blue-300 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-300"
                     />
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <Filter className="h-4 w-4 text-gray-500 hidden sm:block" />
+                    <Select
+                      value={casesAssignedExpertFilter}
+                      onValueChange={setCasesAssignedExpertFilter}
+                    >
+                      <SelectTrigger className="w-full sm:w-48 border-2 border-blue-300 rounded-xl focus:border-blue-500">
+                        <SelectValue placeholder="Filter by Assigned Expert" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[100]">
+                        <SelectItem value="all">All Experts</SelectItem>
+                        {availableAssignedExperts.map((expert) => (
+                          <SelectItem key={expert} value={expert}>
+                            {expert}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {(casesSearchTerm || casesAssignedExpertFilter !== 'all') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCasesSearchTerm('');
+                          setCasesAssignedExpertFilter('all');
+                        }}
+                        className="border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 w-full sm:w-auto"
+                      >
+                        Clear
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={fetchCasesData}
                       disabled={isLoadingCases}
-                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                      className="border-blue-300 text-blue-700 hover:bg-blue-50 w-full sm:w-auto"
                     >
                       <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingCases ? 'animate-spin' : ''}`} />
                       Refresh
@@ -3154,31 +3215,31 @@ Created Time: ${report.created_time}
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Case ID
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Case Summary
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden md:table-cell">
                             Case Description
                           </th>
                           {/* <th className="text-left p-4 font-semibold text-gray-700">
                             Type of Policysss
                           </th> */}
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">
                             Referral Date
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Status
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Assigned Expert
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">
                             Entity
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Actions
                           </th>
                         </tr>
@@ -3186,15 +3247,25 @@ Created Time: ${report.created_time}
                       <tbody>
                         {casesData
                           .filter((item) => {
-                            if (!casesSearchTerm) return true;
-                            const searchLower = casesSearchTerm.toLowerCase();
-                            return (
-                              item.case_summary?.toLowerCase().includes(searchLower) ||
-                              item.case_description?.toLowerCase().includes(searchLower) ||
-                              item.backlog_id?.toString().includes(searchLower) ||
-                              item.case_type_id?.toString().includes(searchLower) ||
-                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                            );
+                            // Search filter
+                            const matchesSearch = !casesSearchTerm || (() => {
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
+                            })();
+                            
+                            // Assigned Expert filter
+                            const matchesExpert = casesAssignedExpertFilter === 'all' || 
+                              (casesAssignedExpertFilter === 'Not Assigned' 
+                                ? (!item.assigned_consultant_name || item.assigned_consultant_name.trim() === '')
+                                : (item.assigned_consultant_name && item.assigned_consultant_name === casesAssignedExpertFilter));
+                            
+                            return matchesSearch && matchesExpert;
                           })
                           .slice((currentPageCases - 1) * pageSizeCases, currentPageCases * pageSizeCases)
                           .map((item, index) => {
@@ -3214,65 +3285,68 @@ Created Time: ${report.created_time}
                                 key={item.backlog_id || index}
                                 className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors duration-200"
                               >
-                                <td className="p-4">
-                                  <span className="font-mono text-sm text-blue-600">
+                                <td className="p-3 sm:p-4">
+                                  <span className="font-mono text-xs sm:text-sm text-blue-600">
                                     {item.backlog_id}
                                   </span>
                                 </td>
-                                <td className="p-4">
-                                  <div className="font-medium text-gray-900">
+                                <td className="p-3 sm:p-4">
+                                  <div className="font-medium text-xs sm:text-sm text-gray-900 break-words max-w-xs">
                                     {item.case_summary || "No Summary"}
                                   </div>
                                 </td>
-                                <td className="p-4 text-gray-700">
+                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-700 hidden md:table-cell break-words max-w-md">
                                   {item.case_description || "No Description"}
                                 </td>
                                 {/* <td className="p-4 text-gray-700">
                                   {item.case_types?.case_type_name || `Type ${item.case_type_id}` || "N/A"}
                                 </td> */}
-                                <td className="p-4 text-sm text-gray-600">
+                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-600 hidden lg:table-cell">
                                   {item.backlog_referral_date || "N/A"}
                                 </td>
-                                <td className="p-4">
+                                <td className="p-3 sm:p-4">
                                   <Badge className={statusBadgeClass}>
                                     {item.status || "N/A"}
                                   </Badge>
                                 </td>
-                                <td className="p-4 text-gray-700">
+                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-700 break-words max-w-xs">
                                   {item.assigned_consultant_name ? item.assigned_consultant_name : 'Not Assigned'}
                                 </td>
-                                <td className="p-4 text-gray-700">
+                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-700 hidden lg:table-cell break-words max-w-xs">
                                   {item.partners ? (item.partners["name of entity"] || item.partners.entity_name || 'N/A') :
                                    item.entity_name || item["name of entity"] || 'N/A'}
                                 </td>
-                                <td className="p-4">
-                                  <div className="flex space-x-2">
+                                <td className="p-3 sm:p-4">
+                                  <div className="flex flex-col sm:flex-row gap-2">
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                                      className="border-blue-300 text-blue-700 hover:bg-blue-50 w-full sm:w-auto"
                                       onClick={() => navigate(`/admin-backlog-view/${item.backlog_id}`)}
                                     >
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      View
+                                      <Eye className="h-4 w-4 mr-1 sm:mr-2" />
+                                      <span className="hidden sm:inline">View</span>
+                                      <span className="sm:hidden">View</span>
                                     </Button>
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                                      className="border-blue-300 text-blue-700 hover:bg-blue-50 w-full sm:w-auto"
                                       onClick={() => handleEdit(item.backlog_id)}
                                     >
-                                      <Edit className="h-4 w-4 mr-2" />
-                                      Edit
+                                      <Edit className="h-4 w-4 mr-1 sm:mr-2" />
+                                      <span className="hidden sm:inline">Edit</span>
+                                      <span className="sm:hidden">Edit</span>
                                     </Button>
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="border-red-300 text-red-700 hover:bg-red-50"
+                                      className="border-red-300 text-red-700 hover:bg-red-50 w-full sm:w-auto"
                                       onClick={() => handleDeleteCase(item)}
                                     >
-                                      <Trash className="h-4 w-4 mr-2" />
-                                      Delete
+                                      <Trash className="h-4 w-4 mr-1 sm:mr-2" />
+                                      <span className="hidden sm:inline">Delete</span>
+                                      <span className="sm:hidden">Del</span>
                                     </Button>
                                   </div>
                                 </td>
@@ -3297,25 +3371,45 @@ Created Time: ${report.created_time}
                       <div className="flex items-center justify-between mt-6">
                         <div className="text-sm text-gray-500">
                           Showing {((currentPageCases - 1) * pageSizeCases) + 1} to {Math.min(currentPageCases * pageSizeCases, casesData.filter((item) => {
-                            if (!casesSearchTerm) return true;
-                            const searchLower = casesSearchTerm.toLowerCase();
-                            return (
-                              item.case_summary?.toLowerCase().includes(searchLower) ||
-                              item.case_description?.toLowerCase().includes(searchLower) ||
-                              item.backlog_id?.toString().includes(searchLower) ||
-                              item.case_type_id?.toString().includes(searchLower) ||
-                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                            );
+                            // Search filter
+                            const matchesSearch = !casesSearchTerm || (() => {
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
+                            })();
+                            
+                            // Assigned Expert filter
+                            const matchesExpert = casesAssignedExpertFilter === 'all' || 
+                              (casesAssignedExpertFilter === 'Not Assigned' 
+                                ? (!item.assigned_consultant_name || item.assigned_consultant_name.trim() === '')
+                                : (item.assigned_consultant_name && item.assigned_consultant_name === casesAssignedExpertFilter));
+                            
+                            return matchesSearch && matchesExpert;
                           }).length)} of {casesData.filter((item) => {
-                            if (!casesSearchTerm) return true;
-                            const searchLower = casesSearchTerm.toLowerCase();
-                            return (
-                              item.case_summary?.toLowerCase().includes(searchLower) ||
-                              item.case_description?.toLowerCase().includes(searchLower) ||
-                              item.backlog_id?.toString().includes(searchLower) ||
-                              item.case_type_id?.toString().includes(searchLower) ||
-                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                            );
+                            // Search filter
+                            const matchesSearch = !casesSearchTerm || (() => {
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
+                            })();
+                            
+                            // Assigned Expert filter
+                            const matchesExpert = casesAssignedExpertFilter === 'all' || 
+                              (casesAssignedExpertFilter === 'Not Assigned' 
+                                ? (!item.assigned_consultant_name || item.assigned_consultant_name.trim() === '')
+                                : (item.assigned_consultant_name && item.assigned_consultant_name === casesAssignedExpertFilter));
+                            
+                            return matchesSearch && matchesExpert;
                           }).length} entries
                         </div>
                         <div className="flex items-center space-x-2">
@@ -3330,41 +3424,65 @@ Created Time: ${report.created_time}
                           </Button>
                           <span className="text-sm text-gray-600">
                             Page {currentPageCases} of {Math.ceil(casesData.filter((item) => {
-                              if (!casesSearchTerm) return true;
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                              // Search filter
+                              const matchesSearch = !casesSearchTerm || (() => {
+                                const searchLower = casesSearchTerm.toLowerCase();
+                                return (
+                                  item.case_summary?.toLowerCase().includes(searchLower) ||
+                                  item.case_description?.toLowerCase().includes(searchLower) ||
+                                  item.backlog_id?.toString().includes(searchLower) ||
+                                  item.case_type_id?.toString().includes(searchLower) ||
+                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                                );
+                              })();
+                              
+                              // Assigned Expert filter
+                              const matchesExpert = casesAssignedExpertFilter === 'all' || 
+                                (item.assigned_consultant_name && item.assigned_consultant_name === casesAssignedExpertFilter);
+                              
+                              return matchesSearch && matchesExpert;
                             }).length / pageSizeCases)}
                           </span>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setCurrentPageCases(prev => Math.min(Math.ceil(casesData.filter((item) => {
-                              if (!casesSearchTerm) return true;
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                              // Search filter
+                              const matchesSearch = !casesSearchTerm || (() => {
+                                const searchLower = casesSearchTerm.toLowerCase();
+                                return (
+                                  item.case_summary?.toLowerCase().includes(searchLower) ||
+                                  item.case_description?.toLowerCase().includes(searchLower) ||
+                                  item.backlog_id?.toString().includes(searchLower) ||
+                                  item.case_type_id?.toString().includes(searchLower) ||
+                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                                );
+                              })();
+                              
+                              // Assigned Expert filter
+                              const matchesExpert = casesAssignedExpertFilter === 'all' || 
+                                (item.assigned_consultant_name && item.assigned_consultant_name === casesAssignedExpertFilter);
+                              
+                              return matchesSearch && matchesExpert;
                             }).length / pageSizeCases), prev + 1))}
                             disabled={currentPageCases >= Math.ceil(casesData.filter((item) => {
-                              if (!casesSearchTerm) return true;
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                              // Search filter
+                              const matchesSearch = !casesSearchTerm || (() => {
+                                const searchLower = casesSearchTerm.toLowerCase();
+                                return (
+                                  item.case_summary?.toLowerCase().includes(searchLower) ||
+                                  item.case_description?.toLowerCase().includes(searchLower) ||
+                                  item.backlog_id?.toString().includes(searchLower) ||
+                                  item.case_type_id?.toString().includes(searchLower) ||
+                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                                );
+                              })();
+                              
+                              // Assigned Expert filter
+                              const matchesExpert = casesAssignedExpertFilter === 'all' || 
+                                (item.assigned_consultant_name && item.assigned_consultant_name === casesAssignedExpertFilter);
+                              
+                              return matchesSearch && matchesExpert;
                             }).length / pageSizeCases)}
                             className="border-blue-300 text-blue-700 hover:bg-blue-50"
                           >

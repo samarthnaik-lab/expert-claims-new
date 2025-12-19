@@ -1015,13 +1015,13 @@ const Login = () => {
       </div>
 
       <Card className="w-full max-w-md shadow-2xl border-none bg-white/80 backdrop-blur-sm animate-fade-in relative z-10">
-        <CardHeader className="text-center pb-8 pt-8">
-          <div className="flex items-center justify-center space-x-3 mb-6">
+        <CardHeader className="text-center pb-6 sm:pb-8 pt-6 sm:pt-8 px-4 sm:px-6">
+          <div className="flex items-center justify-center space-x-3 mb-4 sm:mb-6">
             {/* <div className="p-3 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl shadow-lg">
               <Shield className="h-8 w-8 text-white" />
             </div> */}
             <div>
-                <img src="/leaders/logo.jpeg" alt="ExpertClaims" className="w-48" />
+                <img src="/leaders/logo.jpeg" alt="ExpertClaims" className="w-32 sm:w-48 h-auto" />
               </div>
             <div className="text-left">
               {/* <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
@@ -1030,8 +1030,8 @@ const Login = () => {
               {/* <p className="text-xs text-gray-500 font-medium">Insurance Claim Recovery</p> */}
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
-          <CardDescription className="text-gray-600 font-medium">
+          <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
+          <CardDescription className="text-sm sm:text-base text-gray-600 font-medium">
             Select your role and enter your credentials
           </CardDescription>
           <p className="text-xs text-gray-500 mt-2">
@@ -1039,7 +1039,7 @@ const Login = () => {
           </p>
         </CardHeader>
         
-        <CardContent className="space-y-6 px-8 pb-8">
+        <CardContent className="space-y-6 px-4 sm:px-8 pb-6 sm:pb-8">
           <div className="space-y-2">
             <Label htmlFor="role" className="text-gray-700 font-semibold">User Role</Label>
             <Select 
