@@ -349,16 +349,96 @@ const Login = () => {
       return;
     }
 
-    // For customer role, validate mobile number
-    if (role === 'customer' && !formData.mobile) {
-      toast({
-        title: "Error",
-        description: "Please enter your mobile number",
-        variant: "destructive",
-      });
+    // For customer role, validate mobile number and use customer-specific endpoint
+    if (role === 'customer') {
+      if (!formData.mobile) {
+        toast({
+          title: "Error",
+          description: "Please enter your mobile number",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsSendingOtp(true);
+
+      try {
+        // Step 1: Validate phone number exists
+        console.log('[Customer Login] Step 1: Validating phone number...');
+        const validateResponse = await fetch('http://localhost:3000/api/customer/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone_number: formData.mobile,
+            step: 'validate_phone'
+          })
+        });
+
+        const validateResult = await validateResponse.json();
+
+        if (!validateResponse.ok || !validateResult.success) {
+          toast({
+            title: "Error",
+            description: validateResult.message || "Customer not found with this phone number",
+            variant: "destructive",
+          });
+          setIsSendingOtp(false);
+          return;
+        }
+
+        console.log('[Customer Login] Phone validated, sending OTP...');
+
+        // Step 2: Send OTP
+        const sendOtpResponse = await fetch('http://localhost:3000/api/customer/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone_number: formData.mobile,
+            step: 'send_otp'
+          })
+        });
+
+        const sendOtpResult = await sendOtpResponse.json();
+
+        if (sendOtpResponse.ok && sendOtpResult.success) {
+          setOtpSent(true);
+          setLoginStep('otp_sent');
+          setOtpValue(sendOtpResult.otp || ''); // Store OTP for testing (remove in production)
+          
+          // Pre-fill OTP field with received OTP (for testing only)
+          if (sendOtpResult.otp) {
+            setFormData(prev => ({ ...prev, otp: sendOtpResult.otp }));
+          }
+
+          toast({
+            title: "OTP Sent Successfully",
+            description: sendOtpResult.message || "OTP has been sent to your mobile number. Please enter the OTP code.",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: sendOtpResult.message || "Failed to send OTP",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error in customer login flow:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send OTP. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSendingOtp(false);
+      }
       return;
     }
 
+    // Admin flow (unchanged)
     setIsSendingOtp(true);
 
     try {
@@ -488,8 +568,109 @@ const Login = () => {
       return;
     }
 
-    // For customer/hr: Use existing flow
-    if (role === 'customer' || role === 'hr') {
+    // For customer: Use customer-specific login endpoint
+    if (role === 'customer') {
+      if (!otpSent) {
+        // First time - validate phone and send OTP
+        await handleSendOtp();
+        return;
+      }
+      
+      if (!formData.otp || formData.otp.trim().length !== 4) {
+        toast({
+          title: "Error",
+          description: "Please enter a valid 4-digit OTP",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsLoggingIn(true);
+
+      try {
+        console.log('[Customer Login] Step 3: Verifying OTP...');
+        
+        // Use customer-specific endpoint
+        const response = await fetch('http://localhost:3000/api/customer/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone_number: formData.mobile,
+            otp: formData.otp
+            // No step field - backend will detect otp and go to verify step
+          })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          // Store session in the format AuthContext expects
+          if (result.jwtToken && result.sessionId && result.userId && result.userRole) {
+            const expiresAt = result.expiresAt || (Date.now() + (3 * 60 * 60 * 1000)); // 3 hours default
+            const session = {
+              sessionId: result.sessionId,
+              jwtToken: result.jwtToken,
+              userId: result.userId.toString(), // Ensure it's a string
+              userRole: result.userRole || 'customer',
+              expiresAt: expiresAt,
+              expiresAtFormatted: result.expiresAtFormatted || new Date(expiresAt).toLocaleString(),
+              expiresIn: result.expiresIn || Math.floor((expiresAt - Date.now()) / 1000)
+            };
+            
+            console.log('[Customer Login] Storing session:', session);
+            
+            // Store in the format AuthContext expects
+            localStorage.setItem('expertclaims_session', JSON.stringify(session));
+            
+            // Also store individual items for backward compatibility
+            localStorage.setItem('jwtToken', result.jwtToken);
+            localStorage.setItem('sessionId', result.sessionId);
+            localStorage.setItem('userId', result.userId.toString());
+            localStorage.setItem('userRole', result.userRole || 'customer');
+            localStorage.setItem('expiresAt', expiresAt.toString());
+            
+            console.log('[Customer Login] Session stored successfully');
+          } else {
+            console.error('[Customer Login] Missing required session fields:', {
+              hasJwtToken: !!result.jwtToken,
+              hasSessionId: !!result.sessionId,
+              hasUserId: !!result.userId,
+              hasUserRole: !!result.userRole
+            });
+          }
+
+          toast({
+            title: "Login Successful",
+            description: result.message || `Welcome to your customer portal!`,
+          });
+          
+          // Reload the page to ensure AuthContext picks up the new session
+          // This is necessary because AuthContext checks session on mount
+          window.location.href = '/customer-portal';
+        } else {
+          toast({
+            title: "Login Failed",
+            description: result.message || "Invalid OTP",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Customer login error:', error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoggingIn(false);
+      }
+      return;
+    }
+
+    // For hr: Use existing flow
+    if (role === 'hr') {
       if (!otpSent) {
         toast({
           title: "Error",
@@ -523,11 +704,7 @@ const Login = () => {
             description: result.message || `Welcome to your ${role} portal!`,
           });
           
-          if (role === 'customer') {
-            navigate('/customer-portal');
-          } else if (role === 'hr') {
-            navigate('/employee-dashboard');
-          }
+          navigate('/employee-dashboard');
         } else {
           toast({
             title: "Login Failed",
@@ -664,6 +841,7 @@ const Login = () => {
                   onKeyDown={handleKeyPress}
                   onBlur={() => handleFieldBlur('mobile')}
                   placeholder="Enter your mobile number"
+                  disabled={otpSent && loginStep === 'otp_sent'}
                   className="pl-10 h-12 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
                 />
                 {touched.mobile && errors.mobile && (
@@ -672,26 +850,29 @@ const Login = () => {
               </div>
             </div>
             
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="otp" className="text-gray-700 font-semibold">OTP <span className="text-red-500">*</span></Label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                  <Input
-                    id="otp"
-                    value={formData.otp}
-                    onChange={(e) => handleOtpChange(e.target.value)}
-                    onKeyDown={handleKeyPress}
-                    onBlur={() => handleFieldBlur('otp')}
-                    placeholder="Enter OTP (use 1234 for testing)"
-                    className="pl-10 h-12 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-                  />
-                  {touched.otp && errors.otp && (
-                    <p className="text-xs text-red-500 mt-1">{errors.otp}</p>
-                  )}
+            {/* OTP Field - Only show after OTP is sent */}
+            {otpSent && loginStep === 'otp_sent' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="otp" className="text-gray-700 font-semibold">OTP <span className="text-red-500">*</span></Label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                    <Input
+                      id="otp"
+                      value={formData.otp}
+                      onChange={(e) => handleOtpChange(e.target.value)}
+                      onKeyDown={handleKeyPress}
+                      onBlur={() => handleFieldBlur('otp')}
+                      placeholder="Enter 4-digit OTP"
+                      className="pl-10 h-12 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                    />
+                    {touched.otp && errors.otp && (
+                      <p className="text-xs text-red-500 mt-1">{errors.otp}</p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         );
 
@@ -812,6 +993,13 @@ const Login = () => {
       if (loginStep === 'initial') {
         return 'Validate Credentials';
       } else if (loginStep === 'otp_sent') {
+        return 'Sign In';
+      }
+    }
+    if (role === 'customer') {
+      if (!otpSent) {
+        return 'Verify & Send OTP';
+      } else {
         return 'Sign In';
       }
     }
