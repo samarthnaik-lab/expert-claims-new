@@ -8,12 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Users, FileText, Settings, TrendingUp, LogOut, Plus, Eye, Edit, Trash, UserPlus, ArrowLeft, List, Calendar, CheckCircle, XCircle, Search, Filter, X, AlertTriangle, RefreshCw, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Users, FileText, Settings, TrendingUp, LogOut, Plus, Eye, Edit, Trash, UserPlus, ArrowLeft, List, Calendar, CheckCircle, XCircle, Search, Filter, X, AlertTriangle, RefreshCw, ZoomIn, ZoomOut, RotateCcw, ArrowUpDown } from 'lucide-react';
 import { SessionExpiry } from '@/components/SessionExpiry';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserService, AdminUser } from '@/services/userService';
+import SortableTableHeader from '@/components/ui/SortableTableHeader';
+import { useTableSort } from '@/hooks/useTableSort';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -36,6 +38,7 @@ const AdminDashboard = () => {
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('all');
   const [userPartnerTypeFilter, setUserPartnerTypeFilter] = useState('all');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
   const [userPageLimit, setUserPageLimit] = useState('10');
   const [userCurrentPage, setUserCurrentPage] = useState(1);
   const [leavePageLimit, setLeavePageLimit] = useState('10');
@@ -72,6 +75,7 @@ const AdminDashboard = () => {
   const [isLoadingCases, setIsLoadingCases] = useState(false);
   const [loadingAllCases, setLoadingAllCases] = useState(false);
   const [casesSearchTerm, setCasesSearchTerm] = useState('');
+  const [casesAssignedExpertFilter, setCasesAssignedExpertFilter] = useState('all');
   const [currentPageCases, setCurrentPageCases] = useState(1);
   const [pageSizeCases, setPageSizeCases] = useState(10);
   
@@ -376,72 +380,142 @@ const AdminDashboard = () => {
     }
   }, [activeTab, allTasks, loadingAllTasks, allUsers, loadingAllUsers, allLeaveRequests, loadingAllLeaves, allCasesData, loadingAllCases, reports, reportsLoading, stats, dashboardLoading, statusMapping]);
 
-  // Filter tasks based on search term and status (client-side filtering for now)
-  // Note: In a real implementation, these filters should also be sent to the backend
-  const filteredTasks = tasks.filter(task => {
+  // Extract unique statuses from all tasks for dropdown (dynamic status filter)
+  const availableTaskStatuses = useMemo(() => {
+    const statusSet = new Set<string>();
+    allTasks.forEach((task: any) => {
+      if (task.current_status) {
+        statusSet.add(task.current_status);
+      }
+    });
+    return Array.from(statusSet).sort();
+  }, [allTasks]);
+
+  // Extract unique assigned experts from all cases for dropdown (dynamic filter)
+  const availableAssignedExperts = useMemo(() => {
+    const expertSet = new Set<string>();
+    let hasUnassigned = false;
+    
+    allCasesData.forEach((caseItem: any) => {
+      if (caseItem.assigned_consultant_name && caseItem.assigned_consultant_name.trim() !== '') {
+        expertSet.add(caseItem.assigned_consultant_name);
+      } else {
+        hasUnassigned = true;
+      }
+    });
+    
+    const experts = Array.from(expertSet).sort();
+    // Add "Not Assigned" at the end if there are any unassigned cases
+    if (hasUnassigned) {
+      experts.push('Not Assigned');
+    }
+    
+    return experts;
+  }, [allCasesData]);
+
+  // Filter tasks based on search term and status
+  // When searching/filtering, use allTasks; otherwise use paginated tasks
+  const isSearchingOrFilteringTasks = searchTerm || statusFilter !== 'all';
+  const tasksToFilter = isSearchingOrFilteringTasks ? allTasks : tasks;
+  
+  const allFilteredTasks = tasksToFilter.filter(task => {
     const searchLower = searchTerm.toLowerCase();
-    const matchesSearch =
-      task.title.toLowerCase().includes(searchLower) ||
-      task.task_id.toLowerCase().includes(searchLower) ||
+    const matchesSearch = !searchTerm || (
+      task.title?.toLowerCase().includes(searchLower) ||
+      task.task_id?.toLowerCase().includes(searchLower) ||
       task.assigned_to_profile?.full_name?.toLowerCase().includes(searchLower) ||
       task.customer_profile?.full_name?.toLowerCase().includes(searchLower) ||
-      task.current_status.toLowerCase().includes(searchLower);
+      task.current_status?.toLowerCase().includes(searchLower)
+    );
     
     // Updated status matching logic (case-insensitive)
+    // If statusFilter is a mapped value (like 'under review'), use mapping
+    // Otherwise, do direct status match (for actual status values from table)
     let matchesStatus = true;
     if (statusFilter !== 'all') {
       const statusArray = statusMapping[statusFilter as keyof typeof statusMapping];
       if (statusArray) {
-        // Convert both task status and mapping values to lowercase for comparison
-        const taskStatusLower = task.current_status.toLowerCase();
+        // Use mapping for filter values like 'under review', 'approved', 'in progress'
+        const taskStatusLower = task.current_status?.toLowerCase() || '';
         matchesStatus = statusArray.some(status => status.toLowerCase() === taskStatusLower);
       } else {
-        matchesStatus = false;
-      }
-      
-      // Debug logging
-      if (statusFilter === 'under review' || statusFilter === 'approved' || statusFilter === 'in progress') {
-        console.log(`Filter: ${statusFilter}, Task Status: ${task.current_status}, Matches: ${matchesStatus}`);
+        // Direct status match for actual status values from table
+        matchesStatus = task.current_status?.toLowerCase() === statusFilter.toLowerCase();
       }
     }
     
     return matchesSearch && matchesStatus;
   });
 
+  // Paginate filtered tasks
+  // When searching/filtering: use client-side pagination on filtered results
+  // When NOT searching/filtering: use API pagination (tasks already paginated from API)
+  const taskPageLimitNum = parseInt(taskPageLimit);
+  const taskStartIndex = (taskCurrentPage - 1) * taskPageLimitNum;
+  const taskEndIndex = taskStartIndex + taskPageLimitNum;
+  
+  const filteredTasks = isSearchingOrFilteringTasks
+    ? allFilteredTasks.slice(taskStartIndex, taskEndIndex) // Client-side pagination for search/filter results
+    : allFilteredTasks; // API pagination - tasks are already paginated
+
+  // Sorting for tasks
+  const { sortedData: sortedTasks, sortConfig: taskSortConfig, handleSort: handleTaskSort } = useTableSort(filteredTasks);
+
   // Get unique partner types from users data
+  // Use allUsersForSearch if available to show all partner types from all records
   const partnerTypes = useMemo(() => {
     const types = new Set<string>();
-    users.forEach((user: any) => {
+    const sourceUsers = allUsersForSearch.length > 0 ? allUsersForSearch : users;
+    sourceUsers.forEach((user: any) => {
       if (user.partner_type && user.partner_type !== 'N/A') {
         types.add(user.partner_type);
       }
     });
     return Array.from(types).sort();
-  }, [users]);
+  }, [allUsersForSearch, users]);
 
-  // Filter users based on search term, status, and partner type
+  // Filter users based on search term, role, and partner type
   // When searching or filtering, use all users; otherwise use current page users for display
-  const isSearchingOrFiltering = userSearchTerm || userStatusFilter !== 'all' || userPartnerTypeFilter !== 'all';
+  // Search, role, and partner type filtering (status filter removed)
+  const isSearchingOrFiltering = userSearchTerm || userRoleFilter !== 'all' || userPartnerTypeFilter !== 'all';
   
   // Determine which user set to filter from
-  const usersToFilter = isSearchingOrFiltering
-    ? (userPartnerTypeFilter !== 'all' ? allFetchedUsers : allUsersForSearch.length > 0 ? allUsersForSearch : users)
-    : (userPartnerTypeFilter !== 'all' ? allFetchedUsers : users);
+  // When filtering/searching, we need all users; otherwise use paginated users
+  // If filtering but allUsersForSearch is empty, use users as fallback (will be limited to current page)
+  const usersToFilter = isSearchingOrFiltering 
+    ? (allUsersForSearch.length > 0 ? allUsersForSearch : users) // Use allUsersForSearch if available when filtering
+    : users; // Use paginated users when not filtering
   
-  // Apply filters
-  const allFilteredUsers = usersToFilter.filter(user => {
-    const searchLower = userSearchTerm.toLowerCase();
-    const matchesSearch = !userSearchTerm || (
-      (user.id && user.id.toLowerCase().includes(searchLower)) ||
-      (user.name && user.name.toLowerCase().includes(searchLower)) ||
-      (user.role && user.role.toLowerCase().includes(searchLower)) ||
-      (user.status && user.status.toLowerCase().includes(searchLower)) ||
-      (user.email && user.email.toLowerCase().includes(searchLower))
-    );
-    const matchesStatus = userStatusFilter === 'all' || (user.status && user.status === userStatusFilter);
-    const matchesPartnerType = userPartnerTypeFilter === 'all' || ((user as any).partner_type && (user as any).partner_type === userPartnerTypeFilter);
-    return matchesSearch && matchesStatus && matchesPartnerType;
-  });
+  // Extract unique roles from users data for dropdown
+  // Use allUsersForSearch if available to show all roles, otherwise use current users
+  const availableRoles = useMemo(() => {
+    const rolesSet = new Set<string>();
+    const sourceUsers = allUsersForSearch.length > 0 ? allUsersForSearch : users;
+    sourceUsers.forEach(user => {
+      if (user.role) {
+        rolesSet.add(user.role);
+      }
+    });
+    return Array.from(rolesSet).sort();
+  }, [allUsersForSearch, users]);
+  
+  // Apply search, role, and partner type filters (status filter removed)
+  // Only filter if we have data to filter (when filtering, wait for allUsersForSearch to load)
+  const allFilteredUsers = (isSearchingOrFiltering && allUsersForSearch.length === 0 && loadingAllUsers)
+    ? [] // Show empty while loading all users for filtering
+    : usersToFilter.filter(user => {
+        const searchLower = userSearchTerm.toLowerCase();
+        const matchesSearch = !userSearchTerm || (
+          (user.id && user.id.toLowerCase().includes(searchLower)) ||
+          (user.name && user.name.toLowerCase().includes(searchLower)) ||
+          (user.role && user.role.toLowerCase().includes(searchLower)) ||
+          (user.status && user.status.toLowerCase().includes(searchLower)) ||
+          (user.email && user.email.toLowerCase().includes(searchLower))
+        );
+        const matchesRole = userRoleFilter === 'all' || (user.role && user.role === userRoleFilter);
+        const matchesPartnerType = userPartnerTypeFilter === 'all' || ((user as any).partner_type && (user as any).partner_type === userPartnerTypeFilter);
+        return matchesSearch && matchesRole && matchesPartnerType;
+      });
 
   // Paginate filtered users
   // When searching/filtering: use client-side pagination on filtered results
@@ -452,7 +526,22 @@ const AdminDashboard = () => {
   
   const filteredUsers = isSearchingOrFiltering
     ? allFilteredUsers.slice(startIndex, endIndex) // Client-side pagination for search/filter results
-    : allFilteredUsers; // API pagination - users are already paginated
+    : users; // API pagination - users are already paginated
+
+  // Sorting for users
+  const { sortedData: sortedUsers, sortConfig: userSortConfig, handleSort: handleUserSort } = useTableSort(filteredUsers);
+
+  // Sorting for leave requests
+  const { sortedData: sortedLeaveRequests, sortConfig: leaveSortConfig, handleSort: handleLeaveSort } = useTableSort(leaveRequests);
+
+  // Sorting for reports
+  const { sortedData: sortedReports, sortConfig: reportSortConfig, handleSort: handleReportSort } = useTableSort(reports);
+
+  // Sorting for assigned tasks
+  const { sortedData: sortedAssignedTasks, sortConfig: assignedTaskSortConfig, handleSort: handleAssignedTaskSort } = useTableSort(assignedTasks);
+
+  // Sorting for cases (Gap Analysis)
+  const { sortedData: sortedCases, sortConfig: caseSortConfig, handleSort: handleCaseSort } = useTableSort(casesData);
 
   // Initialize active tab from URL parameters
   useEffect(() => {
@@ -478,8 +567,12 @@ const AdminDashboard = () => {
       fetchTasks(); // Fetch paginated tasks for table
     }
     if (activeTab === 'users') {
-      fetchAllUsers(); // Fetch all users for cards
+      fetchAllUsers(); // Fetch all users for cards and filtering
       fetchUsers(); // Fetch paginated users for table
+      // Also ensure allUsersForSearch is populated for filtering
+      if (allUsersForSearch.length === 0) {
+        // fetchAllUsers will populate allUsersForSearch
+      }
     }
     if (activeTab === 'leave') {
       fetchAllLeaveRequests(); // Fetch all leave requests for cards
@@ -494,41 +587,28 @@ const AdminDashboard = () => {
     }
   }, [activeTab]);
 
-  // Reset accumulated users and page when partner type filter changes
+  // Fetch all users for searching when users tab is active or when filtering
+  // This ensures partner type filter checks all records, not just current page
   useEffect(() => {
-    if (activeTab === 'users' && userPartnerTypeFilter !== 'all') {
-      // Reset to page 1 and clear accumulated users when filter changes
-      setUserCurrentPage(1);
-      setAllFetchedUsers([]);
-      setHasMoreUsers(true);
-      // Trigger fetch for page 1
-      fetchUsers();
-    } else if (activeTab === 'users' && userPartnerTypeFilter === 'all') {
-      // Clear accumulated users when filter is removed
-      setAllFetchedUsers([]);
-    }
-  }, [userPartnerTypeFilter]);
-
-  // Fetch all users for searching when users tab is active
-  useEffect(() => {
-    if (activeTab === 'users' && allUsersForSearch.length === 0) {
+    if (activeTab === 'users' && isSearchingOrFiltering && allUsersForSearch.length === 0 && !loadingAllUsers) {
+      console.log('Fetching all users for filtering (including partner type filter)...');
       fetchAllUsers();
     }
-  }, [activeTab]);
+  }, [activeTab, isSearchingOrFiltering, userSearchTerm, userRoleFilter, userPartnerTypeFilter]);
 
   // Reset to page 1 when search term or filters change
   useEffect(() => {
-    if (activeTab === 'users' && (userSearchTerm || userStatusFilter !== 'all' || userPartnerTypeFilter !== 'all')) {
+    if (activeTab === 'users' && (userSearchTerm || userRoleFilter !== 'all' || userPartnerTypeFilter !== 'all')) {
       setUserCurrentPage(1);
     }
-  }, [userSearchTerm, userStatusFilter, userPartnerTypeFilter, activeTab]);
+  }, [userSearchTerm, userRoleFilter, userPartnerTypeFilter, activeTab]);
 
   // Refetch users when pagination parameters change (only if not searching/filtering)
   useEffect(() => {
-    if (activeTab === 'users' && !userSearchTerm && userStatusFilter === 'all' && userPartnerTypeFilter === 'all') {
+    if (activeTab === 'users' && !isSearchingOrFiltering) {
       fetchUsers();
     }
-  }, [userCurrentPage, userPageLimit]);
+  }, [userCurrentPage, userPageLimit, activeTab]);
 
   // Refetch leave requests when pagination parameters change
   useEffect(() => {
@@ -537,12 +617,22 @@ const AdminDashboard = () => {
     }
   }, [leaveCurrentPage, leavePageLimit]);
 
-  // Refetch tasks when pagination parameters change
+  // Refetch tasks when pagination parameters change (only if not searching/filtering)
   useEffect(() => {
-    if (activeTab === 'tasks') {
+    if (activeTab === 'tasks' && !isSearchingOrFilteringTasks) {
       fetchTasks();
     }
-  }, [taskCurrentPage, taskPageLimit]);
+  }, [taskCurrentPage, taskPageLimit, activeTab]);
+
+  // Reset to page 1 when search term or status filter changes
+  useEffect(() => {
+    if (activeTab === 'tasks' && (searchTerm || statusFilter !== 'all')) {
+      setTaskCurrentPage(1);
+    }
+    if (activeTab === 'cases' && (casesSearchTerm || casesAssignedExpertFilter !== 'all')) {
+      setCurrentPageCases(1);
+    }
+  }, [searchTerm, statusFilter, activeTab, casesSearchTerm, casesAssignedExpertFilter]);
 
 
   const fetchDashboardData = async () => {
@@ -791,22 +881,9 @@ const AdminDashboard = () => {
               customers: user.customers
             }));
 
-            // If filtering by partner type, accumulate users across pages
-            if (userPartnerTypeFilter !== 'all') {
-              setAllFetchedUsers(prev => {
-                // Remove duplicates based on user ID
-                const existingIds = new Set(prev.map(u => u.id));
-                const newUsers = transformedUsers.filter(u => !existingIds.has(u.id));
-                return [...prev, ...newUsers];
-              });
-              // Check if we got a full page (means there might be more to fetch)
-              setHasMoreUsers(transformedUsers.length >= parseInt(userPageLimit));
-            } else {
-              // Normal pagination - replace users
-              setUsers(transformedUsers);
-              setAllFetchedUsers([]); // Clear accumulated users
-              setHasMoreUsers(transformedUsers.length >= parseInt(userPageLimit));
-            }
+            // Store paginated users
+            setUsers(transformedUsers);
+            setHasMoreUsers(transformedUsers.length >= parseInt(userPageLimit));
             console.log('Transformed users:', transformedUsers);
           } else if (firstResult.status === 'error' || firstResult.status === 'failure') {
             console.error('API returned error:', firstResult);
@@ -2503,30 +2580,32 @@ Created Time: ${report.created_time}
             {/* Search and Filter Section */}
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className="relative flex-1 max-w-sm">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="relative flex-1 w-full sm:max-w-sm">
                     <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                     <Input
                       placeholder="Search by task ID, assignee, customer, or status..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 border-2 border-gray-200 rounded-lg focus:border-primary-500"
+                      className="pl-10 border-2 border-gray-200 rounded-lg focus:border-primary-500 w-full"
                     />
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Filter className="h-4 w-4 text-gray-500" />
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <Filter className="h-4 w-4 text-gray-500 hidden sm:block" />
                     <Select
                       value={statusFilter}
                       onValueChange={setStatusFilter}
                     >
-                      <SelectTrigger className="w-40 border-2 border-gray-200 rounded-lg focus:border-primary-500">
+                      <SelectTrigger className="w-full sm:w-40 border-2 border-gray-200 rounded-lg focus:border-primary-500">
                         <SelectValue placeholder="Filter by status" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[100]">
                         <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="under review">Under Review</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="in progress">In Progress</SelectItem>
+                        {availableTaskStatuses.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Select
@@ -2536,10 +2615,10 @@ Created Time: ${report.created_time}
                         setTaskCurrentPage(1); // Reset to first page when limit changes
                       }}
                     >
-                      <SelectTrigger className="w-32 border-2 border-gray-200 rounded-lg focus:border-primary-500">
+                      <SelectTrigger className="w-full sm:w-32 border-2 border-gray-200 rounded-lg focus:border-primary-500">
                         <SelectValue placeholder="Page limit" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[100]">
                         <SelectItem value="10">10</SelectItem>
                         <SelectItem value="30">30</SelectItem>
                         <SelectItem value="50">50</SelectItem>
@@ -2555,7 +2634,7 @@ Created Time: ${report.created_time}
                           setSearchTerm('');
                           setStatusFilter('all');
                         }}
-                        className="border-2 border-gray-300 hover:border-primary-500"
+                        className="border-2 border-gray-300 hover:border-primary-500 w-full sm:w-auto"
                       >
                         Clear
                       </Button>
@@ -2567,44 +2646,52 @@ Created Time: ${report.created_time}
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className="overflow-hidden">
+                  <table className="w-full" style={{ tableLayout: 'auto' }}>
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <SortableTableHeader
+                          column="task_id"
+                          label="Task ID"
+                          sortColumn={taskSortConfig?.column || ''}
+                          sortDirection={taskSortConfig?.direction || 'asc'}
+                          onSort={handleTaskSort}
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        />
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredTasks.map((task: any) => (
+                      {sortedTasks.map((task: any) => (
                         <tr key={task.id} className="hover:bg-gray-50">
                           <td
-                            className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 cursor-pointer hover:underline"
+                            className="px-4 py-4 min-w-0 break-words text-sm font-medium text-blue-600 cursor-pointer hover:underline"
+                            style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                             onClick={() => navigate(`/task/${task.task_id}`)}
                           >
                             {task.task_id}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.title}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-900" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{task.title}</td>
+                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                             {task.assigned_employee_name || 'Unassigned'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                             {task.customer_profile?.full_name || 'N/A'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 py-4 whitespace-nowrap">
                             <Badge className={getStatusColor(task.current_status)}>
                               {task.current_status}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
                             {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
                             <Button
                               variant="outline"
                               size="sm"
@@ -2626,9 +2713,9 @@ Created Time: ${report.created_time}
                           </td>
                         </tr>
                       ))}
-                      {filteredTasks.length === 0 && (
+                      {sortedTasks.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                          <td colSpan={7} className="px-4 py-4 text-center text-gray-500">
                             No tasks found
                           </td>
                         </tr>
@@ -2640,9 +2727,13 @@ Created Time: ${report.created_time}
             </Card>
 
             {/* Pagination Controls */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-sm text-gray-700">
-                Showing {filteredTasks.length} tasks
+                {isSearchingOrFilteringTasks ? (
+                  <>Showing {filteredTasks.length} of {allFilteredTasks.length} filtered tasks</>
+                ) : (
+                  <>Showing {filteredTasks.length} tasks</>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <Button
@@ -2661,7 +2752,11 @@ Created Time: ${report.created_time}
                   variant="outline"
                   size="sm"
                   onClick={() => setTaskCurrentPage(prev => prev + 1)}
-                  disabled={filteredTasks.length < parseInt(taskPageLimit)}
+                  disabled={
+                    isSearchingOrFilteringTasks
+                      ? (taskEndIndex >= allFilteredTasks.length) // No more filtered tasks when searching/filtering
+                      : (filteredTasks.length < parseInt(taskPageLimit)) // Normal pagination: disabled when no more pages from API
+                  }
                   className="border-2 border-gray-300 hover:border-primary-500"
                 >
                   Next
@@ -2690,18 +2785,21 @@ Created Time: ${report.created_time}
                   </div>
                   <div className="flex items-center space-x-2">
                     <Filter className="h-4 w-4 text-gray-500" />
+                    {/* Status filter hidden as per requirements */}
                     <Select
-                      value={userStatusFilter}
-                      onValueChange={setUserStatusFilter}
+                      value={userRoleFilter}
+                      onValueChange={setUserRoleFilter}
                     >
                       <SelectTrigger className="w-40 border-2 border-gray-200 rounded-lg focus:border-primary-500">
-                        <SelectValue placeholder="Filter by status" />
+                        <SelectValue placeholder="Filter by role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                        <SelectItem value="suspended">Suspended</SelectItem>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        {availableRoles.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {role.charAt(0).toUpperCase() + role.slice(1)}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Select
@@ -2735,16 +2833,15 @@ Created Time: ${report.created_time}
                         <SelectItem value="30">30</SelectItem>
                         <SelectItem value="50">50</SelectItem>
                         <SelectItem value="100">100</SelectItem>
-                        
                       </SelectContent>
                     </Select>
-                    {(userSearchTerm || userStatusFilter !== 'all' || userPartnerTypeFilter !== 'all') && (
+                    {(userSearchTerm || userRoleFilter !== 'all' || userPartnerTypeFilter !== 'all') && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => {
                           setUserSearchTerm('');
-                          setUserStatusFilter('all');
+                          setUserRoleFilter('all');
                           setUserPartnerTypeFilter('all');
                         }}
                         className="border-2 border-gray-300 hover:border-primary-500"
@@ -2759,70 +2856,82 @@ Created Time: ${report.created_time}
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className="overflow-hidden">
+                  <table className="w-full" style={{ tableLayout: 'auto' }}>
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User ID</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entity</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner Type</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <SortableTableHeader
+                          column="id"
+                          label="User ID"
+                          sortColumn={userSortConfig?.column || ''}
+                          sortDirection={userSortConfig?.direction || 'asc'}
+                          onSort={handleUserSort}
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        />
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entity</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredUsers.map(user => (
+                      {sortedUsers.map(user => (
                         <tr key={user.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.id}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.role}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{user.id}</td>
+                          <td className="px-4 py-4 min-w-0 break-words text-sm font-medium text-gray-900" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{user.name}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{user.role}</td>
+                          <td className="px-4 py-4 whitespace-nowrap">
                             <Badge className={getStatusColor(user.status)}>
                               {user.status}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.department || 'N/A'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.email || 'N/A'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{(user as any).entity || 'N/A'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatPartnerType((user as any).partner_type)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewUser(user)}
-                              className="border-2 border-gray-300 hover:border-primary-500"
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditUser(user)}
-                              className="border-2 border-gray-300 hover:border-primary-500"
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteUser(user)}
-                              className="border-2 border-gray-300 hover:border-primary-500"
-                            >
-                              <Trash className="h-4 w-4 mr-1" />
-                              Delete
-                            </Button>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">{user.department || 'N/A'}</td>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden lg:table-cell break-all">{user.email || 'N/A'}</td>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden lg:table-cell">{(user as any).entity || 'N/A'}</td>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">{formatPartnerType((user as any).partner_type)}</td>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewUser(user)}
+                                className="border-2 border-gray-300 hover:border-primary-500 w-full sm:w-auto"
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                <span className="hidden sm:inline">View</span>
+                                <span className="sm:hidden">View</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditUser(user)}
+                                className="border-2 border-gray-300 hover:border-primary-500 w-full sm:w-auto"
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                <span className="hidden sm:inline">Edit</span>
+                                <span className="sm:hidden">Edit</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteUser(user)}
+                                className="border-2 border-gray-300 hover:border-primary-500 w-full sm:w-auto"
+                              >
+                                <Trash className="h-4 w-4 mr-1" />
+                                <span className="hidden sm:inline">Delete</span>
+                                <span className="sm:hidden">Del</span>
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
                       {filteredUsers.length === 0 && (
                         <tr>
-                          <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
+                          <td colSpan={9} className="px-4 py-4 text-center text-gray-500">
                             No users found
                           </td>
                         </tr>
@@ -2859,22 +2968,20 @@ Created Time: ${report.created_time}
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    // If filtering by partner type and we don't have enough filtered users for next page, fetch more
-                    const nextPageStartIndex = userCurrentPage * pageLimit;
-                    if (userPartnerTypeFilter !== 'all' && nextPageStartIndex >= allFilteredUsers.length && hasMoreUsers) {
-                      // Fetch next page from API to get more users that might match the filter
-                      setUserCurrentPage(prev => prev + 1);
+                    if (isSearchingOrFiltering) {
+                      // Client-side pagination - check if there are more filtered results
+                      if (endIndex < allFilteredUsers.length) {
+                        setUserCurrentPage(prev => prev + 1);
+                      }
                     } else {
-                      // Normal pagination - move to next page
+                      // API pagination - move to next page
                       setUserCurrentPage(prev => prev + 1);
                     }
                   }}
                   disabled={
                     isSearchingOrFiltering
                       ? (endIndex >= allFilteredUsers.length) // No more filtered users when searching/filtering
-                      : (userPartnerTypeFilter !== 'all'
-                          ? (endIndex >= allFilteredUsers.length && !hasMoreUsers) // No more filtered users AND no more API pages
-                          : !hasMoreUsers) // Normal pagination: disabled when no more pages from API
+                      : !hasMoreUsers // Normal pagination: disabled when no more pages from API
                   }
                   className="border-2 border-gray-300 hover:border-primary-500"
                 >
@@ -2914,41 +3021,48 @@ Created Time: ${report.created_time}
                 {leaveLoading ? (
                   <div className="p-6 text-center">Loading leave requests...</div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
+                  <div className="overflow-hidden">
+                    <table className="w-full" style={{ tableLayout: 'auto' }}>
                       <thead className="bg-gray-50 border-b">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Application ID</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied Date</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          <SortableTableHeader
+                            column="application_id"
+                            label="Application ID"
+                            sortColumn={leaveSortConfig?.column || ''}
+                            sortDirection={leaveSortConfig?.direction || 'asc'}
+                            onSort={handleLeaveSort}
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          />
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {leaveRequests.map((request: any) => (
+                        {sortedLeaveRequests.map((request: any) => (
                           <tr key={request.application_id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">{request.application_id}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{request.employees.first_name} {request.employees.last_name}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{request.leave_types?.type_name || 'N/A'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{request.start_date}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{request.end_date}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{request.total_days}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 max-w-xs truncate" title={request.reason}>{request.reason}</td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-4 py-4 min-w-0 break-words text-sm font-medium text-blue-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.application_id}</td>
+                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.employees.first_name} {request.employees.last_name}</td>
+                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.leave_types?.type_name || 'N/A'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.start_date}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.end_date}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.total_days}</td>
+                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={request.reason}>{request.reason}</td>
+                            <td className="px-4 py-4 whitespace-nowrap">
                               <Badge className={getStatusColor(request.status)}>
                                 <span className="capitalize">{request.status}</span>
                               </Badge>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
                               {new Date(request.applied_date).toLocaleDateString()}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
                               {(() => {
                                 // Get current user role from session or userDetails
                                 const currentUserRole = session?.userRole || userDetails?.role || userDetails?.designation || '';
@@ -2995,7 +3109,7 @@ Created Time: ${report.created_time}
                         ))}
                         {leaveRequests.length === 0 && (
                           <tr>
-                            <td colSpan={10} className="px-6 py-4 text-center text-gray-500">
+                            <td colSpan={10} className="px-4 py-4 text-center text-gray-500">
                               No leave requests found
                             </td>
                           </tr>
@@ -3072,23 +3186,53 @@ Created Time: ${report.created_time}
                     </div>
                   )}
                 </div>
-                <div className="flex items-center space-x-2 mt-4">
-                  <div className="relative">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-4">
+                  <div className="relative flex-1 w-full sm:max-w-sm">
                     <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                     <Input
                       placeholder="Search by case summary, description, case type, or ID..."
                       value={casesSearchTerm}
                       onChange={(e) => setCasesSearchTerm(e.target.value)}
-                      className="pl-10 max-w-sm border-2 border-blue-300 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-300"
+                      className="pl-10 w-full border-2 border-blue-300 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-300"
                     />
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <Filter className="h-4 w-4 text-gray-500 hidden sm:block" />
+                    <Select
+                      value={casesAssignedExpertFilter}
+                      onValueChange={setCasesAssignedExpertFilter}
+                    >
+                      <SelectTrigger className="w-full sm:w-48 border-2 border-blue-300 rounded-xl focus:border-blue-500">
+                        <SelectValue placeholder="Filter by Assigned Expert" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[100]">
+                        <SelectItem value="all">All Experts</SelectItem>
+                        {availableAssignedExperts.map((expert) => (
+                          <SelectItem key={expert} value={expert}>
+                            {expert}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {(casesSearchTerm || casesAssignedExpertFilter !== 'all') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCasesSearchTerm('');
+                          setCasesAssignedExpertFilter('all');
+                        }}
+                        className="border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 w-full sm:w-auto"
+                      >
+                        Clear
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={fetchCasesData}
                       disabled={isLoadingCases}
-                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                      className="border-blue-300 text-blue-700 hover:bg-blue-50 w-full sm:w-auto"
                     >
                       <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingCases ? 'animate-spin' : ''}`} />
                       Refresh
@@ -3113,47 +3257,62 @@ Created Time: ${report.created_time}
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-left p-4 font-semibold text-gray-700">
-                            Case ID
-                          </th>
+                          <SortableTableHeader
+                            column="backlog_id"
+                            label="Case ID"
+                            sortColumn={caseSortConfig?.column || ''}
+                            sortDirection={caseSortConfig?.direction || 'asc'}
+                            onSort={handleCaseSort}
+                            className="text-left p-4 font-semibold text-gray-700"
+                          />
                           <th className="text-left p-4 font-semibold text-gray-700">
                             Case Summary
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden md:table-cell">
                             Case Description
                           </th>
                           {/* <th className="text-left p-4 font-semibold text-gray-700">
                             Type of Policysss
                           </th> */}
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">
                             Referral Date
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Status
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Assigned Expert
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">
                             Entity
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Actions
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {casesData
+                        {sortedCases
                           .filter((item) => {
-                            if (!casesSearchTerm) return true;
-                            const searchLower = casesSearchTerm.toLowerCase();
-                            return (
-                              item.case_summary?.toLowerCase().includes(searchLower) ||
-                              item.case_description?.toLowerCase().includes(searchLower) ||
-                              item.backlog_id?.toString().includes(searchLower) ||
-                              item.case_type_id?.toString().includes(searchLower) ||
-                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                            );
+                            // Search filter
+                            const matchesSearch = !casesSearchTerm || (() => {
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
+                            })();
+                            
+                            // Assigned Expert filter
+                            const matchesExpert = casesAssignedExpertFilter === 'all' || 
+                              (casesAssignedExpertFilter === 'Not Assigned' 
+                                ? (!item.assigned_consultant_name || item.assigned_consultant_name.trim() === '')
+                                : (item.assigned_consultant_name && item.assigned_consultant_name === casesAssignedExpertFilter));
+                            
+                            return matchesSearch && matchesExpert;
                           })
                           .slice((currentPageCases - 1) * pageSizeCases, currentPageCases * pageSizeCases)
                           .map((item, index) => {
@@ -3173,65 +3332,68 @@ Created Time: ${report.created_time}
                                 key={item.backlog_id || index}
                                 className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors duration-200"
                               >
-                                <td className="p-4">
-                                  <span className="font-mono text-sm text-blue-600">
+                                <td className="p-3 sm:p-4">
+                                  <span className="font-mono text-xs sm:text-sm text-blue-600">
                                     {item.backlog_id}
                                   </span>
                                 </td>
-                                <td className="p-4">
-                                  <div className="font-medium text-gray-900">
+                                <td className="p-3 sm:p-4">
+                                  <div className="font-medium text-xs sm:text-sm text-gray-900 break-words max-w-xs">
                                     {item.case_summary || "No Summary"}
                                   </div>
                                 </td>
-                                <td className="p-4 text-gray-700">
+                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-700 hidden md:table-cell break-words max-w-md">
                                   {item.case_description || "No Description"}
                                 </td>
                                 {/* <td className="p-4 text-gray-700">
                                   {item.case_types?.case_type_name || `Type ${item.case_type_id}` || "N/A"}
                                 </td> */}
-                                <td className="p-4 text-sm text-gray-600">
+                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-600 hidden lg:table-cell">
                                   {item.backlog_referral_date || "N/A"}
                                 </td>
-                                <td className="p-4">
+                                <td className="p-3 sm:p-4">
                                   <Badge className={statusBadgeClass}>
                                     {item.status || "N/A"}
                                   </Badge>
                                 </td>
-                                <td className="p-4 text-gray-700">
+                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-700 break-words max-w-xs">
                                   {item.assigned_consultant_name ? item.assigned_consultant_name : 'Not Assigned'}
                                 </td>
-                                <td className="p-4 text-gray-700">
+                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-700 hidden lg:table-cell break-words max-w-xs">
                                   {item.partners ? (item.partners["name of entity"] || item.partners.entity_name || 'N/A') :
                                    item.entity_name || item["name of entity"] || 'N/A'}
                                 </td>
-                                <td className="p-4">
-                                  <div className="flex space-x-2">
+                                <td className="p-3 sm:p-4">
+                                  <div className="flex flex-col sm:flex-row gap-2">
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                                      className="border-blue-300 text-blue-700 hover:bg-blue-50 w-full sm:w-auto"
                                       onClick={() => navigate(`/admin-backlog-view/${item.backlog_id}`)}
                                     >
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      View
+                                      <Eye className="h-4 w-4 mr-1 sm:mr-2" />
+                                      <span className="hidden sm:inline">View</span>
+                                      <span className="sm:hidden">View</span>
                                     </Button>
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                                      className="border-blue-300 text-blue-700 hover:bg-blue-50 w-full sm:w-auto"
                                       onClick={() => handleEdit(item.backlog_id)}
                                     >
-                                      <Edit className="h-4 w-4 mr-2" />
-                                      Edit
+                                      <Edit className="h-4 w-4 mr-1 sm:mr-2" />
+                                      <span className="hidden sm:inline">Edit</span>
+                                      <span className="sm:hidden">Edit</span>
                                     </Button>
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="border-red-300 text-red-700 hover:bg-red-50"
+                                      className="border-red-300 text-red-700 hover:bg-red-50 w-full sm:w-auto"
                                       onClick={() => handleDeleteCase(item)}
                                     >
-                                      <Trash className="h-4 w-4 mr-2" />
-                                      Delete
+                                      <Trash className="h-4 w-4 mr-1 sm:mr-2" />
+                                      <span className="hidden sm:inline">Delete</span>
+                                      <span className="sm:hidden">Del</span>
                                     </Button>
                                   </div>
                                 </td>
@@ -3256,25 +3418,45 @@ Created Time: ${report.created_time}
                       <div className="flex items-center justify-between mt-6">
                         <div className="text-sm text-gray-500">
                           Showing {((currentPageCases - 1) * pageSizeCases) + 1} to {Math.min(currentPageCases * pageSizeCases, casesData.filter((item) => {
-                            if (!casesSearchTerm) return true;
-                            const searchLower = casesSearchTerm.toLowerCase();
-                            return (
-                              item.case_summary?.toLowerCase().includes(searchLower) ||
-                              item.case_description?.toLowerCase().includes(searchLower) ||
-                              item.backlog_id?.toString().includes(searchLower) ||
-                              item.case_type_id?.toString().includes(searchLower) ||
-                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                            );
+                            // Search filter
+                            const matchesSearch = !casesSearchTerm || (() => {
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
+                            })();
+                            
+                            // Assigned Expert filter
+                            const matchesExpert = casesAssignedExpertFilter === 'all' || 
+                              (casesAssignedExpertFilter === 'Not Assigned' 
+                                ? (!item.assigned_consultant_name || item.assigned_consultant_name.trim() === '')
+                                : (item.assigned_consultant_name && item.assigned_consultant_name === casesAssignedExpertFilter));
+                            
+                            return matchesSearch && matchesExpert;
                           }).length)} of {casesData.filter((item) => {
-                            if (!casesSearchTerm) return true;
-                            const searchLower = casesSearchTerm.toLowerCase();
-                            return (
-                              item.case_summary?.toLowerCase().includes(searchLower) ||
-                              item.case_description?.toLowerCase().includes(searchLower) ||
-                              item.backlog_id?.toString().includes(searchLower) ||
-                              item.case_type_id?.toString().includes(searchLower) ||
-                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                            );
+                            // Search filter
+                            const matchesSearch = !casesSearchTerm || (() => {
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
+                            })();
+                            
+                            // Assigned Expert filter
+                            const matchesExpert = casesAssignedExpertFilter === 'all' || 
+                              (casesAssignedExpertFilter === 'Not Assigned' 
+                                ? (!item.assigned_consultant_name || item.assigned_consultant_name.trim() === '')
+                                : (item.assigned_consultant_name && item.assigned_consultant_name === casesAssignedExpertFilter));
+                            
+                            return matchesSearch && matchesExpert;
                           }).length} entries
                         </div>
                         <div className="flex items-center space-x-2">
@@ -3289,41 +3471,65 @@ Created Time: ${report.created_time}
                           </Button>
                           <span className="text-sm text-gray-600">
                             Page {currentPageCases} of {Math.ceil(casesData.filter((item) => {
-                              if (!casesSearchTerm) return true;
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                              // Search filter
+                              const matchesSearch = !casesSearchTerm || (() => {
+                                const searchLower = casesSearchTerm.toLowerCase();
+                                return (
+                                  item.case_summary?.toLowerCase().includes(searchLower) ||
+                                  item.case_description?.toLowerCase().includes(searchLower) ||
+                                  item.backlog_id?.toString().includes(searchLower) ||
+                                  item.case_type_id?.toString().includes(searchLower) ||
+                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                                );
+                              })();
+                              
+                              // Assigned Expert filter
+                              const matchesExpert = casesAssignedExpertFilter === 'all' || 
+                                (item.assigned_consultant_name && item.assigned_consultant_name === casesAssignedExpertFilter);
+                              
+                              return matchesSearch && matchesExpert;
                             }).length / pageSizeCases)}
                           </span>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setCurrentPageCases(prev => Math.min(Math.ceil(casesData.filter((item) => {
-                              if (!casesSearchTerm) return true;
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                              // Search filter
+                              const matchesSearch = !casesSearchTerm || (() => {
+                                const searchLower = casesSearchTerm.toLowerCase();
+                                return (
+                                  item.case_summary?.toLowerCase().includes(searchLower) ||
+                                  item.case_description?.toLowerCase().includes(searchLower) ||
+                                  item.backlog_id?.toString().includes(searchLower) ||
+                                  item.case_type_id?.toString().includes(searchLower) ||
+                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                                );
+                              })();
+                              
+                              // Assigned Expert filter
+                              const matchesExpert = casesAssignedExpertFilter === 'all' || 
+                                (item.assigned_consultant_name && item.assigned_consultant_name === casesAssignedExpertFilter);
+                              
+                              return matchesSearch && matchesExpert;
                             }).length / pageSizeCases), prev + 1))}
                             disabled={currentPageCases >= Math.ceil(casesData.filter((item) => {
-                              if (!casesSearchTerm) return true;
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                              // Search filter
+                              const matchesSearch = !casesSearchTerm || (() => {
+                                const searchLower = casesSearchTerm.toLowerCase();
+                                return (
+                                  item.case_summary?.toLowerCase().includes(searchLower) ||
+                                  item.case_description?.toLowerCase().includes(searchLower) ||
+                                  item.backlog_id?.toString().includes(searchLower) ||
+                                  item.case_type_id?.toString().includes(searchLower) ||
+                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                                );
+                              })();
+                              
+                              // Assigned Expert filter
+                              const matchesExpert = casesAssignedExpertFilter === 'all' || 
+                                (item.assigned_consultant_name && item.assigned_consultant_name === casesAssignedExpertFilter);
+                              
+                              return matchesSearch && matchesExpert;
                             }).length / pageSizeCases)}
                             className="border-blue-300 text-blue-700 hover:bg-blue-50"
                           >
@@ -3352,7 +3558,14 @@ Created Time: ${report.created_time}
                     <table className="w-full">
                       <thead className="bg-gray-50 border-b">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Report ID</th>
+                          <SortableTableHeader
+                            column="id"
+                            label="Report ID"
+                            sortColumn={reportSortConfig?.column || ''}
+                            sortDirection={reportSortConfig?.direction || 'asc'}
+                            onSort={handleReportSort}
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          />
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -3493,14 +3706,21 @@ Created Time: ${report.created_time}
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
+                        <SortableTableHeader
+                          column="task_id"
+                          label="Task ID"
+                          sortColumn={assignedTaskSortConfig?.column || ''}
+                          sortDirection={assignedTaskSortConfig?.direction || 'asc'}
+                          onSort={handleAssignedTaskSort}
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        />
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {assignedTasks.map((task: any) => (
+                      {sortedAssignedTasks.map((task: any) => (
                         <tr key={task.id} className="hover:bg-gray-50">
                           <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                             {task.task_id}

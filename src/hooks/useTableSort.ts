@@ -27,9 +27,9 @@ export const useTableSort = <T>(data: T[], defaultSort?: SortConfig) => {
       let aValue = (a as any)[sortConfig.column];
       let bValue = (b as any)[sortConfig.column];
 
-      // Handle backlog_id specifically - convert to number for proper sorting
-      if (sortConfig.column === 'backlog_id') {
-        // Extract last 3+ digits from ID (e.g., "ECSI-GA-25-080" -> "080")
+      // Handle ID columns specifically - convert to number for proper sorting
+      if (sortConfig.column === 'backlog_id' || sortConfig.column === 'task_id') {
+        // Extract last 3+ digits from ID (e.g., "ECSI-GA-25-080" -> "080", "ECSI-25-242" -> "242")
         // Handles future growth: "ECSI-GA-25-1234" -> "1234"
         const extractLastDigits = (id: string | number) => {
           if (id == null) return 0;
@@ -48,6 +48,32 @@ export const useTableSort = <T>(data: T[], defaultSort?: SortConfig) => {
           return aValue - bValue;
         } else {
           return bValue - aValue;
+        }
+      }
+
+      // Handle application_id - can be simple number or string number
+      if (sortConfig.column === 'application_id') {
+        const aNum = typeof aValue === 'number' ? aValue : (typeof aValue === 'string' && /^\d+$/.test(aValue) ? parseInt(aValue, 10) : 0);
+        const bNum = typeof bValue === 'number' ? bValue : (typeof bValue === 'string' && /^\d+$/.test(bValue) ? parseInt(bValue, 10) : 0);
+        
+        if (sortConfig.direction === 'asc') {
+          return aNum - bNum;
+        } else {
+          return bNum - aNum;
+        }
+      }
+
+      // Handle numeric ID columns (like user id, report id)
+      if (sortConfig.column === 'id' && (typeof aValue === 'number' || typeof bValue === 'number' || 
+          (typeof aValue === 'string' && /^\d+$/.test(aValue)) || 
+          (typeof bValue === 'string' && /^\d+$/.test(bValue)))) {
+        const aNum = typeof aValue === 'number' ? aValue : (typeof aValue === 'string' ? parseInt(aValue, 10) : 0);
+        const bNum = typeof bValue === 'number' ? bValue : (typeof bValue === 'string' ? parseInt(bValue, 10) : 0);
+        
+        if (sortConfig.direction === 'asc') {
+          return aNum - bNum;
+        } else {
+          return bNum - aNum;
         }
       }
 

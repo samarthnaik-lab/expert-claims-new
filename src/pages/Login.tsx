@@ -20,6 +20,21 @@ import { AuthService } from '@/services/authService';
  * we temporarily support sending hashed passwords for migration.
  * New users should send plain passwords.
  */
+// Helper function to mask mobile number - show only last 4 digits
+const maskMobileNumber = (message: string): string => {
+  if (!message) return message;
+  
+  // Pattern to match mobile numbers (10 digits)
+  const mobilePattern = /\b(\d{10})\b/g;
+  
+  return message.replace(mobilePattern, (match) => {
+    // Keep only last 4 digits, mask the rest
+    const last4 = match.slice(-4);
+    const masked = '*'.repeat(6) + last4; // 6 stars + last 4 digits
+    return masked;
+  });
+};
+
 const getPasswordForBackend = (password: string, isLegacyUser: boolean = false): string => {
   if (isLegacyUser) {
     // Legacy: Generate fake hash for users with fake hashes in DB
@@ -287,9 +302,13 @@ const Login = () => {
         if (result.nextStep === 'final_login' || result.requiresOtp) {
           setLoginStep('otp_sent');
           setOtpSent(true);
+          // Mask mobile number in the message
+          const message = result.message || "OTP has been sent to your mobile number. Please enter the OTP code.";
+          const maskedMessage = maskMobileNumber(message);
+          
           toast({
             title: "OTP Sent Successfully",
-            description: result.message || "OTP has been sent to your mobile number. Please enter the OTP code.",
+            description: maskedMessage,
           });
         } else {
           // Credentials validated but OTP not sent yet (shouldn't happen with new flow)
@@ -453,11 +472,16 @@ const Login = () => {
           setFormData(prev => ({ ...prev, otp: result.otp }));
         }
 
+        // Mask mobile number in the message
+        const defaultMessage = role === 'admin' 
+          ? `OTP sent to email ${formData.email}` 
+          : "OTP has been sent to your mobile number. Please enter the OTP code.";
+        const message = result.message || defaultMessage;
+        const maskedMessage = role === 'admin' ? message : maskMobileNumber(message); // Only mask for non-admin (mobile numbers)
+        
         toast({
           title: "OTP Sent Successfully",
-          description: result.message || (role === 'admin' 
-            ? `OTP sent to email ${formData.email}` 
-            : "OTP has been sent to your mobile number. Please enter the OTP code."),
+          description: maskedMessage,
         });
       } else {
         toast({
@@ -991,13 +1015,13 @@ const Login = () => {
       </div>
 
       <Card className="w-full max-w-md shadow-2xl border-none bg-white/80 backdrop-blur-sm animate-fade-in relative z-10">
-        <CardHeader className="text-center pb-8 pt-8">
-          <div className="flex items-center justify-center space-x-3 mb-6">
+        <CardHeader className="text-center pb-6 sm:pb-8 pt-6 sm:pt-8 px-4 sm:px-6">
+          <div className="flex items-center justify-center space-x-3 mb-4 sm:mb-6">
             {/* <div className="p-3 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl shadow-lg">
               <Shield className="h-8 w-8 text-white" />
             </div> */}
             <div>
-                <img src="/leaders/logo.jpeg" alt="ExpertClaims" className="w-48" />
+                <img src="/leaders/logo.jpeg" alt="ExpertClaims" className="w-32 sm:w-48 h-auto" />
               </div>
             <div className="text-left">
               {/* <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
@@ -1006,8 +1030,8 @@ const Login = () => {
               {/* <p className="text-xs text-gray-500 font-medium">Insurance Claim Recovery</p> */}
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
-          <CardDescription className="text-gray-600 font-medium">
+          <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
+          <CardDescription className="text-sm sm:text-base text-gray-600 font-medium">
             Select your role and enter your credentials
           </CardDescription>
           <p className="text-xs text-gray-500 mt-2">
@@ -1015,7 +1039,7 @@ const Login = () => {
           </p>
         </CardHeader>
         
-        <CardContent className="space-y-6 px-8 pb-8">
+        <CardContent className="space-y-6 px-4 sm:px-8 pb-6 sm:pb-8">
           <div className="space-y-2">
             <Label htmlFor="role" className="text-gray-700 font-semibold">User Role</Label>
             <Select 

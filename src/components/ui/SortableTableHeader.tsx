@@ -46,15 +46,15 @@ export const SortableTableHeader: React.FC<SortableTableHeaderProps> = ({
   return (
     <th 
       className={cn(
-        "text-left p-4 font-semibold text-gray-700",
+        "text-left font-semibold text-gray-700",
         sortable && "cursor-pointer hover:bg-gray-100 select-none transition-colors duration-200",
         className
       )}
       onClick={handleClick}
     >
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center gap-2">
         <span>{label}</span>
-        {getSortIcon()}
+        <span className="flex-shrink-0">{getSortIcon()}</span>
       </div>
     </th>
   );

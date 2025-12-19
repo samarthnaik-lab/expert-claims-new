@@ -44,6 +44,7 @@ const EditRegister = () => {
     age: '',
     username: '',
     role: '',
+    status: 'active', // User status: active, inactive, suspended
     address: '',
     emergency_contact: '',
     employment_status: '',
@@ -321,6 +322,7 @@ const EditRegister = () => {
           age: age,
           username: fetchedUserData.username || '',
           role: fetchedUserData.role || '',
+          status: (fetchedUserData as any).status || 'active', // Get status from API, default to 'active'
           address: address,
           emergency_contact: emergencyContact,
           employment_status: fetchedUserData.role === 'employee' ? fetchedUserData.employees?.employment_status || '' : '',
@@ -485,6 +487,7 @@ const EditRegister = () => {
           password: hashedPassword, // Send hashed password or empty string if no password change
           username: formData.username,
           role: formData.role,
+          status: formData.status || 'active', // Include user status
           mobile_number: formData.mobile,
           emergency_contact: formData.emergency_contact,
           gender: formData.gender,
@@ -558,6 +561,7 @@ const EditRegister = () => {
           password: hashedPassword, // Send hashed password or empty string if no password change
           username: formData.username,
           role: formData.role,
+          status: formData.status || 'active', // Include user status
           mobile_number: formData.mobile,
           emergency_contact: formData.emergency_contact,
           gender: formData.gender,
@@ -616,6 +620,7 @@ const EditRegister = () => {
           password: hashedPassword, // Send hashed password or empty string if no password change
           username: formData.username,
           role: formData.role,
+          status: formData.status || 'active', // Include user status
           designation: formData.designation,
           department: formData.department,
           mobile_number: formData.mobile,
@@ -682,6 +687,7 @@ const EditRegister = () => {
           password: hashedPassword, // Send hashed password or empty string if no password change
           username: formData.username,
           role: formData.role,
+          status: formData.status || 'active', // Include user status
           mobile_number: formData.mobile,
           emergency_contact: formData.emergency_contact,
           gender: formData.gender,
@@ -795,11 +801,12 @@ const EditRegister = () => {
     <div className="min-h-screen bg-gray-100 py-6 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <Card className="shadow-lg rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
-            <CardTitle className="text-2xl font-bold">Edit User Profile</CardTitle>
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0 pb-2 pt-6 px-4 sm:px-6">
+            <CardTitle className="text-xl sm:text-2xl font-bold">Edit User Profile</CardTitle>
             <Button
               variant="outline"
               onClick={() => navigate('/admin-dashboard')}
+              className="w-full sm:w-auto"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Dashboard
@@ -885,6 +892,22 @@ const EditRegister = () => {
                       <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="partner">Partner</SelectItem>
                       <SelectItem value="customer">Customer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="status">User Status *</Label>
+                  <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1407,10 +1430,11 @@ const EditRegister = () => {
                </div>
              )} */}
 
-            <div className="flex justify-end space-x-4 pt-6">
+            <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6">
               <Button
                 variant="outline"
                 onClick={() => navigate('/admin-dashboard')}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
@@ -1418,6 +1442,7 @@ const EditRegister = () => {
                 variant="outline"
                 onClick={handleUpdateUser}
                 disabled={isLoading}
+                className="w-full sm:w-auto"
               >
                 {isLoading ? 'Updating User...' : 'Update User'}
               </Button>

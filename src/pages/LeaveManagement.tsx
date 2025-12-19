@@ -989,19 +989,20 @@ const LeaveManagement = () => {
 
         {/* Filters and Search */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="flex-1">
+          <div className="flex-1 w-full md:max-w-md">
             <Input
               placeholder="Search by employee name, ID, or leave type..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md"
+              className="w-full"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant={filterStatus === "all" ? "default" : "outline"}
               onClick={() => setFilterStatus("all")}
               size="sm"
+              className="flex-1 sm:flex-none"
             >
               All
             </Button>
@@ -1009,6 +1010,7 @@ const LeaveManagement = () => {
               variant={filterStatus === "pending" ? "default" : "outline"}
               onClick={() => setFilterStatus("pending")}
               size="sm"
+              className="flex-1 sm:flex-none"
             >
               Pending
             </Button>
@@ -1016,6 +1018,7 @@ const LeaveManagement = () => {
               variant={filterStatus === "approved" ? "default" : "outline"}
               onClick={() => setFilterStatus("approved")}
               size="sm"
+              className="flex-1 sm:flex-none"
             >
               Approved
             </Button>
@@ -1023,6 +1026,7 @@ const LeaveManagement = () => {
               variant={filterStatus === "rejected" ? "default" : "outline"}
               onClick={() => setFilterStatus("rejected")}
               size="sm"
+              className="flex-1 sm:flex-none"
             >
               Rejected
             </Button>
@@ -1131,15 +1135,16 @@ const LeaveManagement = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 mt-4 sm:mt-0">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleViewLeave(leave)}
-                          className="flex items-center space-x-1"
+                          className="flex items-center space-x-1 w-full sm:w-auto"
                         >
                           <Eye className="h-4 w-4" />
-                          <span>View Details</span>
+                          <span className="hidden sm:inline">View Details</span>
+                          <span className="sm:hidden">View</span>
                         </Button>
                       </div>
                     </div>
