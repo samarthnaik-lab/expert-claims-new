@@ -8,12 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Users, FileText, Settings, TrendingUp, LogOut, Plus, Eye, Edit, Trash, UserPlus, ArrowLeft, List, Calendar, CheckCircle, XCircle, Search, Filter, X, AlertTriangle, RefreshCw, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Users, FileText, Settings, TrendingUp, LogOut, Plus, Eye, Edit, Trash, UserPlus, ArrowLeft, List, Calendar, CheckCircle, XCircle, Search, Filter, X, AlertTriangle, RefreshCw, ZoomIn, ZoomOut, RotateCcw, ArrowUpDown } from 'lucide-react';
 import { SessionExpiry } from '@/components/SessionExpiry';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserService, AdminUser } from '@/services/userService';
+import SortableTableHeader from '@/components/ui/SortableTableHeader';
+import { useTableSort } from '@/hooks/useTableSort';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -433,6 +435,9 @@ const AdminDashboard = () => {
     ? allFilteredTasks.slice(taskStartIndex, taskEndIndex) // Client-side pagination for search/filter results
     : allFilteredTasks; // API pagination - tasks are already paginated
 
+  // Sorting for tasks
+  const { sortedData: sortedTasks, sortConfig: taskSortConfig, handleSort: handleTaskSort } = useTableSort(filteredTasks);
+
   // Get unique partner types from users data
   // Use allUsersForSearch if available to show all partner types from all records
   const partnerTypes = useMemo(() => {
@@ -499,6 +504,21 @@ const AdminDashboard = () => {
   const filteredUsers = isSearchingOrFiltering
     ? allFilteredUsers.slice(startIndex, endIndex) // Client-side pagination for search/filter results
     : users; // API pagination - users are already paginated
+
+  // Sorting for users
+  const { sortedData: sortedUsers, sortConfig: userSortConfig, handleSort: handleUserSort } = useTableSort(filteredUsers);
+
+  // Sorting for leave requests
+  const { sortedData: sortedLeaveRequests, sortConfig: leaveSortConfig, handleSort: handleLeaveSort } = useTableSort(leaveRequests);
+
+  // Sorting for reports
+  const { sortedData: sortedReports, sortConfig: reportSortConfig, handleSort: handleReportSort } = useTableSort(reports);
+
+  // Sorting for assigned tasks
+  const { sortedData: sortedAssignedTasks, sortConfig: assignedTaskSortConfig, handleSort: handleAssignedTaskSort } = useTableSort(assignedTasks);
+
+  // Sorting for cases (Gap Analysis)
+  const { sortedData: sortedCases, sortConfig: caseSortConfig, handleSort: handleCaseSort } = useTableSort(casesData);
 
   // Initialize active tab from URL parameters
   useEffect(() => {
@@ -2600,44 +2620,52 @@ Created Time: ${report.created_time}
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className="overflow-hidden">
+                  <table className="w-full" style={{ tableLayout: 'auto' }}>
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <SortableTableHeader
+                          column="task_id"
+                          label="Task ID"
+                          sortColumn={taskSortConfig?.column || ''}
+                          sortDirection={taskSortConfig?.direction || 'asc'}
+                          onSort={handleTaskSort}
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        />
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredTasks.map((task: any) => (
+                      {sortedTasks.map((task: any) => (
                         <tr key={task.id} className="hover:bg-gray-50">
                           <td
-                            className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 cursor-pointer hover:underline"
+                            className="px-4 py-4 min-w-0 break-words text-sm font-medium text-blue-600 cursor-pointer hover:underline"
+                            style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                             onClick={() => navigate(`/task/${task.task_id}`)}
                           >
                             {task.task_id}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.title}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-900" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{task.title}</td>
+                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                             {task.assigned_employee_name || 'Unassigned'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                             {task.customer_profile?.full_name || 'N/A'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 py-4 whitespace-nowrap">
                             <Badge className={getStatusColor(task.current_status)}>
                               {task.current_status}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
                             {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
                             <Button
                               variant="outline"
                               size="sm"
@@ -2659,9 +2687,9 @@ Created Time: ${report.created_time}
                           </td>
                         </tr>
                       ))}
-                      {filteredTasks.length === 0 && (
+                      {sortedTasks.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                          <td colSpan={7} className="px-4 py-4 text-center text-gray-500">
                             No tasks found
                           </td>
                         </tr>
@@ -2802,37 +2830,44 @@ Created Time: ${report.created_time}
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className="overflow-hidden">
+                  <table className="w-full" style={{ tableLayout: 'auto' }}>
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User ID</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entity</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner Type</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <SortableTableHeader
+                          column="id"
+                          label="User ID"
+                          sortColumn={userSortConfig?.column || ''}
+                          sortDirection={userSortConfig?.direction || 'asc'}
+                          onSort={handleUserSort}
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        />
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entity</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredUsers.map(user => (
+                      {sortedUsers.map(user => (
                         <tr key={user.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.id}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.role}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{user.id}</td>
+                          <td className="px-4 py-4 min-w-0 break-words text-sm font-medium text-gray-900" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{user.name}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{user.role}</td>
+                          <td className="px-4 py-4 whitespace-nowrap">
                             <Badge className={getStatusColor(user.status)}>
                               {user.status}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.department || 'N/A'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.email || 'N/A'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{(user as any).entity || 'N/A'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatPartnerType((user as any).partner_type)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
+                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{user.department || 'N/A'}</td>
+                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{user.email || 'N/A'}</td>
+                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{(user as any).entity || 'N/A'}</td>
+                          <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{formatPartnerType((user as any).partner_type)}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
                             <Button
                               variant="outline"
                               size="sm"
@@ -2865,7 +2900,7 @@ Created Time: ${report.created_time}
                       ))}
                       {filteredUsers.length === 0 && (
                         <tr>
-                          <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
+                          <td colSpan={9} className="px-4 py-4 text-center text-gray-500">
                             No users found
                           </td>
                         </tr>
@@ -2955,41 +2990,48 @@ Created Time: ${report.created_time}
                 {leaveLoading ? (
                   <div className="p-6 text-center">Loading leave requests...</div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
+                  <div className="overflow-hidden">
+                    <table className="w-full" style={{ tableLayout: 'auto' }}>
                       <thead className="bg-gray-50 border-b">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Application ID</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied Date</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          <SortableTableHeader
+                            column="application_id"
+                            label="Application ID"
+                            sortColumn={leaveSortConfig?.column || ''}
+                            sortDirection={leaveSortConfig?.direction || 'asc'}
+                            onSort={handleLeaveSort}
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          />
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {leaveRequests.map((request: any) => (
+                        {sortedLeaveRequests.map((request: any) => (
                           <tr key={request.application_id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">{request.application_id}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{request.employees.first_name} {request.employees.last_name}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{request.leave_types?.type_name || 'N/A'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{request.start_date}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{request.end_date}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{request.total_days}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 max-w-xs truncate" title={request.reason}>{request.reason}</td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-4 py-4 min-w-0 break-words text-sm font-medium text-blue-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.application_id}</td>
+                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.employees.first_name} {request.employees.last_name}</td>
+                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.leave_types?.type_name || 'N/A'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.start_date}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.end_date}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.total_days}</td>
+                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={request.reason}>{request.reason}</td>
+                            <td className="px-4 py-4 whitespace-nowrap">
                               <Badge className={getStatusColor(request.status)}>
                                 <span className="capitalize">{request.status}</span>
                               </Badge>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
                               {new Date(request.applied_date).toLocaleDateString()}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
                               {(() => {
                                 // Get current user role from session or userDetails
                                 const currentUserRole = session?.userRole || userDetails?.role || userDetails?.designation || '';
@@ -3036,7 +3078,7 @@ Created Time: ${report.created_time}
                         ))}
                         {leaveRequests.length === 0 && (
                           <tr>
-                            <td colSpan={10} className="px-6 py-4 text-center text-gray-500">
+                            <td colSpan={10} className="px-4 py-4 text-center text-gray-500">
                               No leave requests found
                             </td>
                           </tr>
@@ -3154,9 +3196,14 @@ Created Time: ${report.created_time}
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-left p-4 font-semibold text-gray-700">
-                            Case ID
-                          </th>
+                          <SortableTableHeader
+                            column="backlog_id"
+                            label="Case ID"
+                            sortColumn={caseSortConfig?.column || ''}
+                            sortDirection={caseSortConfig?.direction || 'asc'}
+                            onSort={handleCaseSort}
+                            className="text-left p-4 font-semibold text-gray-700"
+                          />
                           <th className="text-left p-4 font-semibold text-gray-700">
                             Case Summary
                           </th>
@@ -3184,7 +3231,7 @@ Created Time: ${report.created_time}
                         </tr>
                       </thead>
                       <tbody>
-                        {casesData
+                        {sortedCases
                           .filter((item) => {
                             if (!casesSearchTerm) return true;
                             const searchLower = casesSearchTerm.toLowerCase();
@@ -3393,7 +3440,14 @@ Created Time: ${report.created_time}
                     <table className="w-full">
                       <thead className="bg-gray-50 border-b">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Report ID</th>
+                          <SortableTableHeader
+                            column="id"
+                            label="Report ID"
+                            sortColumn={reportSortConfig?.column || ''}
+                            sortDirection={reportSortConfig?.direction || 'asc'}
+                            onSort={handleReportSort}
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          />
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -3534,14 +3588,21 @@ Created Time: ${report.created_time}
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
+                        <SortableTableHeader
+                          column="task_id"
+                          label="Task ID"
+                          sortColumn={assignedTaskSortConfig?.column || ''}
+                          sortDirection={assignedTaskSortConfig?.direction || 'asc'}
+                          onSort={handleAssignedTaskSort}
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        />
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {assignedTasks.map((task: any) => (
+                      {sortedAssignedTasks.map((task: any) => (
                         <tr key={task.id} className="hover:bg-gray-50">
                           <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                             {task.task_id}
