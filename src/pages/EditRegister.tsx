@@ -801,11 +801,12 @@ const EditRegister = () => {
     <div className="min-h-screen bg-gray-100 py-6 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <Card className="shadow-lg rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
-            <CardTitle className="text-2xl font-bold">Edit User Profile</CardTitle>
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0 pb-2 pt-6 px-4 sm:px-6">
+            <CardTitle className="text-xl sm:text-2xl font-bold">Edit User Profile</CardTitle>
             <Button
               variant="outline"
               onClick={() => navigate('/admin-dashboard')}
+              className="w-full sm:w-auto"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Dashboard
@@ -1429,10 +1430,11 @@ const EditRegister = () => {
                </div>
              )} */}
 
-            <div className="flex justify-end space-x-4 pt-6">
+            <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6">
               <Button
                 variant="outline"
                 onClick={() => navigate('/admin-dashboard')}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
@@ -1440,6 +1442,7 @@ const EditRegister = () => {
                 variant="outline"
                 onClick={handleUpdateUser}
                 disabled={isLoading}
+                className="w-full sm:w-auto"
               >
                 {isLoading ? 'Updating User...' : 'Update User'}
               </Button>

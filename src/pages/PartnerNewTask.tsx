@@ -21,11 +21,7 @@ import { ArrowLeft, Upload, FileText, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { CaseTypeService, CaseType } from "@/services/caseTypeService";
-import {
-  TaskService,
-  TaskCreateRequest,
-  TaskCustomer,
-} from "@/services/taskService";
+// TaskService imports removed - only using partnerbacklogentry API now
 import mammoth from "mammoth";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -370,39 +366,9 @@ const PartnerNewTask = () => {
     return documentType ? documentType.name : "Unknown";
   };
 
-  const createTaskData = (): TaskCreateRequest => {
-    const selectedCaseType = caseTypes.find(
-      (type) => type.case_type_name === formData.caseType
-    );
-    const caseTypeId = selectedCaseType
-      ? selectedCaseType.case_type_id.toString()
-      : formData.caseType;
+  // uploadDocuments function removed - document upload API no longer called
 
-    const partnerFullName = getPartnerFullName(); // Get partner's full name
-
-    const taskData = {
-      case_Summary: formData.task_summary,
-      case_description: formData.description,
-      caseType: caseTypeId,
-      assignedTo: "1", // Default assignment
-      priority: "medium",
-      ticket_Stage: "analysis",
-      partner_id: "",
-      dueDate: "",
-      stakeholders: [],
-      customer: {
-        firstName: "",
-        lastName: "",
-      } as TaskCustomer,
-      comments: formData.comments,
-      internal: "false",
-      payments: [],
-      updatedby_name: partnerFullName, // Partner's full name (e.g., "Sam Naik")
-      createdby_name: partnerFullName, // Partner's full name (e.g., "Sam Naik")
-    };
-
-    return taskData;
-  };
+  // createTaskData function removed - no longer calling createTask API
 
   const handleSubmitClick = () => {
     setShowSubmitConfirmation(true);
@@ -467,19 +433,7 @@ const PartnerNewTask = () => {
         return false;
       }
 
-      const taskData = createTaskData();
-      console.log("Partner task data:", taskData);
-
-      // Get session data
-      const sessionStr = localStorage.getItem("expertclaims_session");
-      const session = sessionStr ? JSON.parse(sessionStr) : {};
-      const sessionId = session.sessionId || "fddc661a-dfb4-4896-b7b1-448e1adf7bc2";
-      const jwtToken = session.jwtToken || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc";
-
-      const result = await TaskService.createTask(taskData, sessionId, jwtToken);
-      console.log("Task creation result:", result);
-
-      // Call partner backlog entry API
+      // Call partner backlog entry API (only API call needed)
       try {
         // Get case type ID
         const selectedCaseType = caseTypes.find(
@@ -597,9 +551,18 @@ const PartnerNewTask = () => {
         if (backlogResponse.ok) {
           const responseData = await backlogResponse.json();
           console.log("Partner backlog entry created successfully:", responseData);
+
+          // Document upload API call removed - documents are handled by partnerbacklogentry API
         } else {
           const errorData = await backlogResponse.text();
           console.error("Failed to create partner backlog entry:", backlogResponse.status, errorData);
+          toast({
+            title: "Error",
+            description: "Failed to submit task. Please try again.",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return false;
         }
       } catch (backlogError) {
         console.error("Error creating partner backlog entry:", backlogError);

@@ -352,39 +352,39 @@ const PartnerSignup = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-emerald-50">
       {/* Top Header Section */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             {/* Left Side - Logo and Company Name */}
-            <div className="flex items-center space-x-6">
-              <img src="../leaders/logo.jpeg" alt="ExpertClais" className="w-48" />
+            <div className="flex items-center space-x-4 sm:space-x-6 w-full sm:w-auto justify-center sm:justify-start">
+              <img src="../leaders/logo.jpeg" alt="ExpertClais" className="w-32 sm:w-48 h-auto" />
             </div>
             
             {/* Right Side - Phone Number */}
-            <div className="bg-blue-600 px-6 py-3 rounded-lg flex items-center space-x-3 shadow-lg">
-              <PhoneIcon className="h-5 w-5 text-white" />
-              <span className="text-white font-bold text-md">7396253535</span>
+            <div className="bg-blue-600 px-4 sm:px-6 py-2 sm:py-3 rounded-lg flex items-center space-x-2 sm:space-x-3 shadow-lg w-full sm:w-auto justify-center sm:justify-start">
+              <PhoneIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              <span className="text-white font-bold text-sm sm:text-md">7396253535</span>
             </div>
           </div>
         </div>
       </div>
         {/* Main Service Section */}
-        <div className="bg-gradient-to-br from-gray-50 to-white py-12">
-          <div className="max-w-4xl mx-auto px-4 text-center">
-            <h1 className="text-3xl font-bold text-blue-900 mb-3 tracking-wide">POLICY STRUCTURE SUPPORT</h1>
-            <p className="text-lg text-blue-800 mb-4 font-medium">(Insurance Gap Analysis)</p>
-            <p className="text-2xl font-bold text-red-600 mb-6">Optimise Your Insurance Coverage</p>
-            <div className="text-gray-700 space-y-1 text-base">
+        <div className="bg-gradient-to-br from-gray-50 to-white py-8 sm:py-12">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-900 mb-3 tracking-wide">POLICY STRUCTURE SUPPORT</h1>
+            <p className="text-base sm:text-lg text-blue-800 mb-4 font-medium">(Insurance Gap Analysis)</p>
+            <p className="text-xl sm:text-2xl font-bold text-red-600 mb-6">Optimise Your Insurance Coverage</p>
+            <div className="text-gray-700 space-y-1 text-sm sm:text-base">
               <p className="font-medium">With the Expert Guidance from</p>
               <p className="font-medium">The Trusted Industry Legends</p>
-              <p className="font-bold text-lg">&</p>
+              <p className="font-bold text-base sm:text-lg">&</p>
               <p className="font-medium">The Members of our Technical Advisory Board</p>
             </div>
           </div>
         </div>
 
         {/* Partner Signup Form Section */}
-        <div className="py-12 bg-gradient-to-br from-blue-50 via-white to-emerald-50">
-          <div className="max-w-md mx-auto px-4">
+        <div className="py-8 sm:py-12 bg-gradient-to-br from-blue-50 via-white to-emerald-50">
+          <div className="max-w-md mx-auto px-4 sm:px-6">
             {/* Header */}
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-lg mb-4">
