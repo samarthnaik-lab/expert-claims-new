@@ -265,9 +265,19 @@ const CustomerDocumentUpload = () => {
 
   const uploadFileToAPI = async (uploadedFile: UploadedFile) => {
     try {
-      // Get user_id and employee_id from case data
-      const selectedClaimData = caseData.find((claim: any) => claim.case_id === selectedClaim);
-      const employeeId = selectedClaimData?.employee_id || '';
+      // Get userid from localStorage for created_by and updated_by
+      const userDetailsStr = localStorage.getItem("expertclaims_user_details");
+      let userId = "";
+      
+      if (userDetailsStr) {
+        try {
+          const userDetails = JSON.parse(userDetailsStr);
+          const details = Array.isArray(userDetails) ? userDetails[0] : userDetails;
+          userId = (details?.userid || details?.id || details?.customer_id || "").toString();
+        } catch (error) {
+          console.error("Error parsing user details from localStorage:", error);
+        }
+      }
       
       // Get category_id from selected document type
       const selectedCategory = getAvailableDocumentTypes().find(cat => cat.id.toString() === selectedDocumentType);
@@ -279,6 +289,10 @@ const CustomerDocumentUpload = () => {
       formData.append('case_id', selectedClaim);
       formData.append('category_id', categoryId.toString());
       formData.append('is_customer_visible', 'true'); // Customer uploads are visible to customers
+      if (userId) {
+        formData.append('created_by', userId);
+        formData.append('updated_by', userId);
+      }
       
       // Update progress to show upload starting
       setUploadedFiles(prev => prev.map(file => 

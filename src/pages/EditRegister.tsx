@@ -64,7 +64,10 @@ const EditRegister = () => {
     notes: '',
     gstin: '',
     state: '',
-    pincode: ''
+    pincode: '',
+    partner_type: '',
+    license_id: '',
+    license_expiring_date: ''
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -251,6 +254,9 @@ const EditRegister = () => {
         let panNumber = '';
         let state = '';
         let pincode = '';
+        let partnerType = '';
+        let licenseId = '';
+        let licenseExpiringDate = '';
 
         if (fetchedUserData.role === 'employee' && fetchedUserData.employees) {
           firstName = fetchedUserData.employees.first_name || '';
@@ -270,12 +276,30 @@ const EditRegister = () => {
           emergencyContact = fetchedUserData.partners.emergency_contact || '';
         }
         
-        // Extract GSTIN, PAN, State, Pincode for partner role
+        // Extract GSTIN, PAN, State, Pincode, Partner Type, License ID, License Expiring Date for partner role
         if (fetchedUserData.role === 'partner' && fetchedUserData.partners) {
           gstin = (fetchedUserData.partners as any).gstin || '';
-          panNumber = (fetchedUserData.partners as any).pan_number || '';
+          // Check both 'pan' and 'pan_number' fields from API (API may send 'pan')
+          panNumber = (fetchedUserData.partners as any).pan || (fetchedUserData.partners as any).pan_number || '';
           state = (fetchedUserData.partners as any).state || '';
           pincode = (fetchedUserData.partners as any).pincode || '';
+          
+          // Extract partner-specific fields
+          partnerType = (fetchedUserData.partners as any).partner_type || '';
+          licenseId = (fetchedUserData.partners as any).license_id || '';
+          licenseExpiringDate = (fetchedUserData.partners as any).license_expiring_date || '';
+          
+          console.log('Partner data extracted:', {
+            gstin,
+            pan: (fetchedUserData.partners as any).pan,
+            pan_number: (fetchedUserData.partners as any).pan_number,
+            panNumber,
+            state,
+            pincode,
+            partner_type: partnerType,
+            license_id: licenseId,
+            license_expiring_date: licenseExpiringDate
+          });
         } else if (fetchedUserData.role === 'customer' && fetchedUserData.customers) {
           firstName = fetchedUserData.customers.first_name || '';
           lastName = fetchedUserData.customers.last_name || '';
@@ -368,7 +392,10 @@ const EditRegister = () => {
           notes: notes,
           gstin: gstin,
           state: state,
-          pincode: pincode
+          pincode: pincode,
+          partner_type: partnerType,
+          license_id: licenseId,
+          license_expiring_date: licenseExpiringDate
         });
       } else {
         toast({
@@ -879,17 +906,20 @@ const EditRegister = () => {
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                    placeholder="Leave blank to keep current password"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Leave blank to keep current password</p>
-                </div>
+                {/* Hide password field for customer role */}
+                {formData.role !== 'customer' && (
+                  <div>
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => handleInputChange('password', e.target.value)}
+                      placeholder="Leave blank to keep current password"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Leave blank to keep current password</p>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

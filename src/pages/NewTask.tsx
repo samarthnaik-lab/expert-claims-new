@@ -1724,9 +1724,9 @@ const NewTask = () => {
       return;
     }
 
-    // Get employee_id from localStorage
+    // Get userid from localStorage for created_by and updated_by
     const userDetailsStr = localStorage.getItem("expertclaims_user_details");
-    let employeeId = "";
+    let userId = "";
 
     if (userDetailsStr) {
       try {
@@ -1736,16 +1736,16 @@ const NewTask = () => {
           ? userDetails[0]
           : userDetails;
 
-        employeeId = details?.employee_id?.toString() || "";
-        console.log("Employee ID from localStorage:", employeeId);
+        userId = details?.userid?.toString() || details?.id?.toString() || details?.employee_id?.toString() || "";
+        console.log("User ID from localStorage:", userId);
       } catch (error) {
         console.error("Error parsing user details from localStorage:", error);
       }
     }
 
-    if (!employeeId) {
-      console.warn("⚠️ No employee ID found in localStorage, but continuing with upload");
-      // Don't return - continue with upload even without employee ID
+    if (!userId) {
+      console.warn("⚠️ No user ID found in localStorage, but continuing with upload");
+      // Don't return - continue with upload even without user ID
     }
 
     setIsUploadingDocuments(true);
@@ -1901,7 +1901,7 @@ const NewTask = () => {
           }
 
           console.log(
-            `Uploading document: ${actualDocumentName}, Category ID: ${categoryId}, Case ID: ${caseId}, Employee ID: ${employeeId}`
+            `Uploading document: ${actualDocumentName}, Category ID: ${categoryId}, Case ID: ${caseId}, User ID: ${userId}`
           );
 
           const formDataToSend = new FormData();
@@ -1909,12 +1909,18 @@ const NewTask = () => {
           formDataToSend.append("case_id", caseId);
           formDataToSend.append("category_id", categoryId.toString());
           formDataToSend.append("is_customer_visible", "true");
+          if (userId) {
+            formDataToSend.append("created_by", userId);
+            formDataToSend.append("updated_by", userId);
+          }
 
           console.log(`Calling upload API for document: ${actualDocumentName}`);
           console.log(`FormData contents:`, {
             case_id: caseId,
             category_id: categoryId.toString(),
             is_customer_visible: "true",
+            created_by: userId || "not set",
+            updated_by: userId || "not set",
             filename: file.name,
             fileSize: file.size,
             fileType: file.type
