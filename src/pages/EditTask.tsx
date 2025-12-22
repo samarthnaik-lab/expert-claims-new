@@ -1513,19 +1513,23 @@ const EditTask = () => {
         // Use taskId (full case ID from URL like "ECSI-25-230") as priority
         const caseId = taskId || currentTaskData?.case_id?.toString();
 
-        // Get employee_id from localStorage
+        // Get userid from localStorage for created_by and updated_by
         const userDetailsRaw = localStorage.getItem('expertclaims_user_details');
-        let employeeId = 1; // Default fallback
+        let userId = ""; // Will be set from localStorage
         
         if (userDetailsRaw) {
             try {
                 const userDetailsData = JSON.parse(userDetailsRaw);
                 const userDetails = Array.isArray(userDetailsData) ? userDetailsData[0] : userDetailsData;
-                employeeId = userDetails.userid || userDetails.employee_id || 1;
-                console.log('Using employee_id from localStorage:', employeeId);
+                userId = (userDetails.userid || userDetails.id || userDetails.employee_id || "").toString();
+                console.log('Using user ID from localStorage:', userId);
             } catch (error) {
                 console.error('Error parsing user details:', error);
             }
+        }
+        
+        if (!userId) {
+            console.warn('⚠️ No user ID found in localStorage, but continuing with upload');
         }
 
         setIsUploadingDocuments(true);
@@ -1655,13 +1659,17 @@ const EditTask = () => {
                         }
                     }
 
-                    console.log(`Uploading document: ${actualDocumentName}, Category ID: ${categoryId}, Case ID: ${caseId}, Employee ID: ${employeeId}`);
+                    console.log(`Uploading document: ${actualDocumentName}, Category ID: ${categoryId}, Case ID: ${caseId}, User ID: ${userId}`);
 
                     const formDataToSend = new FormData();
                     formDataToSend.append("data", file);
                     formDataToSend.append("case_id", caseId.toString());
                     formDataToSend.append("category_id", categoryId.toString());
                     formDataToSend.append("is_customer_visible", "true");
+                    if (userId) {
+                        formDataToSend.append("created_by", userId);
+                        formDataToSend.append("updated_by", userId);
+                    }
 
                     const uploadPromise = fetch(
                         "http://localhost:3000/api/upload",
@@ -3148,7 +3156,7 @@ const EditTask = () => {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <Label htmlFor="service_amount">Service Amount (₹) *</Label>
+                                    <Label htmlFor="service_amount">service amount (₹) *</Label>
                                     <Input
                                         type="number"
                                         id="service_amount"
@@ -3159,14 +3167,14 @@ const EditTask = () => {
                                     />
                                 </div>
                                 <div>
-                                    <Label htmlFor="claims_amount">Claims Amount (₹)</Label>
+                                    <Label htmlFor="claims_amount">claim amount (₹)</Label>
                                     <Input
                                         type="number"
                                         id="claims_amount"
                                         name="claims_amount"
                                         value={formData.claims_amount}
                                         onChange={handleInputChange}
-                                        placeholder="Enter claims amount"
+                                        placeholder="Enter claim amount"
                                     />
                                 </div>
                             </div>
