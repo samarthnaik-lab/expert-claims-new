@@ -54,6 +54,8 @@ interface ExtendedCaseDetails extends CaseDetails {
     max_bonus_approval_limit?: number;
     emergency_contact_relation?: string;
   };
+  'claim amount'?: string | number;
+  'service amount'?: string | number;
 }
 
 type TaskStatus = 'new' | 'in-progress' | 'pending' | 'completed' | 'cancelled';
@@ -892,8 +894,8 @@ const TaskDetail = () => {
           'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
           'Content-Profile': 'expc',
           'Accept-Profile': 'expc',
-          'session_id': 'a9bfe0a4-1e6c-4c69-860f-ec50846a7da6',
-          'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc',
+          'session_id': sessionId,
+          'jwt_token': jwtToken,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestBody)
@@ -905,19 +907,36 @@ const TaskDetail = () => {
       if (!response.ok) {
         console.error('Failed to call view webhook:', response.status, response.statusText);
         
-        // Try to get error details
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        // Try to get error details for logging
+        let userFriendlyMessage = "Unable to view document. Please try again.";
         try {
-          const errorData = await response.text();
-          console.error('Error response body:', errorData);
-          errorMessage += ` - ${errorData}`;
+          const errorText = await response.text();
+          console.error('Error response body:', errorText);
+          
+          // Try to parse JSON error response
+          try {
+            const errorData = JSON.parse(errorText);
+            if (errorData.error) {
+              // Show user-friendly message based on error type
+              if (errorData.error.includes("File not found") || errorData.error.includes("not found")) {
+                userFriendlyMessage = "Document not found.";
+              } else if (errorData.error.includes("Invalid session")) {
+                userFriendlyMessage = "Session expired. Please log in again.";
+              } else {
+                userFriendlyMessage = "Unable to view document. Please try again.";
+              }
+            }
+          } catch (parseError) {
+            // If not JSON, use default message
+            console.error('Error is not JSON format');
+          }
         } catch (e) {
           console.error('Could not parse error response');
         }
         
         toast({
           title: "Error",
-          description: `Failed to get document view URL: ${errorMessage}`,
+          description: userFriendlyMessage,
           variant: "destructive",
         });
         return;
@@ -1179,6 +1198,30 @@ const TaskDetail = () => {
                     {taskData?.case_type ? taskData.case_type.replace('-', ' ') : 'Not set'}
                   </p>
                 </div> */}
+                
+                {/* Show claim amount from caseDetails if available */}
+                {caseDetails && ((caseDetails as any)['claim amount']) && (
+                  <div>
+                    <p className="text-sm text-gray-600">Claim Amount</p>
+                    <p className="font-medium">
+                      ₹{typeof (caseDetails as any)['claim amount'] === 'number' 
+                        ? (caseDetails as any)['claim amount'].toLocaleString('en-IN')
+                        : String((caseDetails as any)['claim amount'] || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Show service amount from caseDetails if available */}
+                {caseDetails && ((caseDetails as any)['service amount']) && (
+                  <div>
+                    <p className="text-sm text-gray-600">Service Amount</p>
+                    <p className="font-medium">
+                      ₹{typeof (caseDetails as any)['service amount'] === 'number' 
+                        ? (caseDetails as any)['service amount'].toLocaleString('en-IN')
+                        : String((caseDetails as any)['service amount'] || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    </p>
+                  </div>
+                )}
               </div>
               
               {taskData?.case_type && (
@@ -1247,10 +1290,10 @@ const TaskDetail = () => {
                       {caseDetails.case_value ? `${caseDetails.case_value.toLocaleString()} ${caseDetails.value_currency || 'INR'}` : 'Not set'}
                     </p>
                   </div>
-                  <div>
+                  {/* <div>
                     <p className="text-sm text-gray-600">Assigned To</p>
                     <p className="font-medium">{caseDetails.assigned_to || 'N/A'}</p>
-                  </div>
+                  </div> */}
                   <div>
                     <p className="text-sm text-gray-600">Last Updated</p>
                     <p className="font-medium">
