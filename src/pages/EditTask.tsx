@@ -389,19 +389,37 @@ const EditTask = () => {
             title: taskData.title || '',
             description: taskData.case_description || '',
             task_summary: taskData.case_summary || '',
-            service_amount: taskData.service_amount !== null && taskData.service_amount !== undefined 
-                ? String(taskData.service_amount) 
-                : '',
-            claims_amount: (taskData.claims_amount !== null && taskData.claims_amount !== undefined 
-                ? String(taskData.claims_amount) 
-                : (taskData.claim_amount !== null && taskData.claim_amount !== undefined 
-                    ? String(taskData.claim_amount) 
-                    : '')), // Check both claims_amount and claim_amount (API might use singular)
+            service_amount: (() => {
+                // Check multiple possible field names for service amount (API uses "service amount" with space)
+                const serviceAmountRaw = (taskData as any)["service amount"]
+                    ?? taskData.service_amount 
+                    ?? (taskData as any).serviceAmount
+                    ?? null;
+                
+                if (serviceAmountRaw !== null && serviceAmountRaw !== undefined && serviceAmountRaw !== '') {
+                    return String(serviceAmountRaw);
+                }
+                return '';
+            })(),
+            claims_amount: (() => {
+                // Check multiple possible field names for claim amount (API uses "claim amount" with space)
+                const claimAmountRaw = (taskData as any)["claim amount"]
+                    ?? taskData.claim_amount 
+                    ?? taskData.claims_amount
+                    ?? (taskData as any).claimAmount
+                    ?? (taskData as any).claimsAmount
+                    ?? null;
+                
+                if (claimAmountRaw !== null && claimAmountRaw !== undefined && claimAmountRaw !== '') {
+                    return String(claimAmountRaw);
+                }
+                return '';
+            })(),
             priority: taskData.priority || 'medium',
             ticket_stage: taskData.ticket_stage || 'analysis',
             current_status: taskData.current_status || 'new',
             due_date: taskData.due_date || '',
-            assigned_to: taskData.assigned_to || '',
+            assigned_to: taskData.assigned_to ? String(taskData.assigned_to) : '',
             customer_id: taskData.customer_id?.toString() || '',
             reviewer_id: taskData.reviewer_id || '',
             approver_id: taskData.approver_id || '',
@@ -411,18 +429,32 @@ const EditTask = () => {
             selectedDocuments: [], // Start with empty array - only populate when user checks boxes
         });
         
+        // Helper function to get service amount from various field names
+        const getServiceAmount = () => {
+            return (taskData as any)["service amount"] ?? taskData.service_amount ?? (taskData as any).serviceAmount ?? null;
+        };
+        
+        // Helper function to get claim amount from various field names
+        const getClaimAmount = () => {
+            return (taskData as any)["claim amount"] ?? taskData.claim_amount ?? taskData.claims_amount ?? (taskData as any).claimAmount ?? (taskData as any).claimsAmount ?? null;
+        };
+        
+        const serviceAmountValue = getServiceAmount();
+        const claimAmountValue = getClaimAmount();
+        
         console.log('Form data populated:', {
+            'service amount (space)': (taskData as any)["service amount"],
             service_amount: taskData.service_amount,
+            serviceAmount: (taskData as any).serviceAmount,
+            service_amount_final: serviceAmountValue,
+            service_amount_form_value: serviceAmountValue !== null && serviceAmountValue !== undefined && serviceAmountValue !== '' ? String(serviceAmountValue) : '',
+            'claim amount (space)': (taskData as any)["claim amount"],
+            claim_amount: taskData.claim_amount,
             claims_amount: taskData.claims_amount,
-            claim_amount: taskData.claim_amount, // Check singular form from API
-            service_amount_string: taskData.service_amount !== null && taskData.service_amount !== undefined 
-                ? String(taskData.service_amount) 
-                : '',
-            claims_amount_string: (taskData.claims_amount !== null && taskData.claims_amount !== undefined 
-                ? String(taskData.claims_amount) 
-                : (taskData.claim_amount !== null && taskData.claim_amount !== undefined 
-                    ? String(taskData.claim_amount) 
-                    : ''))
+            claimAmount: (taskData as any).claimAmount,
+            claimsAmount: (taskData as any).claimsAmount,
+            claim_amount_final: claimAmountValue,
+            claim_amount_form_value: claimAmountValue !== null && claimAmountValue !== undefined && claimAmountValue !== '' ? String(claimAmountValue) : ''
         });
 
         // Populate customer data if available
@@ -3667,18 +3699,31 @@ const EditTask = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <Label>Assigned To</Label>
-                                    <div className="flex items-center h-10 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
-                                        {formData.assigned_to ? (
-                                            currentTaskData ? (
-                                                getEmployeeNameFromTaskData(currentTaskData)
+                                    <Select
+                                        value={formData.assigned_to}
+                                        onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to: value }))}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select assignee" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {isLoadingUsers ? (
+                                                <SelectItem value="loading" disabled>
+                                                    Loading employees...
+                                                </SelectItem>
+                                            ) : users.length > 0 ? (
+                                                users.map((user) => (
+                                                    <SelectItem key={user.id} value={user.id}>
+                                                        {user.full_name}
+                                                    </SelectItem>
+                                                ))
                                             ) : (
-                                                'Loading employee data...'
-                                            )
-                                        ) : (
-                                            'No assignee selected'
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-1">Assignee cannot be changed when editing</p>
+                                                <SelectItem value="no-users" disabled>
+                                                    No employees available
+                                                </SelectItem>
+                                            )}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 {/* <div>
                                     <Label>Customer</Label>
@@ -4269,33 +4314,36 @@ const EditTask = () => {
                                             <h4 className="font-semibold text-gray-900 mb-3">Payment Summary</h4>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="text-center">
-                                                    <p className="text-sm text-gray-600">Total Claim Amount</p>
+                                                    <p className="text-sm text-gray-600">Total Service Amount</p>
                                                     <p className="text-2xl font-bold text-gray-900">
-                                                        ₹{(() => {
-                                                            // Total Claim Amount = claims_amount + service_amount
-                                                            const claimsAmount = parseFloat(formData.claims_amount || '0') || 0;
-                                                            const serviceAmount = parseFloat(formData.service_amount || '0') || 0;
-                                                            const totalClaimAmount = claimsAmount + serviceAmount;
-                                                            return totalClaimAmount.toLocaleString('en-IN');
-                                                        })()}
+                                                        ₹{formData.service_amount 
+                                                            ? parseFloat(formData.service_amount).toLocaleString('en-IN') 
+                                                            : '0'}
                                                     </p>
                                                 </div>
                                                 <div className="text-center">
                                                     <p className="text-sm text-gray-600">Pending Amount</p>
                                                     <p className="text-2xl font-bold text-red-600">
                                                         ₹{(() => {
-                                                            // Total Claim Amount = claims_amount + service_amount
-                                                            const claimsAmount = parseFloat(formData.claims_amount || '0') || 0;
                                                             const serviceAmount = parseFloat(formData.service_amount || '0') || 0;
-                                                            const totalClaimAmount = claimsAmount + serviceAmount;
+                                                            // Calculate total from editablePaymentStages (current form values) or paymentStages (saved values)
+                                                            const calculateTotal = (phases: any[]) => {
+                                                                return phases.reduce((sum: number, phase: any) => {
+                                                                    if (!phase) return sum;
+                                                                    // Try multiple ways to get the amount
+                                                                    const amount = phase.phase_amount ?? phase.paid_amount ?? 0;
+                                                                    if (amount === null || amount === undefined) return sum;
+                                                                    const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount));
+                                                                    return sum + (isNaN(numAmount) ? 0 : numAmount);
+                                                                }, 0);
+                                                            };
                                                             
-                                                            // Sum of all payment phases' phase_amount
-                                                            const totalPaymentPhasesAmount = editablePaymentStages
-                                                                .reduce((sum: number, phase: any) => sum + (parseFloat(phase.phase_amount) || 0), 0);
+                                                            const totalPaymentPhases = editablePaymentStages.length > 0 
+                                                                ? calculateTotal(editablePaymentStages)
+                                                                : calculateTotal(paymentStages);
                                                             
-                                                            // Pending Amount = Total Claim Amount - all payment phases total
-                                                            const pendingAmount = totalClaimAmount - totalPaymentPhasesAmount;
-                                                            return Math.max(0, pendingAmount).toLocaleString('en-IN'); // Ensure non-negative
+                                                            const pendingAmount = Math.max(0, serviceAmount - totalPaymentPhases);
+                                                            return pendingAmount.toLocaleString('en-IN');
                                                         })()}
                                                     </p>
                                                 </div>
@@ -4303,9 +4351,22 @@ const EditTask = () => {
                                             <div className="mt-3 text-center">
                                                 <p className="text-sm text-gray-600">
                                                     Paid Amount: ₹{(() => {
-                                                        // Paid Amount = sum of all payment phases' phase_amount
-                                                        const paidAmount = editablePaymentStages
-                                                            .reduce((sum: number, phase: any) => sum + (parseFloat(phase.phase_amount) || 0), 0);
+                                                        // Calculate total from editablePaymentStages (current form values) or paymentStages (saved values)
+                                                        const calculateTotal = (phases: any[]) => {
+                                                            return phases.reduce((sum: number, phase: any) => {
+                                                                if (!phase) return sum;
+                                                                // Try multiple ways to get the amount
+                                                                const amount = phase.phase_amount ?? phase.paid_amount ?? 0;
+                                                                if (amount === null || amount === undefined) return sum;
+                                                                const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount));
+                                                                return sum + (isNaN(numAmount) ? 0 : numAmount);
+                                                            }, 0);
+                                                        };
+                                                        
+                                                        const paidAmount = editablePaymentStages.length > 0 
+                                                            ? calculateTotal(editablePaymentStages)
+                                                            : calculateTotal(paymentStages);
+                                                        
                                                         return paidAmount.toLocaleString('en-IN');
                                                     })()}
                                                 </p>

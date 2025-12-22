@@ -17,6 +17,7 @@ import { CaseService, CaseDetails } from '@/services/caseService';
 
 // Extended interface for the actual API response
 interface ExtendedCaseDetails extends CaseDetails {
+  claim_amount?: number | string; // Claim amount from API
   employees: {
     employee_id: number;
     first_name: string;
@@ -1242,9 +1243,28 @@ const TaskDetail = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Case Amount</p>
+                    <p className="text-sm text-gray-600">Claim Amount</p>
                     <p className="font-medium">
-                      {caseDetails.case_value ? `${caseDetails.case_value.toLocaleString()} ${caseDetails.value_currency || 'INR'}` : 'Not set'}
+                      {(() => {
+                        // Check multiple possible field names for claim amount (API uses "claim amount" with space)
+                        const claimAmountRaw = (caseDetails as any)["claim amount"]
+                          ?? caseDetails.claim_amount 
+                          ?? (caseDetails as any).claims_amount 
+                          ?? (caseDetails as any).claimAmount 
+                          ?? (caseDetails as any).claimsAmount
+                          ?? null;
+                        
+                        // Convert to number if it's a string, handle 0 as valid value
+                        if (claimAmountRaw !== null && claimAmountRaw !== undefined && claimAmountRaw !== '') {
+                          const claimAmount = typeof claimAmountRaw === 'string' ? parseFloat(claimAmountRaw) : Number(claimAmountRaw);
+                          if (!isNaN(claimAmount)) {
+                            console.log('Claim amount found:', claimAmount);
+                            return `${claimAmount.toLocaleString()} ${caseDetails.value_currency || 'INR'}`;
+                          }
+                        }
+                        console.log('Claim amount not found. Raw value:', claimAmountRaw, 'Available fields:', Object.keys(caseDetails || {}));
+                        return 'Not set';
+                      })()}
                     </p>
                   </div>
                   <div>
@@ -1282,7 +1302,16 @@ const TaskDetail = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Email</p>
-                        <p className="font-medium">{caseDetails.customers.email_address}</p>
+                        {caseDetails.customers.email_address ? (
+                          <a 
+                            href={`mailto:${caseDetails.customers.email_address}`}
+                            className="font-medium "
+                          >
+                            {caseDetails.customers.email_address}
+                          </a>
+                        ) : (
+                          <p className="font-medium">N/A</p>
+                        )}
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Mobile Number</p>
