@@ -1540,7 +1540,8 @@ const EditTask = () => {
             console.log("Document uploads:", documentUploads);
             console.log("Document categories:", documentCategories);
             console.log("Case ID:", caseId);
-            console.log("Employee ID:", employeeId);
+            // Fixed: Use userId (from localStorage), not undefined employeeId
+            console.log("User ID:", userId);
 
             const uploadPromises: Promise<any>[] = [];
             let successCount = 0;
