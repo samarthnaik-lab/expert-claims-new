@@ -12,7 +12,7 @@ import { CalendarIcon, Plus, X, Upload, FileText, ArrowLeft, ZoomIn, ZoomOut, Ro
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, formatDateDDMMYYYY } from '@/lib/utils';
 
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
@@ -3613,7 +3613,7 @@ const EditTask = () => {
                                                         Document ID: {doc.document_id}
                                                     </p>
                                                     <p className="text-xs text-gray-400">
-                                                        {doc.upload_time ? new Date(doc.upload_time).toLocaleString() : 'Upload time not available'}
+                                                        {doc.upload_time ? formatDateDDMMYYYY(doc.upload_time) : 'Upload time not available'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -4183,20 +4183,23 @@ const EditTask = () => {
                                                                     variant="outline"
                                                                     role="combobox"
                                                                     aria-expanded={phaseNameComboboxOpenIndex === index}
-                                                                    className="w-full justify-between mt-1"
+                                                                    className="w-full justify-between mt-1 text-left overflow-hidden"
                                                                 >
-                                                                    {phase.phase_name || "Select phase or type to add new..."}
-                                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                                    <span className="truncate flex-1 text-left">
+                                                                        {phase.phase_name || "Select phase or type to add new..."}
+                                                                    </span>
+                                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-shrink-0" />
                                                                 </Button>
                                                             </PopoverTrigger>
-                                                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                                                                <Command shouldFilter={false}>
+                                                            <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[500px] min-w-[300px] max-w-[90vw] p-0" align="start" sideOffset={4}>
+                                                                <Command shouldFilter={false} className="w-full">
                                                                     <CommandInput 
                                                                         placeholder="Search phase or type new phase name..." 
                                                                         value={phase.phase_name || ''}
                                                                         onValueChange={(value) => handlePaymentStageChange(index, 'phase_name', value)}
+                                                                        className="w-full"
                                                                     />
-                                                                    <CommandList>
+                                                                    <CommandList className="max-h-[300px]">
                                                                         <CommandGroup>
                                                                             {phase.phase_name && 
                                                                              phase.phase_name.trim() !== '' && 
@@ -4209,14 +4212,15 @@ const EditTask = () => {
                                                                                         handlePaymentStageChange(index, 'phase_name', phase.phase_name);
                                                                                         setPhaseNameComboboxOpenIndex(null);
                                                                                     }}
+                                                                                    className="cursor-pointer whitespace-normal break-words"
                                                                                 >
                                                                                     <Check
                                                                                         className={cn(
-                                                                                            "mr-2 h-4 w-4",
+                                                                                            "mr-2 h-4 w-4 shrink-0 mt-0.5",
                                                                                             "opacity-100"
                                                                                         )}
                                                                                     />
-                                                                                    {phase.phase_name} (Custom)
+                                                                                    <span className="flex-1 break-words">{phase.phase_name} (Custom)</span>
                                                                                 </CommandItem>
                                                                             )}
                                                                             <CommandItem
@@ -4225,14 +4229,15 @@ const EditTask = () => {
                                                                                     handlePaymentStageChange(index, 'phase_name', 'Agreement with the party');
                                                                                     setPhaseNameComboboxOpenIndex(null);
                                                                                 }}
+                                                                                className="cursor-pointer whitespace-normal break-words"
                                                                             >
                                                                                 <Check
                                                                                     className={cn(
-                                                                                        "mr-2 h-4 w-4",
+                                                                                        "mr-2 h-4 w-4 shrink-0 mt-0.5",
                                                                                         phase.phase_name === "Agreement with the party" ? "opacity-100" : "opacity-0"
                                                                                     )}
                                                                                 />
-                                                                                Agreement with the party
+                                                                                <span className="flex-1 break-words">Agreement with the party</span>
                                                                             </CommandItem>
                                                                             <CommandItem
                                                                                 value="Filing case with Ombudsman"
@@ -4240,14 +4245,15 @@ const EditTask = () => {
                                                                                     handlePaymentStageChange(index, 'phase_name', 'Filing case with Ombudsman');
                                                                                     setPhaseNameComboboxOpenIndex(null);
                                                                                 }}
+                                                                                className="cursor-pointer whitespace-normal break-words"
                                                                             >
                                                                                 <Check
                                                                                     className={cn(
-                                                                                        "mr-2 h-4 w-4",
+                                                                                        "mr-2 h-4 w-4 shrink-0 mt-0.5",
                                                                                         phase.phase_name === "Filing case with Ombudsman" ? "opacity-100" : "opacity-0"
                                                                                     )}
                                                                                 />
-                                                                                Filing case with Ombudsman
+                                                                                <span className="flex-1 break-words">Filing case with Ombudsman</span>
                                                                             </CommandItem>
                                                                             <CommandItem
                                                                                 value="Claim settlement (on receipt of claim amount by the party)"
@@ -4255,14 +4261,15 @@ const EditTask = () => {
                                                                                     handlePaymentStageChange(index, 'phase_name', 'Claim settlement (on receipt of claim amount by the party)');
                                                                                     setPhaseNameComboboxOpenIndex(null);
                                                                                 }}
+                                                                                className="cursor-pointer whitespace-normal break-words"
                                                                             >
                                                                                 <Check
                                                                                     className={cn(
-                                                                                        "mr-2 h-4 w-4",
+                                                                                        "mr-2 h-4 w-4 shrink-0 mt-0.5",
                                                                                         phase.phase_name === "Claim settlement (on receipt of claim amount by the party)" ? "opacity-100" : "opacity-0"
                                                                                     )}
                                                                                 />
-                                                                                Claim settlement (on receipt of claim amount by the party)
+                                                                                <span className="flex-1 break-words">Claim settlement (on receipt of claim amount by the party)</span>
                                                                             </CommandItem>
                                                                         </CommandGroup>
                                                                     </CommandList>
@@ -4501,20 +4508,23 @@ const EditTask = () => {
                                                     variant="outline"
                                                     role="combobox"
                                                     aria-expanded={phaseNameComboboxOpen}
-                                                    className="w-full justify-between mt-1"
+                                                    className="w-full justify-between mt-1 text-left overflow-hidden"
                                                 >
-                                                    {paymentPhaseForm.phase_name || "Select phase or type to add new..."}
-                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    <span className="truncate flex-1 text-left">
+                                                        {paymentPhaseForm.phase_name || "Select phase or type to add new..."}
+                                                    </span>
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-shrink-0" />
                                                 </Button>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                                                <Command shouldFilter={false}>
+                                            <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[500px] min-w-[300px] max-w-[90vw] p-0" align="start" sideOffset={4}>
+                                                <Command shouldFilter={false} className="w-full">
                                                     <CommandInput 
                                                         placeholder="Search phase or type new phase name..." 
                                                         value={paymentPhaseForm.phase_name}
                                                         onValueChange={(value) => setPaymentPhaseForm(prev => ({ ...prev, phase_name: value }))}
+                                                        className="w-full"
                                                     />
-                                                    <CommandList>
+                                                    <CommandList className="max-h-[300px]">
                                                         <CommandGroup>
                                                             {paymentPhaseForm.phase_name && 
                                                              paymentPhaseForm.phase_name.trim() !== '' && 
@@ -4527,14 +4537,15 @@ const EditTask = () => {
                                                                         setPaymentPhaseForm(prev => ({ ...prev, phase_name: paymentPhaseForm.phase_name }));
                                                                         setPhaseNameComboboxOpen(false);
                                                                     }}
+                                                                    className="cursor-pointer whitespace-normal break-words"
                                                                 >
                                                                     <Check
                                                                         className={cn(
-                                                                            "mr-2 h-4 w-4",
+                                                                            "mr-2 h-4 w-4 shrink-0 mt-0.5",
                                                                             "opacity-100"
                                                                         )}
                                                                     />
-                                                                    {paymentPhaseForm.phase_name} (Custom)
+                                                                    <span className="flex-1 break-words">{paymentPhaseForm.phase_name} (Custom)</span>
                                                                 </CommandItem>
                                                             )}
                                                             <CommandItem
@@ -4543,14 +4554,15 @@ const EditTask = () => {
                                                                     setPaymentPhaseForm(prev => ({ ...prev, phase_name: "Agreement with the party" }));
                                                                     setPhaseNameComboboxOpen(false);
                                                                 }}
+                                                                className="cursor-pointer whitespace-normal break-words"
                                                             >
                                                                 <Check
                                                                     className={cn(
-                                                                        "mr-2 h-4 w-4",
+                                                                        "mr-2 h-4 w-4 shrink-0 mt-0.5",
                                                                         paymentPhaseForm.phase_name === "Agreement with the party" ? "opacity-100" : "opacity-0"
                                                                     )}
                                                                 />
-                                                                Agreement with the party
+                                                                <span className="flex-1 break-words">Agreement with the party</span>
                                                             </CommandItem>
                                                             <CommandItem
                                                                 value="Filing case with Ombudsman"
@@ -4558,14 +4570,15 @@ const EditTask = () => {
                                                                     setPaymentPhaseForm(prev => ({ ...prev, phase_name: "Filing case with Ombudsman" }));
                                                                     setPhaseNameComboboxOpen(false);
                                                                 }}
+                                                                className="cursor-pointer whitespace-normal break-words"
                                                             >
                                                                 <Check
                                                                     className={cn(
-                                                                        "mr-2 h-4 w-4",
+                                                                        "mr-2 h-4 w-4 shrink-0 mt-0.5",
                                                                         paymentPhaseForm.phase_name === "Filing case with Ombudsman" ? "opacity-100" : "opacity-0"
                                                                     )}
                                                                 />
-                                                                Filing case with Ombudsman
+                                                                <span className="flex-1 break-words">Filing case with Ombudsman</span>
                                                             </CommandItem>
                                                             <CommandItem
                                                                 value="Claim settlement (on receipt of claim amount by the party)"
@@ -4573,14 +4586,15 @@ const EditTask = () => {
                                                                     setPaymentPhaseForm(prev => ({ ...prev, phase_name: "Claim settlement (on receipt of claim amount by the party)" }));
                                                                     setPhaseNameComboboxOpen(false);
                                                                 }}
+                                                                className="cursor-pointer whitespace-normal break-words"
                                                             >
                                                                 <Check
                                                                     className={cn(
-                                                                        "mr-2 h-4 w-4",
+                                                                        "mr-2 h-4 w-4 shrink-0 mt-0.5",
                                                                         paymentPhaseForm.phase_name === "Claim settlement (on receipt of claim amount by the party)" ? "opacity-100" : "opacity-0"
                                                                     )}
                                                                 />
-                                                                Claim settlement (on receipt of claim amount by the party)
+                                                                <span className="flex-1 break-words">Claim settlement (on receipt of claim amount by the party)</span>
                                                             </CommandItem>
                                                         </CommandGroup>
                                                     </CommandList>

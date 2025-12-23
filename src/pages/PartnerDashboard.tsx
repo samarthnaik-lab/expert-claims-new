@@ -13,11 +13,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -120,6 +124,32 @@ const PartnerDashboard = () => {
 
   // Sorting for backlog data - use allBacklogData for searching across all records
   const { sortedData: sortedBacklogData, sortConfig: backlogSortConfig, handleSort: handleBacklogSort } = useTableSort(allBacklogData.length > 0 ? allBacklogData : backlogData);
+
+  // Helper function to parse dd/mm/yyyy or YYYY-MM-DD to Date object
+  const parseDDMMYYYY = (dateString: string): Date | null => {
+    if (!dateString) return null;
+    try {
+      // Handle dd/mm/yyyy format
+      const parts = dateString.split('/');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+        const year = parseInt(parts[2], 10);
+        const date = new Date(year, month, day);
+        if (!isNaN(date.getTime()) && date.getDate() === day && date.getMonth() === month && date.getFullYear() === year) {
+          return date;
+        }
+      }
+      // Handle YYYY-MM-DD format (stored format)
+      if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const date = new Date(dateString);
+        if (!isNaN(date.getTime())) return date;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
 
   // Reset page to 1 when search term or filters change
   useEffect(() => {
@@ -393,6 +423,8 @@ const PartnerDashboard = () => {
       if (response.ok) {
         const data = await response.json();
         setAllReferrals(data);
+        // Update totalReferrals with the actual count of all referrals (for pagination)
+        setTotalReferrals(data.length);
       }
     } catch (error) {
       console.error("Error fetching all referrals:", error);
@@ -1043,9 +1075,14 @@ const PartnerDashboard = () => {
 
   // Pagination logic - server-side pagination with client-side search filtering
   const displayReferrals = filteredReferrals; // Use filtered referrals for search
-  const totalPages = Math.ceil(totalReferrals / pageSize);
+  // Use allReferrals.length for total count (since it contains all referrals)
+  // When searching, use filteredReferrals.length, otherwise use allReferrals.length or totalReferrals
+  const actualTotal = searchTerm 
+    ? filteredReferrals.length 
+    : (allReferrals.length > 0 ? allReferrals.length : (totalReferrals > 0 ? totalReferrals : referrals.length));
+  const totalPages = Math.ceil(actualTotal / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalReferrals);
+  const endIndex = Math.min(startIndex + pageSize, actualTotal);
 
   // Handle page size change
   const handlePageSizeChange = (newPageSize: string) => {
@@ -1144,7 +1181,7 @@ const PartnerDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-emerald-50">
       {/* Modern Header */}
       <header className="bg-primary-500 backdrop-blur-md shadow-sm border-b border-primary-600 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-[80%] mx-auto px-2 sm:px-3 lg:px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-lg">
@@ -1203,7 +1240,7 @@ const PartnerDashboard = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-[80%] mx-auto px-2 sm:px-3 lg:px-4 py-8">
         {/* Welcome Section */}
         <div className="mb-8 animate-fade-in ">
           <h2 className="text-3xl font-bold text-gray-900 mb-6">
@@ -1443,25 +1480,25 @@ const PartnerDashboard = () => {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Case ID
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Customer
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Case Type
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Status
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                          Task Referral Date
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Case Value
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Actions
                           </th>
                         </tr>
@@ -1568,10 +1605,12 @@ const PartnerDashboard = () => {
                     {/* Pagination Info */}
                     <div className="text-sm text-gray-600">
                       {searchTerm
-                        ? `Showing ${displayReferrals.length} of ${totalReferrals} entries (filtered)`
-                        : `Showing ${
+                        ? `Showing ${displayReferrals.length} of ${actualTotal} entries (filtered)`
+                        : displayReferrals.length > 0
+                        ? `Showing ${
                             startIndex + 1
-                          } to ${endIndex} of ${totalReferrals} entries`}
+                          } to ${Math.min(endIndex, actualTotal)} of ${actualTotal} entries`
+                        : `Showing 0 of ${actualTotal} entries`}
                     </div>
 
                     {/* Pagination Navigation - only show when not searching */}
@@ -1763,7 +1802,7 @@ const PartnerDashboard = () => {
                           </div>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
+                          <CalendarComponent
                             mode="single"
                             selected={backlogStartDate ? (() => {
                               try {
@@ -1830,7 +1869,7 @@ const PartnerDashboard = () => {
                           </div>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
+                          <CalendarComponent
                             mode="single"
                             selected={backlogEndDate ? (() => {
                               try {
@@ -1910,7 +1949,7 @@ const PartnerDashboard = () => {
                             sortColumn={backlogSortConfig?.column || ''}
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                           />
                           <SortableTableHeader
                             column="case_summary"
@@ -1919,7 +1958,7 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]"
                           />
                           <SortableTableHeader
                             column="case_description"
@@ -1928,7 +1967,7 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[150px]"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[150px]"
                           />
                           <SortableTableHeader
                             column="backlog_referral_date"
@@ -1937,7 +1976,7 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                           />
                           <SortableTableHeader
                             column="status"
@@ -1946,12 +1985,12 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                           />
-                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[120px]">
+                          <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[120px]">
                             Assigned Expert
                           </th>
-                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[180px]">
+                          <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[180px]">
                             Actions
                           </th>
                         </tr>
@@ -1977,22 +2016,37 @@ const PartnerDashboard = () => {
                             const statusMatch = backlogStatusFilter === "all" || 
                               (backlogStatusFilter && item.status && item.status.toLowerCase() === backlogStatusFilter.toLowerCase());
 
-                            // Date range filter
+                            // Date range filter (handles dd/mm/yyyy format)
                             const dateMatch = (() => {
                               if (!backlogStartDate && !backlogEndDate) return true;
                               
                               const itemDate = item.backlog_referral_date ? new Date(item.backlog_referral_date) : null;
-                              if (!itemDate) return false;
+                              if (!itemDate || isNaN(itemDate.getTime())) return false;
 
-                              const startDate = backlogStartDate ? new Date(backlogStartDate) : null;
-                              const endDate = backlogEndDate ? new Date(backlogEndDate) : null;
+                              const startDate = backlogStartDate ? parseDDMMYYYY(backlogStartDate) : null;
+                              const endDate = backlogEndDate ? parseDDMMYYYY(backlogEndDate) : null;
 
                               if (startDate && endDate) {
-                                return itemDate >= startDate && itemDate <= endDate;
+                                // Set time to start/end of day for proper comparison
+                                const startOfDay = new Date(startDate);
+                                startOfDay.setHours(0, 0, 0, 0);
+                                const endOfDay = new Date(endDate);
+                                endOfDay.setHours(23, 59, 59, 999);
+                                const itemDateOnly = new Date(itemDate);
+                                itemDateOnly.setHours(0, 0, 0, 0);
+                                return itemDateOnly >= startOfDay && itemDateOnly <= endOfDay;
                               } else if (startDate) {
-                                return itemDate >= startDate;
+                                const startOfDay = new Date(startDate);
+                                startOfDay.setHours(0, 0, 0, 0);
+                                const itemDateOnly = new Date(itemDate);
+                                itemDateOnly.setHours(0, 0, 0, 0);
+                                return itemDateOnly >= startOfDay;
                               } else if (endDate) {
-                                return itemDate <= endDate;
+                                const endOfDay = new Date(endDate);
+                                endOfDay.setHours(23, 59, 59, 999);
+                                const itemDateOnly = new Date(itemDate);
+                                itemDateOnly.setHours(0, 0, 0, 0);
+                                return itemDateOnly <= endOfDay;
                               }
                               return true;
                             })();
@@ -2005,7 +2059,7 @@ const PartnerDashboard = () => {
                               key={item.backlog_id || index}
                               className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors duration-200"
                             >
-                              <td className="px-2 sm:px-3 py-3">
+                              <td className="px-2 sm:px-3 py-3 text-center">
                                 <span 
                                   className="font-mono text-xs sm:text-sm text-blue-600 hover:text-blue-800 cursor-pointer break-words"
                                   style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
@@ -2015,21 +2069,21 @@ const PartnerDashboard = () => {
                                   {item.backlog_id}
                                 </span>
                               </td>
-                              <td className="px-2 sm:px-3 py-3">
+                              <td className="px-2 sm:px-3 py-3 text-center">
                                 <div className="font-medium text-xs sm:text-sm text-gray-900 break-words max-w-[120px] sm:max-w-none" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.case_summary || "No Summary"}>
                                   {item.case_summary || "No Summary"}
                                 </div>
                               </td>
-                              <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-700 break-words hidden lg:table-cell max-w-[150px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.case_description || "No Description"}>
+                              <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-700 break-words hidden lg:table-cell max-w-[150px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.case_description || "No Description"}>
                                 {item.case_description || "No Description"}
                               </td>
-                              <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+                              <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 whitespace-nowrap">
                                 {item.backlog_referral_date
                                   ? formatDateDDMMYYYY(item.backlog_referral_date)
                                   : "N/A"}
                               </td>
 
-                              <td className="px-2 sm:px-3 py-3 whitespace-nowrap">
+                              <td className="px-2 sm:px-3 py-3 text-center whitespace-nowrap">
                               <Badge
                                 className={`${
                                   item.status?.toLowerCase() === "new"
@@ -2044,11 +2098,11 @@ const PartnerDashboard = () => {
                                   {item.status ? item.status : "N/A"}
                                 </Badge>
                               </td>
-                              <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.assigned_consultant_name || 'Not Assigned'}>
+                              <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.assigned_consultant_name || 'Not Assigned'}>
                                 {item.assigned_consultant_name ? item.assigned_consultant_name : 'Not Assigned'}
                               </td>
-                              <td className="px-2 sm:px-3 py-3 whitespace-nowrap min-w-[180px]">
-                                <div className="flex items-center gap-1 sm:gap-2">
+                              <td className="px-2 sm:px-3 py-3 text-center whitespace-nowrap min-w-[180px]">
+                                <div className="flex items-center justify-center gap-1 sm:gap-2">
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -2095,22 +2149,37 @@ const PartnerDashboard = () => {
                           );
                         })();
 
-                        // Date range filter
+                        // Date range filter (handles dd/mm/yyyy format)
                         const dateMatch = (() => {
                           if (!backlogStartDate && !backlogEndDate) return true;
                           
                           const itemDate = item.backlog_referral_date ? new Date(item.backlog_referral_date) : null;
-                          if (!itemDate) return false;
+                          if (!itemDate || isNaN(itemDate.getTime())) return false;
 
-                          const startDate = backlogStartDate ? new Date(backlogStartDate) : null;
-                          const endDate = backlogEndDate ? new Date(backlogEndDate) : null;
+                          const startDate = backlogStartDate ? parseDDMMYYYY(backlogStartDate) : null;
+                          const endDate = backlogEndDate ? parseDDMMYYYY(backlogEndDate) : null;
 
                           if (startDate && endDate) {
-                            return itemDate >= startDate && itemDate <= endDate;
+                            // Set time to start/end of day for proper comparison
+                            const startOfDay = new Date(startDate);
+                            startOfDay.setHours(0, 0, 0, 0);
+                            const endOfDay = new Date(endDate);
+                            endOfDay.setHours(23, 59, 59, 999);
+                            const itemDateOnly = new Date(itemDate);
+                            itemDateOnly.setHours(0, 0, 0, 0);
+                            return itemDateOnly >= startOfDay && itemDateOnly <= endOfDay;
                           } else if (startDate) {
-                            return itemDate >= startDate;
+                            const startOfDay = new Date(startDate);
+                            startOfDay.setHours(0, 0, 0, 0);
+                            const itemDateOnly = new Date(itemDate);
+                            itemDateOnly.setHours(0, 0, 0, 0);
+                            return itemDateOnly >= startOfDay;
                           } else if (endDate) {
-                            return itemDate <= endDate;
+                            const endOfDay = new Date(endDate);
+                            endOfDay.setHours(23, 59, 59, 999);
+                            const itemDateOnly = new Date(itemDate);
+                            itemDateOnly.setHours(0, 0, 0, 0);
+                            return itemDateOnly <= endOfDay;
                           }
                           return true;
                         })();
@@ -2307,19 +2376,19 @@ const PartnerDashboard = () => {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Case ID
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Customer
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Total Bonus Amount
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Bonus Status
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Payment Date
                           </th>
                           {/* <th className="text-left p-4 font-semibold text-gray-700">Actions</th> */}
@@ -2333,22 +2402,22 @@ const PartnerDashboard = () => {
                               index % 2 === 0 ? "bg-white" : "bg-gray-50/30"
                             }`}
                           >
-                            <td className="p-4">
+                            <td className="p-4 text-center">
                               <span className="font-mono text-sm text-gray-900">
                                 {bonus.case_id}
                               </span>
                             </td>
-                            <td className="p-4 text-gray-700">
+                            <td className="p-4 text-center text-gray-700">
                               {bonus.customer_first_name || "Unknown"}{" "}
                               {bonus.customer_last_name || "Customer"}
                             </td>
-                            <td className="p-4">
+                            <td className="p-4 text-center">
                               <span className="font-semibold text-green-600">
                                 ₹{bonus.stage_bonus_amount.toLocaleString()}
                               </span>
                             </td>
-                            <td className="p-4">
-                              <div className="flex flex-col items-start space-y-1">
+                            <td className="p-4 text-center">
+                              <div className="flex flex-col items-center space-y-1">
                                 <Badge
                                   className={`${getBonusStatusColor(
                                     bonusStatus || "unknown"

@@ -2405,7 +2405,7 @@ Created Time: ${report.created_time}
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-primary-500 shadow-sm border-b border-primary-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-[80%] mx-auto px-2 sm:px-3 lg:px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
@@ -2431,7 +2431,7 @@ Created Time: ${report.created_time}
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-[80%] mx-auto px-2 sm:px-3 lg:px-4 py-8">
         {/* Overview Stats */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-900">Dashboard Overview</h2>
@@ -2632,45 +2632,45 @@ Created Time: ${report.created_time}
                           sortColumn={taskSortConfig?.column || ''}
                           sortDirection={taskSortConfig?.direction || 'asc'}
                           onSort={handleTaskSort}
-                          className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                          className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                         />
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>Task Name</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[100px]">Assignee</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[120px]">Customer</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider break-words max-w-[120px]">Status</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Assign Date</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[160px]">Actions</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>Task Name</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[100px]">Assignee</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[120px]">Customer</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider break-words max-w-[120px]">Status</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Assign Date</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[160px]">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {sortedTasks.map((task: any) => (
                         <tr key={task.id} className="hover:bg-gray-50">
                           <td
-                            className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm font-medium text-blue-600 cursor-pointer hover:underline"
+                            className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-xs sm:text-sm font-medium text-blue-600 cursor-pointer hover:underline"
                             onClick={() => navigate(`/task/${task.task_id}`)}
                             title={task.task_id}
                           >
                             {task.task_id}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-900 break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.title}>
+                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-900 break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.title}>
                             {task.title}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.assigned_employee_name || 'Unassigned'}>
+                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.assigned_employee_name || 'Unassigned'}>
                             {task.assigned_employee_name || 'Unassigned'}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.customer_profile?.full_name || 'N/A'}>
+                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.customer_profile?.full_name || 'N/A'}>
                             {task.customer_profile?.full_name || 'N/A'}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.current_status}>
+                          <td className="px-2 sm:px-3 py-3 text-center break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.current_status}>
                             <Badge className={getStatusColor(task.current_status)}>
                               <span className="text-xs break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{task.current_status}</span>
                             </Badge>
                           </td>
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
                             {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 min-w-[160px]">
-                            <div className="flex items-center gap-1 sm:gap-2">
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-xs sm:text-sm text-gray-500 min-w-[160px]">
+                            <div className="flex items-center justify-center gap-1 sm:gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -2848,35 +2848,35 @@ Created Time: ${report.created_time}
                           sortColumn={userSortConfig?.column || ''}
                           sortDirection={userSortConfig?.direction || 'asc'}
                           onSort={handleUserSort}
-                          className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                          className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                         />
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Role</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Department</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">Email</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Entity</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Partner Type</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Actions</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Role</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Department</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">Email</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Entity</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Partner Type</th>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {sortedUsers.map(user => (
                         <tr key={user.id} className="hover:bg-gray-50">
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">{user.id}</td>
-                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm font-medium text-gray-900 break-words max-w-[120px] sm:max-w-none" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={user.name}>{user.name}</td>
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">{user.role}</td>
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap">
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-xs sm:text-sm text-gray-600">{user.id}</td>
+                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm font-medium text-gray-900 break-words max-w-[120px] sm:max-w-none" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={user.name}>{user.name}</td>
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-xs sm:text-sm text-gray-600">{user.role}</td>
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center">
                             <Badge className={getStatusColor(user.status)}>
                               <span className="text-xs">{user.status}</span>
                             </Badge>
                           </td>
-                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={user.department || 'N/A'}>{user.department || 'N/A'}</td>
-                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-all hidden xl:table-cell max-w-[180px]" style={{ wordBreak: 'break-all' }} title={user.email || 'N/A'}>{user.email || 'N/A'}</td>
-                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={(user as any).entity || 'N/A'}>{(user as any).entity || 'N/A'}</td>
-                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={formatPartnerType((user as any).partner_type)}>{formatPartnerType((user as any).partner_type)}</td>
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">
-                            <div className="flex items-center gap-1 sm:gap-2">
+                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={user.department || 'N/A'}>{user.department || 'N/A'}</td>
+                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-all hidden xl:table-cell max-w-[180px]" style={{ wordBreak: 'break-all' }} title={user.email || 'N/A'}>{user.email || 'N/A'}</td>
+                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={(user as any).entity || 'N/A'}>{(user as any).entity || 'N/A'}</td>
+                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={formatPartnerType((user as any).partner_type)}>{formatPartnerType((user as any).partner_type)}</td>
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-xs sm:text-sm text-gray-500">
+                            <div className="flex items-center justify-center gap-1 sm:gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -3013,38 +3013,38 @@ Created Time: ${report.created_time}
                             sortColumn={leaveSortConfig?.column || ''}
                             sortDirection={leaveSortConfig?.direction || 'asc'}
                             onSort={handleLeaveSort}
-                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
                           />
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Applied Date</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {sortedLeaveRequests.map((request: any) => (
                           <tr key={request.application_id} className="hover:bg-gray-50">
-                            <td className="px-4 py-4 min-w-0 break-words text-sm font-medium text-blue-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.application_id}</td>
-                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.employees.first_name} {request.employees.last_name}</td>
-                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.leave_types?.type_name || 'N/A'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.start_date}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.end_date}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.total_days}</td>
-                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={request.reason}>{request.reason}</td>
-                            <td className="px-4 py-4 whitespace-nowrap">
+                            <td className="px-4 py-4 text-center min-w-0 break-words text-sm font-medium text-blue-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.application_id}</td>
+                            <td className="px-4 py-4 text-center min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.employees.first_name} {request.employees.last_name}</td>
+                            <td className="px-4 py-4 text-center min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.leave_types?.type_name || 'N/A'}</td>
+                            <td className="px-4 py-4 text-center whitespace-nowrap text-sm text-gray-600">{request.start_date}</td>
+                            <td className="px-4 py-4 text-center whitespace-nowrap text-sm text-gray-600">{request.end_date}</td>
+                            <td className="px-4 py-4 text-center whitespace-nowrap text-sm text-gray-600">{request.total_days}</td>
+                            <td className="px-4 py-4 text-center min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={request.reason}>{request.reason}</td>
+                            <td className="px-4 py-4 text-center whitespace-nowrap">
                               <Badge className={getStatusColor(request.status)}>
                                 <span className="capitalize">{request.status}</span>
                               </Badge>
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
+                            <td className="px-4 py-4 text-center whitespace-nowrap text-sm text-gray-600">
                               {new Date(request.applied_date).toLocaleDateString()}
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
+                            <td className="px-4 py-4 text-center whitespace-nowrap text-sm text-gray-500 space-x-2">
                               {(() => {
                                 // Get current user role from session or userDetails
                                 const currentUserRole = session?.userRole || userDetails?.role || userDetails?.designation || '';
@@ -3245,30 +3245,30 @@ Created Time: ${report.created_time}
                             sortColumn={caseSortConfig?.column || ''}
                             sortDirection={caseSortConfig?.direction || 'asc'}
                             onSort={handleCaseSort}
-                            className="text-left p-4 font-semibold text-gray-700"
+                            className="text-center p-4 font-semibold text-gray-700"
                           />
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Case Summary
                           </th>
-                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden md:table-cell">
+                          <th className="text-center p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden md:table-cell">
                             Case Description
                           </th>
-                          {/* <th className="text-left p-4 font-semibold text-gray-700">
+                          {/* <th className="text-center p-4 font-semibold text-gray-700">
                             Type of Policysss
                           </th> */}
-                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">
+                          <th className="text-center p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">
                             Referral Date
                           </th>
-                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
+                          <th className="text-center p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Status
                           </th>
-                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
+                          <th className="text-center p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Assigned Expert
                           </th>
-                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">
+                          <th className="text-center p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">
                             Entity
                           </th>
-                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
+                          <th className="text-center p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Actions
                           </th>
                         </tr>
@@ -3314,39 +3314,39 @@ Created Time: ${report.created_time}
                                 key={item.backlog_id || index}
                                 className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors duration-200"
                               >
-                                <td className="p-3 sm:p-4">
+                                <td className="p-3 sm:p-4 text-center">
                                   <span className="font-mono text-xs sm:text-sm text-blue-600">
                                     {item.backlog_id}
                                   </span>
                                 </td>
-                                <td className="p-3 sm:p-4">
+                                <td className="p-3 sm:p-4 text-center">
                                   <div className="font-medium text-xs sm:text-sm text-gray-900 break-words max-w-xs">
                                     {item.case_summary || "No Summary"}
                                   </div>
                                 </td>
-                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-700 hidden md:table-cell break-words max-w-md">
+                                <td className="p-3 sm:p-4 text-center text-xs sm:text-sm text-gray-700 hidden md:table-cell break-words max-w-md">
                                   {item.case_description || "No Description"}
                                 </td>
-                                {/* <td className="p-4 text-gray-700">
+                                {/* <td className="p-4 text-center text-gray-700">
                                   {item.case_types?.case_type_name || `Type ${item.case_type_id}` || "N/A"}
                                 </td> */}
-                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-600 hidden lg:table-cell">
+                                <td className="p-3 sm:p-4 text-center text-xs sm:text-sm text-gray-600 hidden lg:table-cell">
                                   {item.backlog_referral_date || "N/A"}
                                 </td>
-                                <td className="p-3 sm:p-4">
+                                <td className="p-3 sm:p-4 text-center">
                                   <Badge className={statusBadgeClass}>
                                     {item.status || "N/A"}
                                   </Badge>
                                 </td>
-                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-700 break-words max-w-xs">
+                                <td className="p-3 sm:p-4 text-center text-xs sm:text-sm text-gray-700 break-words max-w-xs">
                                   {item.assigned_consultant_name ? item.assigned_consultant_name : 'Not Assigned'}
                                 </td>
-                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-700 hidden lg:table-cell break-words max-w-xs">
+                                <td className="p-3 sm:p-4 text-center text-xs sm:text-sm text-gray-700 hidden lg:table-cell break-words max-w-xs">
                                   {item.partners ? (item.partners["name of entity"] || item.partners.entity_name || 'N/A') :
                                    item.entity_name || item["name of entity"] || 'N/A'}
                                 </td>
-                                <td className="p-3 sm:p-4">
-                                  <div className="flex flex-col sm:flex-row gap-2">
+                                <td className="p-3 sm:p-4 text-center">
+                                  <div className="flex flex-col sm:flex-row justify-center gap-2">
                                     <Button
                                       variant="outline"
                                       size="sm"

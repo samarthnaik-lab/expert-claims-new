@@ -82,6 +82,8 @@ const EmployeeDashboard = () => {
   // Assigned tasks data from employee_all_task API
   const [assignedTasks, setAssignedTasks] = useState<any[]>([]);
   const [isLoadingAssignedTasks, setIsLoadingAssignedTasks] = useState(false);
+  const [assignedTaskCurrentPage, setAssignedTaskCurrentPage] = useState(1);
+  const [assignedTaskPageLimit, setAssignedTaskPageLimit] = useState('10');
 
   // Backlog data from API
   const [backlogData, setBacklogData] = useState<any[]>([]);
@@ -427,10 +429,10 @@ const EmployeeDashboard = () => {
       const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o";
       
       // Build URL with query parameters
-      const employeeTaskUrl = new URL('http://localhost:3000/webhook/employee_all_task');
+      const employeeTaskUrl = new URL('http://localhost:3000/support/employee_all_task');
       employeeTaskUrl.searchParams.append('user_id', userId.toString());
       employeeTaskUrl.searchParams.append('page', '1');
-      employeeTaskUrl.searchParams.append('size', '100');
+      employeeTaskUrl.searchParams.append('size', '10');
       
       const finalUrl = employeeTaskUrl.toString();
       console.log('API URL:', finalUrl);
@@ -530,8 +532,58 @@ const EmployeeDashboard = () => {
     setCurrentPageBacklog(1);
   }, [backlogSearchTerm, backlogStartDate, backlogEndDate]);
 
-  // Use API data for task stats
-  const taskStats = {
+  // Get current active tab
+  const activeTab = searchParams.get('tab') || (['gap_analysis', 'technical_consultant'].includes(employeeDepartment.toLowerCase()) ? "Assignments" : "overview");
+
+  // Calculate stats from assignedTasks when assigned-task tab is active
+  const calculateAssignedTaskStats = () => {
+    if (!assignedTasks || assignedTasks.length === 0) {
+      return {
+        total: 0,
+        pending: 0,
+        review: 0,
+        cancelled: 0,
+        completed: 0
+      };
+    }
+
+    const stats = {
+      total: assignedTasks.length,
+      pending: 0,
+      review: 0,
+      cancelled: 0,
+      completed: 0
+    };
+
+    assignedTasks.forEach((task: any) => {
+      const status = (task.status || task.ticket_stage || task.task_status || '').toLowerCase();
+      
+      if (status.includes('pending') || status.includes('new') || status.includes('under process')) {
+        stats.pending++;
+      } else if (status.includes('review') || status.includes('under review')) {
+        stats.review++;
+      } else if (status.includes('completed') || status.includes('complete')) {
+        stats.completed++;
+      } else if (status.includes('cancelled') || status.includes('cancel')) {
+        stats.cancelled++;
+      } else {
+        // Default to pending for unknown statuses
+        stats.pending++;
+      }
+    });
+
+    return stats;
+  };
+
+  // Use assignedTasks stats when assigned-task tab is active, otherwise use dashboardStats
+  const assignedTaskStats = calculateAssignedTaskStats();
+  const taskStats = activeTab === 'assigned-task' ? {
+    new: assignedTaskStats.total,
+    pending: assignedTaskStats.pending,
+    review: assignedTaskStats.review,
+    approval: assignedTaskStats.cancelled,
+    completed: assignedTaskStats.completed
+  } : {
     new: dashboardStats.totalTasks,
     pending: dashboardStats.Newtask,
     review: dashboardStats.reviewCounts,
@@ -856,7 +908,7 @@ const EmployeeDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-emerald-50">
       {/* Modern Header */}
       <header className="bg-primary-500 backdrop-blur-md shadow-sm border-b border-primary-600 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-[80%] mx-auto px-2 sm:px-3 lg:px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-lg">
@@ -911,7 +963,7 @@ const EmployeeDashboard = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-[80%] mx-auto px-2 sm:px-3 lg:px-4 py-8">
         {/* Welcome Section */}
         <div className="mb-8 animate-fade-in">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back!</h2>
@@ -1289,6 +1341,7 @@ const EmployeeDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
+                            className="text-center p-4 font-semibold text-gray-700"
                           />
                           <SortableTableHeader
                             column="backlog_referral_date"
@@ -1297,6 +1350,7 @@ const EmployeeDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
+                            className="text-center p-4 font-semibold text-gray-700"
                           />
                           <SortableTableHeader
                             column="status"
@@ -1306,10 +1360,10 @@ const EmployeeDashboard = () => {
                             onSort={handleBacklogSort}
                             sortable={false}
                           />
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Assigned Expert
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Actions
                           </th>
                         </tr>
@@ -1361,23 +1415,29 @@ const EmployeeDashboard = () => {
                               key={item.backlog_id || index}
                               className="border-b border-gray-100 hover:bg-purple-50/50 transition-colors duration-200"
                             >
-                              <td className="p-4">
+                              <td className="p-4 text-center">
                                 <span className="font-mono text-sm text-purple-600">
                                   {item.backlog_id}
                                 </span>
                               </td>
-                              <td className="p-4">
+                              <td className="p-4 text-center">
                                 <div className="font-medium text-gray-900">
                                   {item.case_summary || "No Summary"}
                                 </div>
                               </td>
-                              <td className="p-4 text-gray-700">
+                              <td className="p-4 text-center text-gray-700">
                                 {item.case_description || "No Description"}
                               </td>
-                              <td className="p-4 text-sm text-gray-600">
-                                {formatDateDDMMYYYY(item.backlog_referral_date)}
+                              <td className="p-4 text-center text-sm text-gray-600">
+                                {item.backlog_referral_date
+                                  ? new Date(item.backlog_referral_date).toLocaleDateString("en-GB", {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "2-digit",
+                                    })
+                                : "N/A"}
                               </td>
-                              <td className="p-4">
+                              <td className="p-4 text-center">
                                 <Badge
                                   className={`
                                     ${
@@ -1394,11 +1454,11 @@ const EmployeeDashboard = () => {
                                   {item.status ? item.status : 'N/A'}
                                 </Badge>
                               </td>
-                              <td className="p-4">
+                              <td className="p-4 text-center">
                                 {item.assigned_consultant_name ? item.assigned_consultant_name : 'Not Assigned'}
                               </td>
-                              <td className="p-4">
-                                <div className="flex space-x-2">
+                              <td className="p-4 text-center">
+                                <div className="flex justify-center space-x-2">
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -1601,70 +1661,134 @@ const EmployeeDashboard = () => {
                     <p className="text-sm text-gray-400">Tasks will appear here once they are assigned to you</p>
                   </div>
                 ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left p-4 font-semibold text-gray-700">ID</th>
-                        <th className="text-left p-4 font-semibold text-gray-700">Task Name</th>
-                        <th className="text-left p-4 font-semibold text-gray-700">Customer</th>
-                        <th className="text-left p-4 font-semibold text-gray-700">Mobile</th>
-                        <th className="text-left p-4 font-semibold text-gray-700">Priority</th>
-                        <th className="text-left p-4 font-semibold text-gray-700">Status</th>
-                        <th className="text-left p-4 font-semibold text-gray-700">Assigned Date</th>
-                        <th className="text-left p-4 font-semibold text-gray-700">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredTasks.map(task => (
-                        <tr key={task.case_id} className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors duration-200">
-                          <td className="p-4">
+                <div className="w-full">
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block">
+                    <div className="rounded-lg border border-gray-200 overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gradient-to-r from-blue-50 to-indigo-50">
+                          <tr>
+                            <th className="text-left p-3 font-semibold text-gray-700 text-sm w-20">ID</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 text-sm min-w-[200px]">Task Name</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 text-sm min-w-[150px]">Customer</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 text-sm w-32 hidden lg:table-cell">Mobile</th>
+                            <th className="text-center p-3 font-semibold text-gray-700 text-sm w-28">Priority</th>
+                            <th className="text-center p-3 font-semibold text-gray-700 text-sm w-32">Status</th>
+                            <th className="text-center p-3 font-semibold text-gray-700 text-sm w-32 hidden lg:table-cell">Assigned Date</th>
+                            <th className="text-center p-3 font-semibold text-gray-700 text-sm w-40">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {filteredTasks.map(task => (
+                            <tr key={task.case_id} className="hover:bg-blue-50/30 transition-colors duration-150">
+                              <td className="p-3">
+                                <button
+                                  onClick={() => navigate(`/task/${task.case_id}`)}
+                                  className="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                                >
+                                  {task.case_id || 'N/A'}
+                                </button>
+                              </td>
+                              <td className="p-3">
+                                <div className="font-medium text-gray-900 text-sm line-clamp-2">{task.case_summary || 'No Summary'}</div>
+                              </td>
+                              <td className="p-3 text-gray-700 text-sm">{task.customer_name || 'Unknown Customer'}</td>
+                              <td className="p-3 text-gray-600 text-sm hidden lg:table-cell">{task.mobile_number || 'N/A'}</td>
+                              <td className="p-3 text-center">
+                                <Badge className={`${getPriorityColor(task.priority)} px-2 py-0.5 rounded-full text-xs font-medium`}>
+                                  {task.priority || 'N/A'}
+                                </Badge>
+                              </td>
+                              <td className="p-3 text-center">
+                                <Badge className={`${getStatusColor(task.ticket_stage)} px-2 py-0.5 rounded-full text-xs font-medium`}>
+                                  {task.ticket_stage || 'Unknown Status'}
+                                </Badge>
+                              </td>
+                              <td className="p-3 text-center text-xs text-gray-600 hidden lg:table-cell">
+                                {task.created_time || task.assigned_date || task.due_date 
+                                  ? formatDateDDMMYYYY(task.created_time || task.assigned_date || task.due_date)
+                                  : 'N/A'}
+                              </td>
+                              <td className="p-3">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => navigate(`/task/${task.case_id}`)}
+                                    className="h-7 px-2 text-xs border border-gray-300 hover:border-blue-500 hover:bg-blue-50 rounded-md transition-all"
+                                  >
+                                    View
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => navigate(`/edit-task/${task.case_id}`)}
+                                    className="h-7 px-2 text-xs border border-gray-300 hover:border-blue-500 hover:bg-blue-50 rounded-md transition-all"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-3">
+                    {filteredTasks.map(task => (
+                      <div key={task.case_id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
                             <button
                               onClick={() => navigate(`/task/${task.case_id}`)}
-                              className="font-mono text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors duration-200"
+                              className="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline mb-1"
                             >
-                              {task.case_id || 'N/A'}
+                              ID: {task.case_id || 'N/A'}
                             </button>
-                          </td>
-                          <td className="p-4 font-medium text-gray-900">{task.case_summary || 'No Summary'}</td>
-                          <td className="p-4 text-gray-700">{task.customer_name || 'Unknown Customer'}</td>
-                          <td className="p-4 text-gray-600">{task.mobile_number || 'N/A'}</td>
-                          <td className="p-4">
-                            <Badge className={`${getPriorityColor(task.priority)} px-3 py-1 rounded-full font-medium`}>
+                            <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">{task.case_summary || 'No Summary'}</h3>
+                            <p className="text-xs text-gray-600">{task.customer_name || 'Unknown Customer'}</p>
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <Badge className={`${getPriorityColor(task.priority)} px-2 py-0.5 rounded-full text-xs w-fit`}>
                               {task.priority || 'N/A'}
                             </Badge>
-                          </td>
-                          <td className="p-4">
-                            <Badge className={`${getStatusColor(task.ticket_stage)} px-3 py-1 rounded-full font-medium`}>
-                              {task.ticket_stage || 'Unknown Status'}
+                            <Badge className={`${getStatusColor(task.ticket_stage)} px-2 py-0.5 rounded-full text-xs w-fit`}>
+                              {task.ticket_stage || 'Unknown'}
                             </Badge>
-                          </td>
-                          <td className="p-4 text-sm text-gray-600">{formatDateDDMMYYYY(task.due_date)}</td>
-                          <td className="p-4">
-                            <div className="flex items-center space-x-2">
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => navigate(`/task/${task.case_id}`)}
-                                className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300"
-                              >
-                                View
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => navigate(`/edit-task/${task.case_id}`)}
-                                className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300 flex items-center space-x-1"
-                              >
-                                <Edit className="h-3 w-3" />
-                                <span>Edit</span>
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                          <div className="text-xs text-gray-500">
+                            <div className="mb-1">Mobile: {task.mobile_number || 'N/A'}</div>
+                            <div>Date: {task.created_time || task.assigned_date || task.due_date 
+                              ? formatDateDDMMYYYY(task.created_time || task.assigned_date || task.due_date)
+                              : 'N/A'}</div>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => navigate(`/task/${task.case_id}`)}
+                              className="h-7 px-3 text-xs"
+                            >
+                              View
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => navigate(`/edit-task/${task.case_id}`)}
+                              className="h-7 px-3 text-xs"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                   {filteredTasks.length === 0 && tasks.length > 0 && (
                     <div className="text-center py-8">
                       <p className="text-gray-500">
@@ -1734,16 +1858,35 @@ const EmployeeDashboard = () => {
                       View and manage all tasks assigned to you
                     </CardDescription>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={fetchEmployeeAllTasks}
-                    disabled={isLoadingAssignedTasks}
-                    className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300"
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingAssignedTasks ? 'animate-spin' : ''}`} />
-                    Refresh
-                  </Button>
+                  <div className="flex items-center space-x-2">
+                    <Select
+                      value={assignedTaskPageLimit}
+                      onValueChange={(value) => {
+                        setAssignedTaskPageLimit(value);
+                        setAssignedTaskCurrentPage(1); // Reset to first page when limit changes
+                      }}
+                    >
+                      <SelectTrigger className="w-32 border-2 border-gray-200 rounded-xl focus:border-primary-500">
+                        <SelectValue placeholder="Page limit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={fetchEmployeeAllTasks}
+                      disabled={isLoadingAssignedTasks}
+                      className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300"
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingAssignedTasks ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -1761,80 +1904,166 @@ const EmployeeDashboard = () => {
                     <p className="text-sm text-gray-400">Tasks will appear here once they are assigned to you</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left p-4 font-semibold text-gray-700">Task ID</th>
-                          <th className="text-left p-4 font-semibold text-gray-700">Task Name</th>
-                          <th className="text-left p-4 font-semibold text-gray-700">Description</th>
-                          <th className="text-left p-4 font-semibold text-gray-700">Status</th>
-                          <th className="text-left p-4 font-semibold text-gray-700">Priority</th>
-                          <th className="text-left p-4 font-semibold text-gray-700">Assign Date</th>
-                          <th className="text-left p-4 font-semibold text-gray-700">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {assignedTasks.map((task: any, index: number) => (
-                          <tr key={task.id || task.task_id || task.case_id || index} className="border-b border-gray-100 hover:bg-emerald-50/50 transition-colors duration-200">
-                            <td className="p-4">
-                              <span className="font-mono text-sm text-emerald-600">
-                                {task.id || task.task_id || task.case_id || 'N/A'}
+                  <div className="w-full">
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block">
+                      <div className="rounded-lg border border-gray-200 overflow-hidden">
+                        <table className="w-full">
+                          <thead className="bg-gradient-to-r from-emerald-50 to-teal-50">
+                            <tr>
+                              <th className="text-left p-3 font-semibold text-gray-700 text-sm w-20">Task ID</th>
+                              <th className="text-left p-3 font-semibold text-gray-700 text-sm min-w-[200px]">Task Name</th>
+                              <th className="text-left p-3 font-semibold text-gray-700 text-sm min-w-[180px] hidden lg:table-cell">Description</th>
+                              <th className="text-center p-3 font-semibold text-gray-700 text-sm w-28">Status</th>
+                              <th className="text-center p-3 font-semibold text-gray-700 text-sm w-28">Priority</th>
+                              <th className="text-center p-3 font-semibold text-gray-700 text-sm w-32 hidden lg:table-cell">Assign Date</th>
+                              <th className="text-center p-3 font-semibold text-gray-700 text-sm w-40">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {assignedTasks
+                              .slice((assignedTaskCurrentPage - 1) * parseInt(assignedTaskPageLimit), assignedTaskCurrentPage * parseInt(assignedTaskPageLimit))
+                              .map((task: any, index: number) => (
+                              <tr key={task.id || task.task_id || task.case_id || index} className="hover:bg-emerald-50/30 transition-colors duration-150">
+                                <td className="p-3">
+                                  <span className="font-mono text-xs text-emerald-600">
+                                    {task.id || task.task_id || task.case_id || 'N/A'}
+                                  </span>
+                                </td>
+                                <td className="p-3">
+                                  <div className="font-medium text-gray-900 text-sm line-clamp-2">{task.task_name || task.case_summary || task.title || task.name || 'No Title'}</div>
+                                </td>
+                                <td className="p-3 text-gray-700 text-sm hidden lg:table-cell">
+                                  <div className="line-clamp-2">{task.description || task.case_description || task.task_description || 'No Description'}</div>
+                                </td>
+                                <td className="p-3 text-center">
+                                  <Badge className={`${getStatusColor(task.status || task.ticket_stage || task.task_status)} px-2 py-0.5 rounded-full text-xs font-medium`}>
+                                    {task.status || task.ticket_stage || task.task_status || 'Unknown'}
+                                  </Badge>
+                                </td>
+                                <td className="p-3 text-center">
+                                  <Badge className={`${getPriorityColor(task.priority || task.task_priority)} px-2 py-0.5 rounded-full text-xs font-medium`}>
+                                    {task.priority || task.task_priority || 'N/A'}
+                                  </Badge>
+                                </td>
+                                <td className="p-3 text-center text-xs text-gray-600 hidden lg:table-cell">
+                                  {task.assigned_date || task.created_at || task.created_time || task.due_date || task.due_date_time
+                                    ? formatDateDDMMYYYY(task.assigned_date || task.created_at || task.created_time || task.due_date || task.due_date_time)
+                                    : 'N/A'}
+                                </td>
+                                <td className="p-3">
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    {(task.case_id || task.id || task.task_id) && (
+                                      <>
+                                        <Button 
+                                          size="sm" 
+                                          variant="outline"
+                                          onClick={() => navigate(`/task/${task.case_id || task.id || task.task_id}`)}
+                                          className="h-7 px-2 text-xs border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 rounded-md transition-all"
+                                        >
+                                          View
+                                        </Button>
+                                        <Button 
+                                          size="sm" 
+                                          variant="outline"
+                                          onClick={() => navigate(`/edit-task/${task.case_id || task.id || task.task_id}`)}
+                                          className="h-7 px-2 text-xs border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 rounded-md transition-all"
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                      {assignedTasks
+                        .slice((assignedTaskCurrentPage - 1) * parseInt(assignedTaskPageLimit), assignedTaskCurrentPage * parseInt(assignedTaskPageLimit))
+                        .map((task: any, index: number) => (
+                        <div key={task.id || task.task_id || task.case_id || index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <span className="font-mono text-xs text-emerald-600 mb-1 block">
+                                ID: {task.id || task.task_id || task.case_id || 'N/A'}
                               </span>
-                            </td>
-                            <td className="p-4 font-medium text-gray-900">
-                              {task.task_name || task.case_summary || task.title || task.name || 'No Title'}
-                            </td>
-                            <td className="p-4 text-gray-700">
-                              {task.description || task.case_description || task.task_description || 'No Description'}
-                            </td>
-                            <td className="p-4">
-                              <Badge className={`${getStatusColor(task.status || task.ticket_stage || task.task_status)} px-3 py-1 rounded-full font-medium`}>
+                              <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">{task.task_name || task.case_summary || task.title || task.name || 'No Title'}</h3>
+                              <p className="text-xs text-gray-600 line-clamp-2">{task.description || task.case_description || task.task_description || 'No Description'}</p>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                              <Badge className={`${getStatusColor(task.status || task.ticket_stage || task.task_status)} px-2 py-0.5 rounded-full text-xs w-fit`}>
                                 {task.status || task.ticket_stage || task.task_status || 'Unknown'}
                               </Badge>
-                            </td>
-                            <td className="p-4">
-                              <Badge className={`${getPriorityColor(task.priority || task.task_priority)} px-3 py-1 rounded-full font-medium`}>
+                              <Badge className={`${getPriorityColor(task.priority || task.task_priority)} px-2 py-0.5 rounded-full text-xs w-fit`}>
                                 {task.priority || task.task_priority || 'N/A'}
                               </Badge>
-                            </td>
-                            <td className="p-4 text-sm text-gray-600">
-                              {task.due_date || task.due_date_time || task.created_at 
-                                ? new Date(task.due_date || task.due_date_time || task.created_at).toLocaleDateString()
-                                : 'No Due Date'}
-                            </td>
-                            <td className="p-4">
-                              <div className="flex items-center space-x-2">
-                                {(task.case_id || task.id || task.task_id) && (
-                                  <>
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline"
-                                      onClick={() => navigate(`/task/${task.case_id || task.id || task.task_id}`)}
-                                      className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300"
-                                    >
-                                      View
-                                    </Button>
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline"
-                                      onClick={() => navigate(`/edit-task/${task.case_id || task.id || task.task_id}`)}
-                                      className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300 flex items-center space-x-1"
-                                    >
-                                      <Edit className="h-3 w-3" />
-                                      <span>Edit</span>
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                            <div className="text-xs text-gray-500">
+                              Date: {task.assigned_date || task.created_at || task.created_time || task.due_date || task.due_date_time
+                                ? formatDateDDMMYYYY(task.assigned_date || task.created_at || task.created_time || task.due_date || task.due_date_time)
+                                : 'N/A'}
+                            </div>
+                            <div className="flex gap-1.5">
+                              {(task.case_id || task.id || task.task_id) && (
+                                <>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => navigate(`/task/${task.case_id || task.id || task.task_id}`)}
+                                    className="h-7 px-3 text-xs"
+                                  >
+                                    View
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => navigate(`/edit-task/${task.case_id || task.id || task.task_id}`)}
+                                    className="h-7 px-3 text-xs"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Pagination Controls */}
                     <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
                       <div className="text-sm text-gray-700">
-                        Showing {assignedTasks.length} assigned tasks
+                        Showing {((assignedTaskCurrentPage - 1) * parseInt(assignedTaskPageLimit)) + 1} to {Math.min(assignedTaskCurrentPage * parseInt(assignedTaskPageLimit), assignedTasks.length)} of {assignedTasks.length} assigned tasks
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAssignedTaskCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={assignedTaskCurrentPage === 1}
+                          className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300"
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-sm text-gray-700">
+                          Page {assignedTaskCurrentPage} of {Math.ceil(assignedTasks.length / parseInt(assignedTaskPageLimit))}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAssignedTaskCurrentPage(prev => prev + 1)}
+                          disabled={assignedTaskCurrentPage >= Math.ceil(assignedTasks.length / parseInt(assignedTaskPageLimit))}
+                          className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300"
+                        >
+                          Next
+                        </Button>
                       </div>
                     </div>
                   </div>

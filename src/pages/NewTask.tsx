@@ -21,7 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Plus, X, Upload, FileText, ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Plus, X, Upload, FileText, ArrowLeft, Check, ChevronsUpDown, CalendarIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -185,6 +186,7 @@ const NewTask = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [languageComboboxOpen, setLanguageComboboxOpen] = useState(false);
+  const [assignDateCalendarOpen, setAssignDateCalendarOpen] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [createCustomerOpen, setCreateCustomerOpen] = useState(false);
   const [hideCustomerDropdown, setHideCustomerDropdown] = useState(false);
@@ -3369,20 +3371,80 @@ const NewTask = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div>
-                <Label>Assign Date *</Label>
-                <Input
-                  type="date"
-                  value={formData.due_date}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      due_date: e.target.value,
-                    }))
-                  }
-                  className="w-full"
-                />
+                <div>
+                  <Label>Assign Date *</Label>
+                  <Popover open={assignDateCalendarOpen} onOpenChange={setAssignDateCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <div className="relative w-full">
+                        <Input
+                          type="text"
+                          readOnly
+                          value={formData.due_date ? (() => {
+                            try {
+                              const dateStr = formData.due_date;
+                              if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                const [year, month, day] = dateStr.split('-').map(Number);
+                                const date = new Date(year, month - 1, day);
+                                if (!isNaN(date.getTime())) {
+                                  const dayStr = String(date.getDate()).padStart(2, '0');
+                                  const monthStr = String(date.getMonth() + 1).padStart(2, '0');
+                                  const yearStr = date.getFullYear();
+                                  return `${dayStr}/${monthStr}/${yearStr}`;
+                                }
+                              }
+                              return '';
+                            } catch {
+                              return '';
+                            }
+                          })() : ''}
+                          placeholder="DD/MM/YYYY"
+                          onClick={() => setAssignDateCalendarOpen(true)}
+                          className="w-full cursor-pointer pr-10 h-10 text-sm"
+                        />
+                        <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.due_date ? (() => {
+                          try {
+                            const dateStr = formData.due_date;
+                            if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                              const [year, month, day] = dateStr.split('-').map(Number);
+                              const date = new Date(year, month - 1, day);
+                              if (!isNaN(date.getTime())) {
+                                return date;
+                              }
+                            }
+                            return undefined;
+                          } catch {
+                            return undefined;
+                          }
+                        })() : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const formattedDate = `${year}-${month}-${day}`;
+                            setFormData((prev) => ({
+                              ...prev,
+                              due_date: formattedDate,
+                            }));
+                            setAssignDateCalendarOpen(false);
+                          }
+                        }}
+                        disabled={(date) => {
+                          const twoMonthsAgo = new Date();
+                          twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+                          return date < twoMonthsAgo;
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
             </div>
 

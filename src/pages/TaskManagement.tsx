@@ -230,7 +230,7 @@ const TaskManagement = () => {
                       <th className="text-left p-4 font-semibold text-white">Est. Duration</th>
                       <th className="text-left p-4 font-semibold text-white">Total Hours Spent</th>
                       <th className="text-left p-4 font-semibold text-white">Customer Rating</th>
-                      <th className="text-left p-4 font-semibold text-white">Due Date</th>
+                      <th className="text-left p-4 font-semibold text-white">Assign Date</th>
                       <th className="text-left p-4 font-semibold text-white">Action</th>
                     </tr>
                   </thead>

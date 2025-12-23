@@ -43,16 +43,20 @@ export const SortableTableHeader: React.FC<SortableTableHeaderProps> = ({
     return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
   };
 
+  // Check if className contains text-center
+  const isCentered = className?.includes('text-center');
+  
   return (
     <th 
       className={cn(
-        "text-left font-semibold text-gray-700",
+        isCentered ? "text-center" : "text-left",
+        "font-semibold text-gray-700",
         sortable && "cursor-pointer hover:bg-gray-100 select-none transition-colors duration-200",
         className
       )}
       onClick={handleClick}
     >
-      <div className="flex items-center gap-2">
+      <div className={cn("flex items-center gap-2", isCentered && "justify-center")}>
         <span>{label}</span>
         <span className="flex-shrink-0">{getSortIcon()}</span>
       </div>
