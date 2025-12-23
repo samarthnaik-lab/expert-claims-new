@@ -749,6 +749,8 @@ const PartnerBacklogDetail = () => {
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseUp}
                   onWheel={handleWheel}
+                  onContextMenu={(e) => e.preventDefault()}
+                  onDragStart={(e) => e.preventDefault()}
                 >
                   <img
                     src={documentUrl}
@@ -762,20 +764,24 @@ const PartnerBacklogDetail = () => {
                       transformOrigin: 'center center'
                     }}
                     draggable={false}
+                    onContextMenu={(e) => e.preventDefault()}
+                    onDragStart={(e) => e.preventDefault()}
                   />
                 </div>
               ) : documentType.includes('application/pdf') || documentType === 'url' ? (
                 <div 
                   className="h-full w-full overflow-hidden cursor-grab"
-                  style={{ cursor: zoomLevel > 100 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
+                  style={{ cursor: zoomLevel > 100 ? (isDragging ? 'grabbing' : 'grab') : 'default', userSelect: 'none' }}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseUp}
                   onWheel={handleWheel}
+                  onContextMenu={(e) => e.preventDefault()}
+                  onDragStart={(e) => e.preventDefault()}
                 >
                   <iframe
-                    src={`${documentUrl}#toolbar=0&navpanes=0&scrollbar=1&statusbar=0&messages=0&scrollbar=1`}
+                    src={`${documentUrl}${documentUrl.includes('#') ? '&' : '#'}toolbar=0&navpanes=0&scrollbar=1&statusbar=0&messages=0`}
                     className="w-full h-full border-0 rounded-lg transition-transform duration-200 select-none"
                     title="Document Viewer"
                     style={{ 
@@ -785,6 +791,35 @@ const PartnerBacklogDetail = () => {
                       userSelect: 'none'
                     }}
                     draggable={false}
+                    allow="fullscreen"
+                    onLoad={(e) => {
+                      // Prevent download via iframe content
+                      try {
+                        const iframe = e.target as HTMLIFrameElement;
+                        if (iframe.contentWindow && iframe.contentDocument) {
+                          // Disable right-click context menu
+                          iframe.contentWindow.addEventListener('contextmenu', (ev) => ev.preventDefault());
+                          iframe.contentDocument.addEventListener('contextmenu', (ev) => ev.preventDefault());
+                          // Prevent common download shortcuts (Ctrl+S, Cmd+S)
+                          iframe.contentWindow.addEventListener('keydown', (ev) => {
+                            if ((ev.ctrlKey || ev.metaKey) && (ev.key === 's' || ev.key === 'S')) {
+                              ev.preventDefault();
+                              ev.stopPropagation();
+                            }
+                          });
+                          iframe.contentDocument.addEventListener('keydown', (ev) => {
+                            if ((ev.ctrlKey || ev.metaKey) && (ev.key === 's' || ev.key === 'S')) {
+                              ev.preventDefault();
+                              ev.stopPropagation();
+                            }
+                          });
+                        }
+                      } catch (error) {
+                        // Cross-origin restrictions may prevent access - this is expected for external URLs
+                        // The toolbar=0 parameter will still hide the download button
+                        console.log('Cannot access iframe content due to CORS restrictions');
+                      }
+                    }}
                   />
                 </div>
               ) : (

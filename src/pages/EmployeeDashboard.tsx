@@ -79,6 +79,10 @@ const EmployeeDashboard = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
 
+  // Assigned tasks data from employee_all_task API
+  const [assignedTasks, setAssignedTasks] = useState<any[]>([]);
+  const [isLoadingAssignedTasks, setIsLoadingAssignedTasks] = useState(false);
+
   // Backlog data from API
   const [backlogData, setBacklogData] = useState<any[]>([]);
   const [isLoadingBacklog, setIsLoadingBacklog] = useState(false);
@@ -391,12 +395,114 @@ const EmployeeDashboard = () => {
     }
   };
 
+  // Fetch employee all tasks API
+  const fetchEmployeeAllTasks = async () => {
+    setIsLoadingAssignedTasks(true);
+    try {
+      const userDetailsStr = localStorage.getItem('expertclaims_user_details');
+      if (!userDetailsStr) {
+        console.log('No user details found, skipping employee_all_task API call');
+        setIsLoadingAssignedTasks(false);
+        return;
+      }
+
+      const userDetailsData = JSON.parse(userDetailsStr);
+      // Handle array response - get the first object if it's an array
+      const userDetails = Array.isArray(userDetailsData) ? userDetailsData[0] : userDetailsData;
+      
+      const userId = userDetails.userid || userDetails.id;
+      const sessionId = userDetails.sessionid;
+
+      if (!userId || !sessionId) {
+        console.log('Missing userid or sessionid, skipping employee_all_task API call');
+        setIsLoadingAssignedTasks(false);
+        return;
+      }
+
+      console.log('=== Calling employee_all_task API from EmployeeDashboard ===');
+      console.log('User ID:', userId);
+      console.log('Session ID:', sessionId);
+      
+      // Supabase anon key
+      const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o";
+      
+      // Build URL with query parameters
+      const employeeTaskUrl = new URL('http://localhost:3000/webhook/employee_all_task');
+      employeeTaskUrl.searchParams.append('user_id', userId.toString());
+      employeeTaskUrl.searchParams.append('page', '1');
+      employeeTaskUrl.searchParams.append('size', '100');
+      
+      const finalUrl = employeeTaskUrl.toString();
+      console.log('API URL:', finalUrl);
+      
+      const response = await fetch(finalUrl, {
+        method: 'GET',
+        headers: {
+          'accept': '/',
+          'content-type': 'application/json',
+          'Content-Profile': 'expc',
+          'Accept-Profile': 'expc',
+          'apikey': supabaseAnonKey,
+          'authorization': `Bearer ${supabaseAnonKey}`,
+          'session_id': sessionId
+        }
+      });
+
+      console.log('Response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Employee all task API response:', data);
+        
+        // Handle array response - extract tasks array if wrapped in an object
+        let tasksArray: any[] = [];
+        if (Array.isArray(data)) {
+          tasksArray = data;
+        } else if (data && Array.isArray(data.data)) {
+          tasksArray = data.data;
+        } else if (data && data.tasks && Array.isArray(data.tasks)) {
+          tasksArray = data.tasks;
+        } else if (data && typeof data === 'object') {
+          // If it's a single object, wrap it in an array
+          tasksArray = [data];
+        }
+        
+        setAssignedTasks(tasksArray);
+        toast({
+          title: "Success",
+          description: `Successfully loaded ${tasksArray.length} assigned tasks`,
+        });
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Failed to fetch employee all tasks:', response.status);
+        console.error('Error response:', errorText);
+        setAssignedTasks([]);
+        toast({
+          title: "Error",
+          description: "Failed to fetch assigned tasks",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error calling employee_all_task API:', error);
+      setAssignedTasks([]);
+      toast({
+        title: "Error",
+        description: "An error occurred while fetching assigned tasks",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingAssignedTasks(false);
+    }
+  };
+
   // Fetch dashboard data on component mount
   useEffect(() => {
     getEmployeeName();
     fetchDashboardData();
     fetchTasks();
     fetchBacklogData();
+    fetchEmployeeAllTasks(); // Call employee_all_task API when dashboard loads
   }, []);
 
   // Update status filter when URL parameters change
@@ -513,6 +619,7 @@ const EmployeeDashboard = () => {
     fetchDashboardData();
     fetchTasks();
     fetchBacklogData();
+    fetchEmployeeAllTasks();
   };
 
   // Calculate assignment statistics from backlogData
@@ -626,8 +733,8 @@ const EmployeeDashboard = () => {
         return;
       }
 
-      // Call the n8n webhook API to get document view URL
-      console.log('Calling n8n webhook for document view...');
+      // Call the support API to get document view URL
+      console.log('Calling support/partnerdocumentview API for document view...');
       console.log('Document ID:', documentId);
       
       const requestBody = {
@@ -635,16 +742,20 @@ const EmployeeDashboard = () => {
       };
       console.log('Request body:', requestBody);
       
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/partnerdocumentview', {
+      // Supabase service role key
+      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+      
+      const response = await fetch('http://localhost:3000/support/partnerdocumentview', {
         method: 'POST',
         headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Content-Profile': 'expc',
+          'Accept': '*/*',
+          'Accept-Language': 'en-US,en;q=0.9',
           'Accept-Profile': 'expc',
-          'session_id': 'a9bfe0a4-1e6c-4c69-860f-ec50846a7da6',
-          'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc',
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${supabaseServiceRoleKey}`,
+          'Content-Profile': 'expc',
+          'Content-Type': 'application/json',
+          'jwt_token': jwtToken,
+          'session_id': sessionId
         },
         body: JSON.stringify(requestBody)
       });
@@ -653,78 +764,50 @@ const EmployeeDashboard = () => {
       console.log('Response headers:', response.headers);
       
       if (!response.ok) {
-        console.error('Failed to call view webhook:', response.status, response.statusText);
-        
-        // Try to get error details
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        try {
-          const errorData = await response.text();
-          console.error('Error response body:', errorData);
-          errorMessage += ` - ${errorData}`;
-        } catch (e) {
-          console.error('Could not parse error response');
-        }
-        
         toast({
           title: "Error",
-          description: `Failed to get document view URL: ${errorMessage}`,
+          description: "Failed to get document view URL",
           variant: "destructive",
         });
         return;
       }
 
-      // Since the API returns binary image data (as shown in Postman), handle it directly
-      console.log('Response received, processing binary data...');
-      
-      try {
-        // Get the response as a blob (binary data)
-        const blob = await response.blob();
-        console.log('Blob created, size:', blob.size, 'bytes');
-        console.log('Blob type:', blob.type);
+      const contentType = response.headers.get('content-type');
+      console.log('Content-Type:', contentType);
+
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log('JSON response:', data);
         
-        // Create a URL for the blob
-        const fileUrl = URL.createObjectURL(blob);
-        console.log('Created blob URL:', fileUrl);
-        
-        // Determine file type based on blob type or try to detect from content
-        const blobType = blob.type;
-        console.log('Detected blob type:', blobType);
-        
-        // Set document URL and type for modal display
-        setDocumentUrl(fileUrl);
-        setDocumentType(blobType || 'unknown');
-        setShowDocumentModal(true);
-        
-        toast({
-          title: "Success",
-          description: "Document opened successfully",
-        });
-        
-        // Clean up the blob URL after some time to free memory
-        setTimeout(() => {
-          URL.revokeObjectURL(fileUrl);
-          console.log('Blob URL cleaned up');
-        }, 30000); // 30 seconds
-        
-      } catch (blobError) {
-        console.error('Error creating blob from response:', blobError);
-        
-        // Fallback: try to get response as text first
+        if (data.url || data.document_url) {
+          const url = data.url || data.document_url;
+          setDocumentUrl(url);
+          setDocumentType('url');
+          setShowDocumentModal(true);
+        } else {
+          toast({
+            title: "Error",
+            description: "No document URL in response",
+            variant: "destructive",
+          });
+        }
+      } else {
         try {
-          const textResponse = await response.text();
-          console.log('Response as text (first 200 chars):', textResponse.substring(0, 200));
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          setDocumentUrl(objectUrl);
           
-          // If it looks like a URL, try to open it
-          if (textResponse.startsWith('http')) {
-            console.log('Opening URL from response:', textResponse);
-            setDocumentUrl(textResponse);
-            setDocumentType('url');
-            setShowDocumentModal(true);
+          if (contentType?.includes('image/')) {
+            setDocumentType(contentType);
+          } else if (contentType?.includes('application/pdf')) {
+            setDocumentType('application/pdf');
           } else {
-            throw new Error('Response is not a URL');
+            setDocumentType('application/octet-stream');
           }
+          
+          setShowDocumentModal(true);
         } catch (textError) {
-          console.error('Error handling response as text:', textError);
+          console.error('Error handling response as blob:', textError);
           toast({
             title: "Error",
             description: "Failed to process document response",
@@ -1017,8 +1100,8 @@ const EmployeeDashboard = () => {
           <TabsList
             className={`grid w-full ${
               ['gap_analysis', 'technical_consultant'].includes(employeeDepartment.toLowerCase())
-                ? 'grid-cols-4'
-                : 'grid-cols-3'
+                ? 'grid-cols-5'
+                : 'grid-cols-4'
             } bg-white/80 backdrop-blur-sm shadow-lg rounded-xl p-1`}
           >
             <TabsTrigger value="overview" className="rounded-lg font-semibold">Overview</TabsTrigger>
@@ -1028,6 +1111,7 @@ const EmployeeDashboard = () => {
               </TabsTrigger>
             )}
             <TabsTrigger value="tasks" className="rounded-lg font-semibold">Task Management</TabsTrigger>
+            <TabsTrigger value="assigned-task" className="rounded-lg font-semibold">Assigned Task</TabsTrigger>
             <TabsTrigger value="hr" className="rounded-lg font-semibold">HR</TabsTrigger>
           </TabsList>
         )}
@@ -1634,6 +1718,127 @@ const EmployeeDashboard = () => {
                     </Button>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          )}
+
+          {!['gap_analysis', 'technical_consultant'].includes(employeeDepartment.toLowerCase()) && (
+            <TabsContent value="assigned-task" className="space-y-4">
+            <Card className="border-none shadow-xl bg-gradient-to-br from-white to-emerald-50/30 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-2xl font-bold text-gray-900">Assigned Task List</CardTitle>
+                    <CardDescription className="text-gray-600">
+                      View and manage all tasks assigned to you
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchEmployeeAllTasks}
+                    disabled={isLoadingAssignedTasks}
+                    className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingAssignedTasks ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoadingAssignedTasks ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="h-6 w-6 animate-spin text-emerald-600 mr-2" />
+                    <span className="text-gray-600">Loading assigned tasks...</span>
+                  </div>
+                ) : assignedTasks.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                      <FileText className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 mb-2">No assigned tasks found</p>
+                    <p className="text-sm text-gray-400">Tasks will appear here once they are assigned to you</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left p-4 font-semibold text-gray-700">Task ID</th>
+                          <th className="text-left p-4 font-semibold text-gray-700">Task Name</th>
+                          <th className="text-left p-4 font-semibold text-gray-700">Description</th>
+                          <th className="text-left p-4 font-semibold text-gray-700">Status</th>
+                          <th className="text-left p-4 font-semibold text-gray-700">Priority</th>
+                          <th className="text-left p-4 font-semibold text-gray-700">Assign Date</th>
+                          <th className="text-left p-4 font-semibold text-gray-700">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {assignedTasks.map((task: any, index: number) => (
+                          <tr key={task.id || task.task_id || task.case_id || index} className="border-b border-gray-100 hover:bg-emerald-50/50 transition-colors duration-200">
+                            <td className="p-4">
+                              <span className="font-mono text-sm text-emerald-600">
+                                {task.id || task.task_id || task.case_id || 'N/A'}
+                              </span>
+                            </td>
+                            <td className="p-4 font-medium text-gray-900">
+                              {task.task_name || task.case_summary || task.title || task.name || 'No Title'}
+                            </td>
+                            <td className="p-4 text-gray-700">
+                              {task.description || task.case_description || task.task_description || 'No Description'}
+                            </td>
+                            <td className="p-4">
+                              <Badge className={`${getStatusColor(task.status || task.ticket_stage || task.task_status)} px-3 py-1 rounded-full font-medium`}>
+                                {task.status || task.ticket_stage || task.task_status || 'Unknown'}
+                              </Badge>
+                            </td>
+                            <td className="p-4">
+                              <Badge className={`${getPriorityColor(task.priority || task.task_priority)} px-3 py-1 rounded-full font-medium`}>
+                                {task.priority || task.task_priority || 'N/A'}
+                              </Badge>
+                            </td>
+                            <td className="p-4 text-sm text-gray-600">
+                              {task.due_date || task.due_date_time || task.created_at 
+                                ? new Date(task.due_date || task.due_date_time || task.created_at).toLocaleDateString()
+                                : 'No Due Date'}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center space-x-2">
+                                {(task.case_id || task.id || task.task_id) && (
+                                  <>
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      onClick={() => navigate(`/task/${task.case_id || task.id || task.task_id}`)}
+                                      className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300"
+                                    >
+                                      View
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      onClick={() => navigate(`/edit-task/${task.case_id || task.id || task.task_id}`)}
+                                      className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300 flex items-center space-x-1"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                      <span>Edit</span>
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                      <div className="text-sm text-gray-700">
+                        Showing {assignedTasks.length} assigned tasks
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

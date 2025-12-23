@@ -16,7 +16,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserService, AdminUser } from '@/services/userService';
 import SortableTableHeader from '@/components/ui/SortableTableHeader';
 import { useTableSort } from '@/hooks/useTableSort';
-import { formatDateDDMMYYYY } from '@/lib/utils';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -483,7 +482,7 @@ const AdminDashboard = () => {
   // Determine which user set to filter from
   // When filtering/searching, we need all users; otherwise use paginated users
   // If filtering but allUsersForSearch is empty, use users as fallback (will be limited to current page)
-  const usersToFilter = isSearchingOrFiltering
+  const usersToFilter = isSearchingOrFiltering 
     ? (allUsersForSearch.length > 0 ? allUsersForSearch : users) // Use allUsersForSearch if available when filtering
     : users; // Use paginated users when not filtering
   
@@ -505,18 +504,18 @@ const AdminDashboard = () => {
   const allFilteredUsers = (isSearchingOrFiltering && allUsersForSearch.length === 0 && loadingAllUsers)
     ? [] // Show empty while loading all users for filtering
     : usersToFilter.filter(user => {
-    const searchLower = userSearchTerm.toLowerCase();
-    const matchesSearch = !userSearchTerm || (
-      (user.id && user.id.toLowerCase().includes(searchLower)) ||
-      (user.name && user.name.toLowerCase().includes(searchLower)) ||
-      (user.role && user.role.toLowerCase().includes(searchLower)) ||
-      (user.status && user.status.toLowerCase().includes(searchLower)) ||
-      (user.email && user.email.toLowerCase().includes(searchLower))
-    );
+        const searchLower = userSearchTerm.toLowerCase();
+        const matchesSearch = !userSearchTerm || (
+          (user.id && user.id.toLowerCase().includes(searchLower)) ||
+          (user.name && user.name.toLowerCase().includes(searchLower)) ||
+          (user.role && user.role.toLowerCase().includes(searchLower)) ||
+          (user.status && user.status.toLowerCase().includes(searchLower)) ||
+          (user.email && user.email.toLowerCase().includes(searchLower))
+        );
         const matchesRole = userRoleFilter === 'all' || (user.role && user.role === userRoleFilter);
-    const matchesPartnerType = userPartnerTypeFilter === 'all' || ((user as any).partner_type && (user as any).partner_type === userPartnerTypeFilter);
+        const matchesPartnerType = userPartnerTypeFilter === 'all' || ((user as any).partner_type && (user as any).partner_type === userPartnerTypeFilter);
         return matchesSearch && matchesRole && matchesPartnerType;
-  });
+      });
 
   // Paginate filtered users
   // When searching/filtering: use client-side pagination on filtered results
@@ -883,8 +882,8 @@ const AdminDashboard = () => {
             }));
 
             // Store paginated users
-              setUsers(transformedUsers);
-              setHasMoreUsers(transformedUsers.length >= parseInt(userPageLimit));
+            setUsers(transformedUsers);
+            setHasMoreUsers(transformedUsers.length >= parseInt(userPageLimit));
             console.log('Transformed users:', transformedUsers);
           } else if (firstResult.status === 'error' || firstResult.status === 'failure') {
             console.error('API returned error:', firstResult);
@@ -2291,8 +2290,8 @@ Created Time: ${report.created_time}
         return;
       }
 
-      // Call the n8n webhook API to get document view URL
-      console.log('Calling n8n webhook for document view...');
+      // Call the support API to get document view URL for Gap Analysis
+      console.log('Calling support/partnerdocumentview API for document view...');
       console.log('Document ID:', documentId);
       
       const requestBody = {
@@ -2300,16 +2299,20 @@ Created Time: ${report.created_time}
       };
       console.log('Request body:', requestBody);
       
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/partnerdocumentview', {
+      // Supabase service role key
+      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+      
+      const response = await fetch('http://localhost:3000/support/partnerdocumentview', {
         method: 'POST',
         headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Content-Profile': 'expc',
+          'Accept': '*/*',
+          'Accept-Language': 'en-US,en;q=0.9',
           'Accept-Profile': 'expc',
-          'session_id': 'a9bfe0a4-1e6c-4c69-860f-ec50846a7da6',
-          'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc',
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${supabaseServiceRoleKey}`,
+          'Content-Profile': 'expc',
+          'Content-Type': 'application/json',
+          'jwt_token': jwtToken,
+          'session_id': sessionId
         },
         body: JSON.stringify(requestBody)
       });
@@ -2318,78 +2321,50 @@ Created Time: ${report.created_time}
       console.log('Response headers:', response.headers);
       
       if (!response.ok) {
-        console.error('Failed to call view webhook:', response.status, response.statusText);
-        
-        // Try to get error details
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        try {
-          const errorData = await response.text();
-          console.error('Error response body:', errorData);
-          errorMessage += ` - ${errorData}`;
-        } catch (e) {
-          console.error('Could not parse error response');
-        }
-        
         toast({
           title: "Error",
-          description: `Failed to get document view URL: ${errorMessage}`,
+          description: "Failed to get document view URL",
           variant: "destructive",
         });
         return;
       }
 
-      // Since the API returns binary image data (as shown in Postman), handle it directly
-      console.log('Response received, processing binary data...');
-      
-      try {
-        // Get the response as a blob (binary data)
-        const blob = await response.blob();
-        console.log('Blob created, size:', blob.size, 'bytes');
-        console.log('Blob type:', blob.type);
+      const contentType = response.headers.get('content-type');
+      console.log('Content-Type:', contentType);
+
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log('JSON response:', data);
         
-        // Create a URL for the blob
-        const fileUrl = URL.createObjectURL(blob);
-        console.log('Created blob URL:', fileUrl);
-        
-        // Determine file type based on blob type or try to detect from content
-        const blobType = blob.type;
-        console.log('Detected blob type:', blobType);
-        
-        // Set document URL and type for modal display
-        setDocumentUrl(fileUrl);
-        setDocumentType(blobType || 'unknown');
-        setShowDocumentModal(true);
-        
-        toast({
-          title: "Success",
-          description: "Document opened successfully",
-        });
-        
-        // Clean up the blob URL after some time to free memory
-        setTimeout(() => {
-          URL.revokeObjectURL(fileUrl);
-          console.log('Blob URL cleaned up');
-        }, 30000); // 30 seconds
-        
-      } catch (blobError) {
-        console.error('Error creating blob from response:', blobError);
-        
-        // Fallback: try to get response as text first
+        if (data.url || data.document_url) {
+          const url = data.url || data.document_url;
+          setDocumentUrl(url);
+          setDocumentType('url');
+          setShowDocumentModal(true);
+        } else {
+          toast({
+            title: "Error",
+            description: "No document URL in response",
+            variant: "destructive",
+          });
+        }
+      } else {
         try {
-          const textResponse = await response.text();
-          console.log('Response as text (first 200 chars):', textResponse.substring(0, 200));
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          setDocumentUrl(objectUrl);
           
-          // If it looks like a URL, try to open it
-          if (textResponse.startsWith('http')) {
-            console.log('Opening URL from response:', textResponse);
-            setDocumentUrl(textResponse);
-            setDocumentType('url');
-            setShowDocumentModal(true);
+          if (contentType?.includes('image/')) {
+            setDocumentType(contentType);
+          } else if (contentType?.includes('application/pdf')) {
+            setDocumentType('application/pdf');
           } else {
-            throw new Error('Response is not a URL');
+            setDocumentType('application/octet-stream');
           }
+          
+          setShowDocumentModal(true);
         } catch (textError) {
-          console.error('Error handling response as text:', textError);
+          console.error('Error handling response as blob:', textError);
           toast({
             title: "Error",
             description: "Failed to process document response",
@@ -2435,7 +2410,7 @@ Created Time: ${report.created_time}
             <div>
               <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
               <p className="text-white/80 mt-1">
-                Welcome, {adminName} • Manage Tasks, Users, Leave Requests And Gap Analysis  
+                Welcome, {adminName} • Manage Tasks, Users, Leave Management And Gap Analysis  
               </p>
             </div>
             <div className="flex items-center space-x-3">
@@ -2505,7 +2480,7 @@ Created Time: ${report.created_time}
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="tasks">Task Management</TabsTrigger>
             <TabsTrigger value="users">User Management</TabsTrigger>
-            <TabsTrigger value="leave">Leave Requests</TabsTrigger>
+            <TabsTrigger value="leave">Leave Management</TabsTrigger>
             <TabsTrigger value="cases">Gap Analysis</TabsTrigger>
             {/* <TabsTrigger value="reports">Reports</TabsTrigger> */}
             {/* <TabsTrigger value="settings">Settings</TabsTrigger> */}
@@ -2566,7 +2541,7 @@ Created Time: ${report.created_time}
                 >
                   <CardContent className="p-6 text-center">
                     <Calendar className="h-8 w-8 mx-auto mb-3 text-gray-600" />
-                    <h3 className="font-semibold text-gray-900">Leave Requests</h3>
+                    <h3 className="font-semibold text-gray-900">Leave Management</h3>
                   </CardContent>
                 </Card>
               </div>
@@ -2659,11 +2634,11 @@ Created Time: ${report.created_time}
                           onSort={handleTaskSort}
                           className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                         />
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Task Name</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>Task Name</th>
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[100px]">Assignee</th>
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[120px]">Customer</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Assigned Date</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider break-words max-w-[120px]">Status</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Assign Date</th>
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[160px]">Actions</th>
                       </tr>
                     </thead>
@@ -2677,7 +2652,7 @@ Created Time: ${report.created_time}
                           >
                             {task.task_id}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-900 break-words max-w-[120px] sm:max-w-none" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.title}>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-900 break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.title}>
                             {task.title}
                           </td>
                           <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.assigned_employee_name || 'Unassigned'}>
@@ -2686,36 +2661,36 @@ Created Time: ${report.created_time}
                           <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.customer_profile?.full_name || 'N/A'}>
                             {task.customer_profile?.full_name || 'N/A'}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap">
+                          <td className="px-2 sm:px-3 py-3 break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.current_status}>
                             <Badge className={getStatusColor(task.current_status)}>
-                              <span className="text-xs">{task.current_status}</span>
+                              <span className="text-xs break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{task.current_status}</span>
                             </Badge>
                           </td>
                           <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
-                            {formatDateDDMMYYYY(task.due_date)}
+                            {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
                           </td>
                           <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 min-w-[160px]">
                             <div className="flex items-center gap-1 sm:gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigate(`/task/${task.task_id}`)}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate(`/task/${task.task_id}`)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3 text-xs"
                                 title="View"
-                            >
+                              >
                                 <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">View</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditTask(task)}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditTask(task)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3 text-xs"
                                 title="Edit"
-                            >
+                              >
                                 <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">Edit</span>
-                            </Button>
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -2902,36 +2877,36 @@ Created Time: ${report.created_time}
                           <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={formatPartnerType((user as any).partner_type)}>{formatPartnerType((user as any).partner_type)}</td>
                           <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">
                             <div className="flex items-center gap-1 sm:gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewUser(user)}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewUser(user)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
                                 title="View"
-                            >
+                              >
                                 <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">View</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditUser(user)}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditUser(user)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
                                 title="Edit"
-                            >
+                              >
                                 <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">Edit</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteUser(user)}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteUser(user)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
                                 title="Delete"
-                            >
+                              >
                                 <Trash className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">Delete</span>
-                            </Button>
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -2978,7 +2953,7 @@ Created Time: ${report.created_time}
                     if (isSearchingOrFiltering) {
                       // Client-side pagination - check if there are more filtered results
                       if (endIndex < allFilteredUsers.length) {
-                      setUserCurrentPage(prev => prev + 1);
+                        setUserCurrentPage(prev => prev + 1);
                       }
                     } else {
                       // API pagination - move to next page
@@ -3000,7 +2975,7 @@ Created Time: ${report.created_time}
 
           <TabsContent value="leave" className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">Leave Requests</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Leave Management</h2>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-700">Show:</span>
                 <Select
@@ -3057,8 +3032,8 @@ Created Time: ${report.created_time}
                             <td className="px-4 py-4 min-w-0 break-words text-sm font-medium text-blue-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.application_id}</td>
                             <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.employees.first_name} {request.employees.last_name}</td>
                             <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.leave_types?.type_name || 'N/A'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatDateDDMMYYYY(request.start_date)}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatDateDDMMYYYY(request.end_date)}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.start_date}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.end_date}</td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.total_days}</td>
                             <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={request.reason}>{request.reason}</td>
                             <td className="px-4 py-4 whitespace-nowrap">
@@ -3067,7 +3042,7 @@ Created Time: ${report.created_time}
                               </Badge>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-                              {formatDateDDMMYYYY(request.applied_date)}
+                              {new Date(request.applied_date).toLocaleDateString()}
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
                               {(() => {
@@ -3303,14 +3278,14 @@ Created Time: ${report.created_time}
                           .filter((item) => {
                             // Search filter
                             const matchesSearch = !casesSearchTerm || (() => {
-                            const searchLower = casesSearchTerm.toLowerCase();
-                            return (
-                              item.case_summary?.toLowerCase().includes(searchLower) ||
-                              item.case_description?.toLowerCase().includes(searchLower) ||
-                              item.backlog_id?.toString().includes(searchLower) ||
-                              item.case_type_id?.toString().includes(searchLower) ||
-                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                            );
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
                             })();
                             
                             // Assigned Expert filter
@@ -3356,7 +3331,7 @@ Created Time: ${report.created_time}
                                   {item.case_types?.case_type_name || `Type ${item.case_type_id}` || "N/A"}
                                 </td> */}
                                 <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-600 hidden lg:table-cell">
-                                  {formatDateDDMMYYYY(item.backlog_referral_date)}
+                                  {item.backlog_referral_date || "N/A"}
                                 </td>
                                 <td className="p-3 sm:p-4">
                                   <Badge className={statusBadgeClass}>
@@ -3427,14 +3402,14 @@ Created Time: ${report.created_time}
                           Showing {((currentPageCases - 1) * pageSizeCases) + 1} to {Math.min(currentPageCases * pageSizeCases, casesData.filter((item) => {
                             // Search filter
                             const matchesSearch = !casesSearchTerm || (() => {
-                            const searchLower = casesSearchTerm.toLowerCase();
-                            return (
-                              item.case_summary?.toLowerCase().includes(searchLower) ||
-                              item.case_description?.toLowerCase().includes(searchLower) ||
-                              item.backlog_id?.toString().includes(searchLower) ||
-                              item.case_type_id?.toString().includes(searchLower) ||
-                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                            );
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
                             })();
                             
                             // Assigned Expert filter
@@ -3447,14 +3422,14 @@ Created Time: ${report.created_time}
                           }).length)} of {casesData.filter((item) => {
                             // Search filter
                             const matchesSearch = !casesSearchTerm || (() => {
-                            const searchLower = casesSearchTerm.toLowerCase();
-                            return (
-                              item.case_summary?.toLowerCase().includes(searchLower) ||
-                              item.case_description?.toLowerCase().includes(searchLower) ||
-                              item.backlog_id?.toString().includes(searchLower) ||
-                              item.case_type_id?.toString().includes(searchLower) ||
-                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                            );
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
                             })();
                             
                             // Assigned Expert filter
@@ -3480,14 +3455,14 @@ Created Time: ${report.created_time}
                             Page {currentPageCases} of {Math.ceil(casesData.filter((item) => {
                               // Search filter
                               const matchesSearch = !casesSearchTerm || (() => {
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                                const searchLower = casesSearchTerm.toLowerCase();
+                                return (
+                                  item.case_summary?.toLowerCase().includes(searchLower) ||
+                                  item.case_description?.toLowerCase().includes(searchLower) ||
+                                  item.backlog_id?.toString().includes(searchLower) ||
+                                  item.case_type_id?.toString().includes(searchLower) ||
+                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                                );
                               })();
                               
                               // Assigned Expert filter
@@ -3503,14 +3478,14 @@ Created Time: ${report.created_time}
                             onClick={() => setCurrentPageCases(prev => Math.min(Math.ceil(casesData.filter((item) => {
                               // Search filter
                               const matchesSearch = !casesSearchTerm || (() => {
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                                const searchLower = casesSearchTerm.toLowerCase();
+                                return (
+                                  item.case_summary?.toLowerCase().includes(searchLower) ||
+                                  item.case_description?.toLowerCase().includes(searchLower) ||
+                                  item.backlog_id?.toString().includes(searchLower) ||
+                                  item.case_type_id?.toString().includes(searchLower) ||
+                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                                );
                               })();
                               
                               // Assigned Expert filter
@@ -3522,14 +3497,14 @@ Created Time: ${report.created_time}
                             disabled={currentPageCases >= Math.ceil(casesData.filter((item) => {
                               // Search filter
                               const matchesSearch = !casesSearchTerm || (() => {
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                                const searchLower = casesSearchTerm.toLowerCase();
+                                return (
+                                  item.case_summary?.toLowerCase().includes(searchLower) ||
+                                  item.case_description?.toLowerCase().includes(searchLower) ||
+                                  item.backlog_id?.toString().includes(searchLower) ||
+                                  item.case_type_id?.toString().includes(searchLower) ||
+                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                                );
                               })();
                               
                               // Assigned Expert filter
@@ -3723,7 +3698,7 @@ Created Time: ${report.created_time}
                         />
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assign Date</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -3741,7 +3716,7 @@ Created Time: ${report.created_time}
                             </Badge>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {formatDateDDMMYYYY(task.due_date)}
+                            {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
                           </td>
                         </tr>
                       ))}
@@ -4028,19 +4003,19 @@ Created Time: ${report.created_time}
                       <div>
                         <label className="text-sm font-medium text-gray-500">Referral Date</label>
                         <p className="text-gray-900 font-medium">
-                          {formatDateDDMMYYYY(selectedBacklogItem.backlog_referral_date)}
+                          {selectedBacklogItem.backlog_referral_date || "N/A"}
                         </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Created Date</label>
+                        <label className="text-sm font-medium text-gray-500">Created Time</label>
                         <p className="text-gray-900 font-medium">
-                          {formatDateDDMMYYYY(selectedBacklogItem.created_time)}
+                          {selectedBacklogItem.created_time ? new Date(selectedBacklogItem.created_time).toLocaleString() : "N/A"}
                         </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Last Updated Date</label>
+                        <label className="text-sm font-medium text-gray-500">Updated Time</label>
                         <p className="text-gray-900 font-medium">
-                          {formatDateDDMMYYYY(selectedBacklogItem.updated_time)}
+                          {selectedBacklogItem.updated_time ? new Date(selectedBacklogItem.updated_time).toLocaleString() : "N/A"}
                         </p>
                       </div>
                     </CardContent>
