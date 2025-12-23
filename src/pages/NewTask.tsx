@@ -847,7 +847,7 @@ const NewTask = () => {
     if (!newPayment.phase || !newPayment.due_date) {
       toast({
         title: "Error",
-        description: "Please fill all required fields (Phase and Due Date)",
+        description: "Please fill all required fields (Phase and Assigned Date)",
         variant: "destructive",
       });
       return;
@@ -1755,7 +1755,7 @@ const NewTask = () => {
     try {
       console.log("=== UPLOAD DOCUMENTS FUNCTION ===");
       console.log("Case ID:", caseId);
-      console.log("Employee ID:", employeeId);
+      console.log("User ID:", userId);
       console.log("Selected documents:", formData.selectedDocuments);
       console.log("Available document categories:", documentCategories);
       console.log("Document uploads:", documentUploads);
