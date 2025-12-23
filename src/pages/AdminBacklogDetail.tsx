@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { formatDateDDMMYYYY } from "@/lib/utils";
 
 interface BacklogDetail {
   status: any;
@@ -1119,13 +1120,16 @@ const AdminBacklogDetail = () => {
           </td>
           <td class="bg-gray" style="text-align:right;">
             <div style="display:flex; align-items:center; height:100%; margin-top:-8px">
-              Generated on: ${new Date().toLocaleDateString('en-GB', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+              Generated on: ${(() => {
+                const now = new Date();
+                const dateStr = formatDateDDMMYYYY(now);
+                const timeStr = now.toLocaleTimeString('en-GB', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true
+                });
+                return `${dateStr} ${timeStr}`;
+              })()}
             </div>
           </td>
         </tr>
@@ -1161,11 +1165,7 @@ const AdminBacklogDetail = () => {
         </tr>
         <tr>
           <td style="font-weight:bold">Created Date</td>
-          <td>${backlogDetail?.created_time ? new Date(backlogDetail.created_time).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric'
-          }) : 'N/A'}</td>
+          <td>${formatDateDDMMYYYY(backlogDetail?.created_time)}</td>
         </tr>
       </tbody>
     </table>
@@ -1657,15 +1657,17 @@ const AdminBacklogDetail = () => {
                             return "User";
                           })()}
                         </span>
-                        <span>{new Date(comment.created_time).toLocaleString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "2-digit",
-                            hour: "2-digit",  
-                            minute: "2-digit",
-                            second: "2-digit",
-                            hour12: true,
-                          })}</span>
+                        <span>{comment.created_time ? (() => {
+                            const date = new Date(comment.created_time);
+                            const dateStr = formatDateDDMMYYYY(date);
+                            const timeStr = date.toLocaleTimeString("en-GB", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                              hour12: true,
+                            });
+                            return `${dateStr} ${timeStr}`;
+                          })() : "N/A"}</span>
                       </div>
                     </div>
                   ))}

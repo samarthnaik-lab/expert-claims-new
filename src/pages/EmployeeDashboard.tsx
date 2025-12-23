@@ -16,6 +16,7 @@ import SortableTableHeader from '@/components/ui/SortableTableHeader';
 import { useTableSort } from '@/hooks/useTableSort';
 import { useAuth } from '@/contexts/AuthContext';
 import { SessionExpiry } from '@/components/SessionExpiry';
+import { formatDateDDMMYYYY } from '@/lib/utils';
 
 // Task interface based on the API response
 interface Task {

@@ -10,6 +10,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Upload, User, FileText, Calendar, Edit, Save, X, Plus, Trash2, Clock, MapPin, Eye, ZoomIn, ZoomOut, RotateCcw, XCircle } from 'lucide-react';
 
 import { useToast } from '@/hooks/use-toast';
+import { formatDateDDMMYYYY } from '@/lib/utils';
 
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -1282,7 +1283,7 @@ const TaskDetail = () => {
                   <div>
                     <p className="text-sm text-gray-600">Assign Date</p>
                     <p className="font-medium">
-                      {caseDetails.due_date ? new Date(caseDetails.due_date).toLocaleDateString() : 'Not set'}
+                      {caseDetails.due_date ? formatDateDDMMYYYY(caseDetails.due_date) : 'Not set'}
                     </p>
                   </div>
                   <div>
@@ -1317,7 +1318,7 @@ const TaskDetail = () => {
                   <div>
                     <p className="text-sm text-gray-600">Last Updated</p>
                     <p className="font-medium">
-                      {caseDetails.updated_time ? new Date(caseDetails.updated_time).toLocaleString() : 'N/A'}
+                      {caseDetails.updated_time ? formatDateDDMMYYYY(caseDetails.updated_time) : 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -2233,17 +2234,17 @@ const TaskDetail = () => {
                              <div className="mt-2 space-y-1">
                                {phase.due_date && (
                                  <p className="text-xs text-gray-600">
-                                   Assign Date: {new Date(phase.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                   Assigned Date: {formatDateDDMMYYYY(phase.due_date)}
                                  </p>
                                )}
                                {phase.payment_date && (
                                  <p className="text-xs text-green-600 font-medium">
-                                   Payment Date: {new Date(phase.payment_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                   Payment Date: {formatDateDDMMYYYY(phase.payment_date)}
                                  </p>
                                )}
                              {phase.status === 'pending' && phase.due_date && (
                                  <p className="text-xs text-red-500">
-                                   Due by: {new Date(phase.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                   Due by: {formatDateDDMMYYYY(phase.due_date)}
                                </p>
                              )}
                              </div>
@@ -2334,12 +2335,12 @@ const TaskDetail = () => {
                              </div>
                              {stage.status === 'paid' && stage.paidDate && (
                                <p className="text-xs text-gray-500 mt-1">
-                                 Paid on: {new Date(stage.paidDate).toLocaleDateString()}
+                                 Paid on: {formatDateDDMMYYYY(stage.paidDate)}
                                </p>
                              )}
                              {stage.status === 'pending' && stage.dueDate && (
                                <p className="text-xs text-red-500 mt-1">
-                                 Due by: {new Date(stage.dueDate).toLocaleDateString()}
+                                 Due by: {formatDateDDMMYYYY(stage.dueDate)}
                                </p>
                              )}
                            </div>

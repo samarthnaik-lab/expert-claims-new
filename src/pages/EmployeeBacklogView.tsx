@@ -11,6 +11,7 @@ import { ArrowLeft, Calendar, User, FileText, Clock, ZoomIn, ZoomOut, RotateCcw,
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatDateDDMMYYYY } from "@/lib/utils";
 
 interface BacklogDetail {
   status: any;
@@ -656,31 +657,19 @@ const EmployeeBacklogView = () => {
                 <div>
                   <h4 className="text-sm font-medium text-gray-500 mb-1">Last Updated</h4>
                   <p className="text-gray-700">{backlogDetail.updated_time
-                    ? new Date(backlogDetail.updated_time).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "2-digit",
-                      })
+                    ? formatDateDDMMYYYY(backlogDetail.updated_time)
                     : "N/A"}</p>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500 mb-1">Referral Date</h4>
                   <p className="text-gray-700"> {backlogDetail.backlog_referral_date
-                    ? new Date(backlogDetail.backlog_referral_date).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "2-digit",
-                      })
+                    ? formatDateDDMMYYYY(backlogDetail.backlog_referral_date)
                   : "N/A"}</p>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500 mb-1">Created Date</h4>
                   <p className="text-gray-700">{backlogDetail.created_time
-                    ? new Date(backlogDetail.created_time).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "2-digit",
-                      })
+                    ? formatDateDDMMYYYY(backlogDetail.created_time)
                     : "N/A"}</p>
                 </div>
                 <div>

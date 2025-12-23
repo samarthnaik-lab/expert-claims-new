@@ -210,6 +210,7 @@ const EditTask = () => {
         status: 'pending' as 'paid' | 'pending'
     });
     const [calendarOpen, setCalendarOpen] = useState(false);
+    const [assignDateCalendarOpen, setAssignDateCalendarOpen] = useState(false);
     const [paymentDateCalendarOpenIndex, setPaymentDateCalendarOpenIndex] = useState<number | null>(null);
     const [phaseNameComboboxOpen, setPhaseNameComboboxOpen] = useState(false);
     const [phaseNameComboboxOpenIndex, setPhaseNameComboboxOpenIndex] = useState<number | null>(null);
@@ -3875,44 +3876,85 @@ const EditTask = () => {
                             </div>
                             <div>
                                 <Label>Assign Date *</Label>
-                                <Input
-                                    type="date"
-                                    value={formData.due_date ? (() => {
-                                        // Ensure due_date is in YYYY-MM-DD format for date input
-                                        try {
-                                            const dateStr = formData.due_date;
-                                            if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                                                // Already in correct format
-                                                return dateStr;
-                                            } else if (dateStr.includes('T')) {
-                                                // ISO format with time
-                                                return dateStr.split('T')[0];
-                                            } else {
-                                                // Try to parse and format
-                                                const date = new Date(dateStr);
-                                                if (!isNaN(date.getTime())) {
-                                                    return date.toISOString().split('T')[0];
+                                <Popover open={assignDateCalendarOpen} onOpenChange={setAssignDateCalendarOpen}>
+                                    <PopoverTrigger asChild>
+                                        <div className="relative">
+                                            <Input
+                                                type="text"
+                                                readOnly
+                                                value={formData.due_date ? (() => {
+                                                    try {
+                                                        const dateStr = formData.due_date;
+                                                        if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                            const [year, month, day] = dateStr.split('-').map(Number);
+                                                            return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+                                                        }
+                                                        if (dateStr.includes('T')) {
+                                                            const date = new Date(dateStr);
+                                                            if (!isNaN(date.getTime())) {
+                                                                const day = String(date.getDate()).padStart(2, '0');
+                                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                                const year = date.getFullYear();
+                                                                return `${day}/${month}/${year}`;
+                                                            }
+                                                        }
+                                                        const date = new Date(dateStr);
+                                                        if (!isNaN(date.getTime())) {
+                                                            const day = String(date.getDate()).padStart(2, '0');
+                                                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                            const year = date.getFullYear();
+                                                            return `${day}/${month}/${year}`;
+                                                        }
+                                                        return '';
+                                                    } catch {
+                                                        return '';
+                                                    }
+                                                })() : ''}
+                                                placeholder="DD/MM/YYYY"
+                                                onClick={() => setAssignDateCalendarOpen(true)}
+                                                className="w-full cursor-pointer pr-10"
+                                            />
+                                            <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                        </div>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={formData.due_date ? (() => {
+                                                try {
+                                                    const dateStr = formData.due_date;
+                                                    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                        const [year, month, day] = dateStr.split('-').map(Number);
+                                                        return new Date(year, month - 1, day);
+                                                    }
+                                                    const date = new Date(dateStr);
+                                                    return !isNaN(date.getTime()) ? date : undefined;
+                                                } catch {
+                                                    return undefined;
                                                 }
-                                            }
-                                            return dateStr;
-                                        } catch (error) {
-                                            console.error('Error formatting due_date:', error);
-                                            return formData.due_date;
-                                        }
-                                    })() : ''}
-                                    min={(() => {
-                                        const twoMonthsAgo = new Date();
-                                        twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-                                        return twoMonthsAgo.toISOString().split("T")[0];
-                                    })()}
-                                    onChange={(e) =>
-                                        setFormData((prev) => ({
-                                            ...prev,
-                                            due_date: e.target.value,
-                                        }))
-                                    }
-                                    className="w-full"
-                                />
+                                            })() : undefined}
+                                            onSelect={(date) => {
+                                                if (date) {
+                                                    const year = date.getFullYear();
+                                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                    const day = String(date.getDate()).padStart(2, '0');
+                                                    const formattedDate = `${year}-${month}-${day}`;
+                                                    setFormData((prev) => ({
+                                                        ...prev,
+                                                        due_date: formattedDate,
+                                                    }));
+                                                    setAssignDateCalendarOpen(false);
+                                                }
+                                            }}
+                                            disabled={(date) => {
+                                                const twoMonthsAgo = new Date();
+                                                twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+                                                return date < twoMonthsAgo;
+                                            }}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </div>
 
@@ -4132,7 +4174,7 @@ const EditTask = () => {
                                                     </div>
                                                 </div>
                                                 
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                                                     <div>
                                                         <Label>Phase Name</Label>
                                                         <Popover open={phaseNameComboboxOpenIndex === index} onOpenChange={(open) => setPhaseNameComboboxOpenIndex(open ? index : null)}>
@@ -4241,30 +4283,30 @@ const EditTask = () => {
                                                                                 const dateStr = phase.due_date;
                                                                                 if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
                                                                                     const [year, month, day] = dateStr.split('-').map(Number);
-                                                                                    return `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${year}`;
+                                                                                    return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
                                                                                 }
                                                                                 if (dateStr.includes('T')) {
                                                                                     const date = new Date(dateStr);
                                                                                     if (!isNaN(date.getTime())) {
-                                                                                        const month = String(date.getMonth() + 1).padStart(2, '0');
                                                                                         const day = String(date.getDate()).padStart(2, '0');
+                                                                                        const month = String(date.getMonth() + 1).padStart(2, '0');
                                                                                         const year = date.getFullYear();
-                                                                                        return `${month}/${day}/${year}`;
+                                                                                        return `${day}/${month}/${year}`;
                                                                                     }
                                                                                 }
                                                                                 const date = new Date(dateStr);
                                                                                 if (!isNaN(date.getTime())) {
-                                                                                    const month = String(date.getMonth() + 1).padStart(2, '0');
                                                                                     const day = String(date.getDate()).padStart(2, '0');
+                                                                                    const month = String(date.getMonth() + 1).padStart(2, '0');
                                                                                     const year = date.getFullYear();
-                                                                                    return `${month}/${day}/${year}`;
+                                                                                    return `${day}/${month}/${year}`;
                                                                                 }
                                                                                 return '';
                                                                             } catch {
                                                                                 return '';
                                                                             }
                                                                         })() : ''}
-                                                                        placeholder="MM/DD/YYYY"
+                                                                        placeholder="DD/MM/YYYY"
                                                                         onClick={() => setPaymentDateCalendarOpenIndex(index)}
                                                                         className="mt-1 cursor-pointer pr-10"
                                                                     />
@@ -4311,6 +4353,21 @@ const EditTask = () => {
                                                             placeholder="Enter amount"
                                                             className="mt-1"
                                                         />
+                                                    </div>
+                                                    <div>
+                                                        <Label>Status</Label>
+                                                        <Select
+                                                            value={phase.status || 'pending'}
+                                                            onValueChange={(value) => handlePaymentStageChange(index, 'status', value)}
+                                                        >
+                                                            <SelectTrigger className="mt-1">
+                                                                <SelectValue placeholder="Select status" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="pending">Pending</SelectItem>
+                                                                <SelectItem value="paid">Paid</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
                                                     </div>
                                                 </div>
                                                 {/* Invoice Number Display */}

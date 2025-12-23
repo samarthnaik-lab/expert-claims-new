@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Shield, FileText, User, Calendar, Phone, Mail, MapPin, DollarSign, Clock, CheckCircle, AlertCircle, XCircle, MessageCircle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { formatDateDDMMYYYY } from '@/lib/utils';
 
 
 
@@ -680,7 +681,7 @@ const CustomerClaimDetail = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Start Date</label>
-                    <p className="text-lg font-semibold text-gray-900">{claim.start_date ? new Date(claim.start_date).toLocaleDateString() : 'N/A'}</p>
+                    <p className="text-lg font-semibold text-gray-900">{claim.start_date ? formatDateDDMMYYYY(claim.start_date) : 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Assign Date</label>
@@ -888,11 +889,11 @@ const CustomerClaimDetail = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Start Date</label>
-                  <p className="text-lg font-semibold text-gray-900">{claim.start_date ? new Date(claim.start_date).toLocaleDateString() : 'N/A'}</p>
+                  <p className="text-lg font-semibold text-gray-900">{claim.start_date ? formatDateDDMMYYYY(claim.start_date) : 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Last Updated</label>
-                  <p className="text-lg font-semibold text-gray-900">{claim.last_updated ? new Date(claim.last_updated).toLocaleDateString() : 'N/A'}</p>
+                  <p className="text-lg font-semibold text-gray-900">{claim.last_updated ? formatDateDDMMYYYY(claim.last_updated) : 'N/A'}</p>
                 </div>
               </CardContent>
             </Card>

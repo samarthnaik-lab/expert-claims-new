@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Calendar, User, FileText, Clock, ZoomIn, ZoomOut, RotateCcw, XCircle } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { formatDateDDMMYYYY } from "@/lib/utils";
 
 interface BacklogDetail {
   status: any;
@@ -565,15 +566,21 @@ const PartnerBacklogDetail = () => {
                           : "No role found"}
                       </span>
 
-                        <span>{new Date(comment.created_time).toLocaleString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                            hour12: true,
-                          })}</span>
+                        <span>{(() => {
+                            try {
+                              const date = new Date(comment.created_time);
+                              if (isNaN(date.getTime())) return 'N/A';
+                              const dateStr = formatDateDDMMYYYY(date);
+                              const hours = String(date.getHours()).padStart(2, '0');
+                              const minutes = String(date.getMinutes()).padStart(2, '0');
+                              const seconds = String(date.getSeconds()).padStart(2, '0');
+                              const ampm = date.getHours() >= 12 ? 'pm' : 'am';
+                              const hours12 = date.getHours() % 12 || 12;
+                              return `${dateStr}, ${String(hours12).padStart(2, '0')}:${minutes}:${seconds} ${ampm}`;
+                            } catch {
+                              return 'N/A';
+                            }
+                          })()}</span>
                       </div>
                     </div>
                   ))}

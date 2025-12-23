@@ -16,6 +16,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -35,7 +37,7 @@ import {
   LogOut,
   RefreshCw,
   Eye,
-  Calendar,
+  Calendar as CalendarIcon,
   Phone,
   Mail,
   Filter,
@@ -45,6 +47,7 @@ import {
   X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatDateDDMMYYYY } from "@/lib/utils";
 import { ReferralService, ReferralCase } from "@/services/referralService";
 import {
   PartnerStatusService,
@@ -110,6 +113,8 @@ const PartnerDashboard = () => {
   const [backlogStatusFilter, setBacklogStatusFilter] = useState("all");
   const [backlogStartDate, setBacklogStartDate] = useState("");
   const [backlogEndDate, setBacklogEndDate] = useState("");
+  const [fromDateCalendarOpen, setFromDateCalendarOpen] = useState(false);
+  const [toDateCalendarOpen, setToDateCalendarOpen] = useState(false);
   const [currentPageBacklog, setCurrentPageBacklog] = useState(1);
   const [pageSizeBacklog, setPageSizeBacklog] = useState(10);
 
@@ -1521,9 +1526,10 @@ const PartnerDashboard = () => {
                               </Badge>
                             </td>
                             <td className="p-4 text-sm text-gray-600">
-                              {referral.referral_date ||
-                                (referral.created_time
-                                  ? referral.created_time.split("T")[0]
+                              {referral.referral_date
+                                ? formatDateDDMMYYYY(referral.referral_date)
+                                : (referral.created_time
+                                  ? formatDateDDMMYYYY(referral.created_time)
                                   : "Not Assigned")}
                             </td>
                             <td className="p-4 text-sm text-gray-600">
@@ -1724,23 +1730,135 @@ const PartnerDashboard = () => {
                       <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                         From Date:
                       </label>
-                      <Input
-                        type="date"
-                        value={backlogStartDate}
-                        onChange={(e) => setBacklogStartDate(e.target.value)}
-                        className="border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:ring-purple-500 transition-all duration-300"
-                      />
+                      <Popover open={fromDateCalendarOpen} onOpenChange={setFromDateCalendarOpen}>
+                        <PopoverTrigger asChild>
+                          <div className="relative">
+                            <Input
+                              type="text"
+                              readOnly
+                              value={backlogStartDate ? (() => {
+                                try {
+                                  const dateStr = backlogStartDate;
+                                  if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                    const [year, month, day] = dateStr.split('-').map(Number);
+                                    return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+                                  }
+                                  const date = new Date(dateStr);
+                                  if (!isNaN(date.getTime())) {
+                                    const day = String(date.getDate()).padStart(2, '0');
+                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                    const year = date.getFullYear();
+                                    return `${day}/${month}/${year}`;
+                                  }
+                                  return '';
+                                } catch {
+                                  return '';
+                                }
+                              })() : ''}
+                              placeholder="DD/MM/YYYY"
+                              onClick={() => setFromDateCalendarOpen(true)}
+                              className="border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:ring-purple-500 transition-all duration-300 cursor-pointer pr-10 w-[140px]"
+                            />
+                            <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                          </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={backlogStartDate ? (() => {
+                              try {
+                                const dateStr = backlogStartDate;
+                                if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                  const [year, month, day] = dateStr.split('-').map(Number);
+                                  return new Date(year, month - 1, day);
+                                }
+                                const date = new Date(dateStr);
+                                return !isNaN(date.getTime()) ? date : undefined;
+                              } catch {
+                                return undefined;
+                              }
+                            })() : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const formattedDate = `${year}-${month}-${day}`;
+                                setBacklogStartDate(formattedDate);
+                                setFromDateCalendarOpen(false);
+                              }
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="flex items-center space-x-2">
                       <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                         To Date:
                       </label>
-                      <Input
-                        type="date"
-                        value={backlogEndDate}
-                        onChange={(e) => setBacklogEndDate(e.target.value)}
-                        className="border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:ring-purple-500 transition-all duration-300"
-                      />
+                      <Popover open={toDateCalendarOpen} onOpenChange={setToDateCalendarOpen}>
+                        <PopoverTrigger asChild>
+                          <div className="relative">
+                            <Input
+                              type="text"
+                              readOnly
+                              value={backlogEndDate ? (() => {
+                                try {
+                                  const dateStr = backlogEndDate;
+                                  if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                    const [year, month, day] = dateStr.split('-').map(Number);
+                                    return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+                                  }
+                                  const date = new Date(dateStr);
+                                  if (!isNaN(date.getTime())) {
+                                    const day = String(date.getDate()).padStart(2, '0');
+                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                    const year = date.getFullYear();
+                                    return `${day}/${month}/${year}`;
+                                  }
+                                  return '';
+                                } catch {
+                                  return '';
+                                }
+                              })() : ''}
+                              placeholder="DD/MM/YYYY"
+                              onClick={() => setToDateCalendarOpen(true)}
+                              className="border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:ring-purple-500 transition-all duration-300 cursor-pointer pr-10 w-[140px]"
+                            />
+                            <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                          </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={backlogEndDate ? (() => {
+                              try {
+                                const dateStr = backlogEndDate;
+                                if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                  const [year, month, day] = dateStr.split('-').map(Number);
+                                  return new Date(year, month - 1, day);
+                                }
+                                const date = new Date(dateStr);
+                                return !isNaN(date.getTime()) ? date : undefined;
+                              } catch {
+                                return undefined;
+                              }
+                            })() : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const formattedDate = `${year}-${month}-${day}`;
+                                setBacklogEndDate(formattedDate);
+                                setToDateCalendarOpen(false);
+                              }
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <Button
                       variant="outline"
@@ -1907,11 +2025,7 @@ const PartnerDashboard = () => {
                               </td>
                               <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 whitespace-nowrap">
                                 {item.backlog_referral_date
-                                  ? new Date(item.backlog_referral_date).toLocaleDateString("en-GB", {
-                                      day: "2-digit",
-                                      month: "short",
-                                      year: "2-digit",
-                                    })
+                                  ? formatDateDDMMYYYY(item.backlog_referral_date)
                                   : "N/A"}
                               </td>
 
@@ -2244,8 +2358,8 @@ const PartnerDashboard = () => {
                                 </Badge>
                               </div>
                             </td>
-                            <td className="p-4 text-center text-sm text-gray-600">
-                              {bonus.payment_date || "Not Paid Yet"}
+                            <td className="p-4 text-sm text-gray-600">
+                              {bonus.payment_date ? formatDateDDMMYYYY(bonus.payment_date) : "Not Paid Yet"}
                             </td>
                             <td className="p-4">
                               {/* <div className="flex items-center space-x-2">

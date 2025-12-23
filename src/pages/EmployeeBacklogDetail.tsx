@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, User, RefreshCw, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { EmployeeService } from '@/services/employeeService';
+import { formatDateDDMMYYYY } from '@/lib/utils';
 
 // User interface for dropdown
 interface User {
@@ -352,13 +353,13 @@ const EmployeeBacklogDetail = () => {
                     <div>
                       <Label className="text-sm font-medium text-gray-500">Created Time</Label>
                       <p className="text-gray-700">
-                        {backlogDetail.created_time ? new Date(backlogDetail.created_time).toLocaleString() : "N/A"}
+                        {backlogDetail.created_time ? formatDateDDMMYYYY(backlogDetail.created_time) : "N/A"}
                       </p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-gray-500">Updated Time</Label>
                       <p className="text-gray-700">
-                        {backlogDetail.updated_time ? new Date(backlogDetail.updated_time).toLocaleString() : "N/A"}
+                        {backlogDetail.updated_time ? formatDateDDMMYYYY(backlogDetail.updated_time) : "N/A"}
                       </p>
                     </div>
                   </CardContent>

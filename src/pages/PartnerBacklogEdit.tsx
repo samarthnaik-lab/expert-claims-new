@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { formatDateDDMMYYYY } from "@/lib/utils";
 
 interface BacklogDetail {
   status: any;
@@ -365,7 +366,7 @@ const PartnerBacklogEdit = () => {
       console.log('Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
-        const errorText = await response.text();
+          const errorText = await response.text();
         console.error('API error response:', errorText);
         toast({
           title: "Error",
@@ -455,7 +456,7 @@ const PartnerBacklogEdit = () => {
         });
         return;
       }
-      
+
       // Use content type from header or blob, or detect from magic bytes
       let detectedType = contentType || blob.type;
       console.log('Initial detected type:', detectedType);
@@ -511,20 +512,20 @@ const PartnerBacklogEdit = () => {
       }
       
       // Create blob URL
-      const fileUrl = URL.createObjectURL(blob);
-      console.log('Created blob URL:', fileUrl);
+        const fileUrl = URL.createObjectURL(blob);
+        console.log('Created blob URL:', fileUrl);
       console.log('Final document type:', detectedType);
-      
-      // Set document URL and type for modal display
-      setDocumentUrl(fileUrl);
+        
+        // Set document URL and type for modal display
+        setDocumentUrl(fileUrl);
       setDocumentType(detectedType || 'application/pdf');
-      setShowDocumentModal(true);
-      
-      toast({
-        title: "Success",
-        description: "Document opened successfully",
-      });
-      
+        setShowDocumentModal(true);
+        
+        toast({
+          title: "Success",
+          description: "Document opened successfully",
+        });
+        
     } catch (error) {
       console.error('Error viewing document:', error);
       toast({
@@ -1671,15 +1672,21 @@ const PartnerBacklogEdit = () => {
                       </span>
 
 
-                        <span>{new Date(comment.created_time).toLocaleString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                            hour12: true,
-                          })}</span>
+                        <span>{(() => {
+                            try {
+                              const date = new Date(comment.created_time);
+                              if (isNaN(date.getTime())) return 'N/A';
+                              const dateStr = formatDateDDMMYYYY(date);
+                              const hours = String(date.getHours()).padStart(2, '0');
+                              const minutes = String(date.getMinutes()).padStart(2, '0');
+                              const seconds = String(date.getSeconds()).padStart(2, '0');
+                              const ampm = date.getHours() >= 12 ? 'pm' : 'am';
+                              const hours12 = date.getHours() % 12 || 12;
+                              return `${dateStr}, ${String(hours12).padStart(2, '0')}:${minutes}:${seconds} ${ampm}`;
+                            } catch {
+                              return 'N/A';
+                            }
+                          })()}</span>
                       </div>
                     </div>
                   ))}
