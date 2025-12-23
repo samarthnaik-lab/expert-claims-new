@@ -458,10 +458,27 @@ const Register = () => {
         });
         navigate('/admin-dashboard');
       } else {
-        const message = (responseBody && (responseBody.message || responseBody.error || JSON.stringify(responseBody))) || 'Failed to create user';
+        // Extract message from backend response
+        let errorMessage = 'Failed to create user';
+        
+        if (responseBody) {
+          // Handle array response (backend might return array with error object)
+          if (Array.isArray(responseBody) && responseBody.length > 0) {
+            errorMessage = responseBody[0].message || responseBody[0].error || errorMessage;
+          } 
+          // Handle object response
+          else if (typeof responseBody === 'object' && responseBody.message) {
+            errorMessage = responseBody.message;
+          }
+          // Handle string response
+          else if (typeof responseBody === 'string') {
+            errorMessage = responseBody;
+          }
+        }
+        
         toast({ 
           title: "Error", 
-          description: message, 
+          description: errorMessage, 
           variant: "destructive" 
         });
       }

@@ -683,7 +683,7 @@ const CustomerClaimDetail = () => {
                     <p className="text-lg font-semibold text-gray-900">{claim.start_date ? new Date(claim.start_date).toLocaleDateString() : 'N/A'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Due Date</label>
+                    <label className="text-sm font-medium text-gray-500">Assign Date</label>
                     <p className="text-lg font-semibold text-gray-900">{claim.due_date ? new Date(claim.due_date).toLocaleDateString() : 'N/A'}</p>
                   </div>
                 </div>

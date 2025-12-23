@@ -186,7 +186,7 @@ const PartnerClaimDetail = () => {
                     <p className="text-lg font-semibold text-gray-900">{claim.priority || 'Not Set'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Due Date</label>
+                    <label className="text-sm font-medium text-gray-500">Assign Date</label>
                     <p className="text-lg font-semibold text-gray-900">{claim.due_date || 'Not Set'}</p>
                   </div>
                   <div>

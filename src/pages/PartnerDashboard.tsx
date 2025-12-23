@@ -1139,7 +1139,7 @@ const PartnerDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-emerald-50">
       {/* Modern Header */}
       <header className="bg-primary-500 backdrop-blur-md shadow-sm border-b border-primary-600 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-[80%] mx-auto px-2 sm:px-3 lg:px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-lg">
@@ -1198,7 +1198,7 @@ const PartnerDashboard = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-[80%] mx-auto px-2 sm:px-3 lg:px-4 py-8">
         {/* Welcome Section */}
         <div className="mb-8 animate-fade-in ">
           <h2 className="text-3xl font-bold text-gray-900 mb-6">
@@ -1438,25 +1438,25 @@ const PartnerDashboard = () => {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Case ID
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Customer
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Case Type
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Status
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                          Task Referral Date
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Case Value
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Actions
                           </th>
                         </tr>
@@ -1792,7 +1792,7 @@ const PartnerDashboard = () => {
                             sortColumn={backlogSortConfig?.column || ''}
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                           />
                           <SortableTableHeader
                             column="case_summary"
@@ -1801,7 +1801,7 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]"
                           />
                           <SortableTableHeader
                             column="case_description"
@@ -1810,7 +1810,7 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[150px]"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[150px]"
                           />
                           <SortableTableHeader
                             column="backlog_referral_date"
@@ -1819,7 +1819,7 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                           />
                           <SortableTableHeader
                             column="status"
@@ -1828,12 +1828,12 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                           />
-                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[120px]">
+                          <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[120px]">
                             Assigned Expert
                           </th>
-                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[180px]">
+                          <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[180px]">
                             Actions
                           </th>
                         </tr>
@@ -1887,7 +1887,7 @@ const PartnerDashboard = () => {
                               key={item.backlog_id || index}
                               className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors duration-200"
                             >
-                              <td className="px-2 sm:px-3 py-3">
+                              <td className="px-2 sm:px-3 py-3 text-center">
                                 <span 
                                   className="font-mono text-xs sm:text-sm text-blue-600 hover:text-blue-800 cursor-pointer break-words"
                                   style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
@@ -1897,15 +1897,15 @@ const PartnerDashboard = () => {
                                   {item.backlog_id}
                                 </span>
                               </td>
-                              <td className="px-2 sm:px-3 py-3">
+                              <td className="px-2 sm:px-3 py-3 text-center">
                                 <div className="font-medium text-xs sm:text-sm text-gray-900 break-words max-w-[120px] sm:max-w-none" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.case_summary || "No Summary"}>
                                   {item.case_summary || "No Summary"}
                                 </div>
                               </td>
-                              <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-700 break-words hidden lg:table-cell max-w-[150px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.case_description || "No Description"}>
+                              <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-700 break-words hidden lg:table-cell max-w-[150px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.case_description || "No Description"}>
                                 {item.case_description || "No Description"}
                               </td>
-                              <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+                              <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 whitespace-nowrap">
                                 {item.backlog_referral_date
                                   ? new Date(item.backlog_referral_date).toLocaleDateString("en-GB", {
                                       day: "2-digit",
@@ -1915,7 +1915,7 @@ const PartnerDashboard = () => {
                                   : "N/A"}
                               </td>
 
-                              <td className="px-2 sm:px-3 py-3 whitespace-nowrap">
+                              <td className="px-2 sm:px-3 py-3 text-center whitespace-nowrap">
                               <Badge
                                 className={`${
                                   item.status?.toLowerCase() === "new"
@@ -1930,11 +1930,11 @@ const PartnerDashboard = () => {
                                   {item.status ? item.status : "N/A"}
                                 </Badge>
                               </td>
-                              <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.assigned_consultant_name || 'Not Assigned'}>
+                              <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.assigned_consultant_name || 'Not Assigned'}>
                                 {item.assigned_consultant_name ? item.assigned_consultant_name : 'Not Assigned'}
                               </td>
-                              <td className="px-2 sm:px-3 py-3 whitespace-nowrap min-w-[180px]">
-                                <div className="flex items-center gap-1 sm:gap-2">
+                              <td className="px-2 sm:px-3 py-3 text-center whitespace-nowrap min-w-[180px]">
+                                <div className="flex items-center justify-center gap-1 sm:gap-2">
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -2193,19 +2193,19 @@ const PartnerDashboard = () => {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Case ID
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Customer
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Total Bonus Amount
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Bonus Status
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Payment Date
                           </th>
                           {/* <th className="text-left p-4 font-semibold text-gray-700">Actions</th> */}
@@ -2219,22 +2219,22 @@ const PartnerDashboard = () => {
                               index % 2 === 0 ? "bg-white" : "bg-gray-50/30"
                             }`}
                           >
-                            <td className="p-4">
+                            <td className="p-4 text-center">
                               <span className="font-mono text-sm text-gray-900">
                                 {bonus.case_id}
                               </span>
                             </td>
-                            <td className="p-4 text-gray-700">
+                            <td className="p-4 text-center text-gray-700">
                               {bonus.customer_first_name || "Unknown"}{" "}
                               {bonus.customer_last_name || "Customer"}
                             </td>
-                            <td className="p-4">
+                            <td className="p-4 text-center">
                               <span className="font-semibold text-green-600">
                                 ₹{bonus.stage_bonus_amount.toLocaleString()}
                               </span>
                             </td>
-                            <td className="p-4">
-                              <div className="flex flex-col items-start space-y-1">
+                            <td className="p-4 text-center">
+                              <div className="flex flex-col items-center space-y-1">
                                 <Badge
                                   className={`${getBonusStatusColor(
                                     bonusStatus || "unknown"
@@ -2244,7 +2244,7 @@ const PartnerDashboard = () => {
                                 </Badge>
                               </div>
                             </td>
-                            <td className="p-4 text-sm text-gray-600">
+                            <td className="p-4 text-center text-sm text-gray-600">
                               {bonus.payment_date || "Not Paid Yet"}
                             </td>
                             <td className="p-4">

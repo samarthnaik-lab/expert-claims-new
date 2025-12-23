@@ -2233,7 +2233,7 @@ const TaskDetail = () => {
                              <div className="mt-2 space-y-1">
                                {phase.due_date && (
                                  <p className="text-xs text-gray-600">
-                                   Due Date: {new Date(phase.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                   Assign Date: {new Date(phase.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                  </p>
                                )}
                                {phase.payment_date && (

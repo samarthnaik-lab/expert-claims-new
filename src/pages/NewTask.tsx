@@ -847,7 +847,7 @@ const NewTask = () => {
     if (!newPayment.phase || !newPayment.due_date) {
       toast({
         title: "Error",
-        description: "Please fill all required fields (Phase and Due Date)",
+        description: "Please fill all required fields (Phase and Assign Date)",
         variant: "destructive",
       });
       return;
