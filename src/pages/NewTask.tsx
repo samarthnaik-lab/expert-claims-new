@@ -2037,7 +2037,7 @@ const NewTask = () => {
       if (!formData.due_date) {
         toast({
           title: "Error",
-          description: "Due date is required",
+          description: "Assign date is required",
           variant: "destructive",
         });
         setIsSubmitting(false);

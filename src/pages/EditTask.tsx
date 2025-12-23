@@ -2227,10 +2227,107 @@ const EditTask = () => {
         setStakeholders(prev => prev.filter(stakeholder => stakeholder.id !== id));
     };
 
-    const addComment = () => {
-        if (newComment.text.trim()) {
-            setComments(prev => [...prev, { ...newComment, id: Date.now().toString() }]);
-            setNewComment({ text: '', isInternal: false });
+    const addComment = async () => {
+        if (!newComment.text.trim()) {
+            toast({
+                title: "Error",
+                description: "Please enter a comment",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        try {
+            // Get user details from localStorage
+            const userDetailsStr = localStorage.getItem('expertclaims_user_details');
+            if (!userDetailsStr) {
+                toast({
+                    title: "Error",
+                    description: "User details not found. Please login again.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            const userDetailsData = JSON.parse(userDetailsStr);
+            // Handle array response - get the first object if it's an array
+            const userDetails = Array.isArray(userDetailsData) ? userDetailsData[0] : userDetailsData;
+            
+            const userId = userDetails.userid || userDetails.id;
+            const sessionId = userDetails.sessionid;
+
+            if (!userId || !sessionId) {
+                toast({
+                    title: "Error",
+                    description: "User ID or session not found. Please login again.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            // Get case_id from taskId or currentTaskData
+            const caseId = taskId || currentTaskData?.case_id;
+            if (!caseId) {
+                toast({
+                    title: "Error",
+                    description: "Case ID not found.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            console.log('Adding comment:', { case_id: caseId, user_id: userId, comment: newComment.text });
+
+            // Supabase anon key
+            const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o";
+
+            // Call assignee_comment_insert API
+            const response = await fetch('http://localhost:3000/support/assignee_comment_insert', {
+                method: 'POST',
+                headers: {
+                    'accept': '/',
+                    'content-type': 'application/json',
+                    'apikey': supabaseAnonKey,
+                    'authorization': `Bearer ${supabaseAnonKey}`,
+                    'session_id': sessionId
+                },
+                body: JSON.stringify({
+                    case_id: caseId.toString(),
+                    user_id: userId,
+                    comment: newComment.text.trim()
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Comment added successfully:', result);
+                
+                // Add comment to local state for immediate display
+                setComments(prev => [...prev, { ...newComment, id: Date.now().toString() }]);
+                
+                // Clear the comment input and reset checkbox
+                setNewComment({ text: '', isInternal: false });
+                
+                toast({
+                    title: "Success",
+                    description: "Comment added successfully",
+                });
+            } else {
+                const errorText = await response.text();
+                console.error('Failed to add comment:', response.status, errorText);
+                toast({
+                    title: "Error",
+                    description: "Failed to add comment. Please try again.",
+                    variant: "destructive",
+                });
+            }
+        } catch (error) {
+            console.error('Error adding comment:', error);
+            toast({
+                title: "Error",
+                description: "Failed to add comment. Please try again.",
+                variant: "destructive",
+            });
         }
     };
 
@@ -2983,9 +3080,9 @@ const EditTask = () => {
             case_id: currentTaskData?.case_id?(currentTaskData?.case_id):null,
             case_description: formData.description,
             service_amount: formData.service_amount ? parseFloat(formData.service_amount) : null,
-            claims_amount: formData.claims_amount && formData.claims_amount.trim() !== '' 
+            claim_amount: formData.claims_amount && formData.claims_amount.trim() !== '' 
                 ? parseFloat(formData.claims_amount) 
-                : null, // Always include claims_amount (null if empty)
+                : null, // Always include claim_amount (null if empty) - backend expects claim_amount not claims_amount
             due_date: formData.due_date,
             partner_id: formData.partner_id,
             case_type: caseTypeId,
@@ -3008,8 +3105,8 @@ const EditTask = () => {
         }
 
             console.log('Task update data prepared:', taskData);
-        console.log('Claims amount value:', taskData.claims_amount);
-        console.log('Claims amount type:', typeof taskData.claims_amount);
+        console.log('Claim amount value:', taskData.claim_amount);
+        console.log('Claim amount type:', typeof taskData.claim_amount);
         console.log('FormData claims_amount:', formData.claims_amount);
         console.log('Full taskData JSON:', JSON.stringify(taskData, null, 2));
 
@@ -3984,13 +4081,33 @@ const EditTask = () => {
                         
                         <div className="space-y-4">
                             <h3 className="text-lg font-semibold border-b pb-2">Comments</h3>
-<Label>Add Comment</Label>
-        <Textarea
-            placeholder="Enter your comment here..."
-            value={newComment.text}
-            onChange={(e) => setNewComment({ ...newComment, text: e.target.value })}
-            rows={3}
-        />
+                            <Label>Add Comment</Label>
+                            <Textarea
+                                placeholder="Enter your comment here..."
+                                value={newComment.text}
+                                onChange={(e) => setNewComment({ ...newComment, text: e.target.value })}
+                                rows={3}
+                            />
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    id="internal-comment-new"
+                                    checked={newComment.isInternal}
+                                    onChange={(e) => setNewComment({ ...newComment, isInternal: e.target.checked })}
+                                    className="rounded border-gray-300"
+                                />
+                                <Label htmlFor="internal-comment-new" className="text-sm font-normal cursor-pointer">
+                                    Internal Comment
+                                </Label>
+                            </div>
+                            <Button
+                                type="button"
+                                onClick={addComment}
+                                disabled={!newComment.text.trim()}
+                                className="bg-primary-500 hover:bg-primary-600 text-white"
+                            >
+                                Add Comment
+                            </Button>
                             {/* Existing Comments - Editable */}
                             {comments.length > 0 && (
                                 <div className="space-y-4">

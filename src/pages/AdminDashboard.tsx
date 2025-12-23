@@ -2658,11 +2658,11 @@ Created Time: ${report.created_time}
                           onSort={handleTaskSort}
                           className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                         />
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Task Name</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>Task Name</th>
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[100px]">Assignee</th>
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[120px]">Customer</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Due Date</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider break-words max-w-[120px]">Status</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Assign Date</th>
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[160px]">Actions</th>
                       </tr>
                     </thead>
@@ -2676,7 +2676,7 @@ Created Time: ${report.created_time}
                           >
                             {task.task_id}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-900 break-words max-w-[120px] sm:max-w-none" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.title}>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-900 break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.title}>
                             {task.title}
                           </td>
                           <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.assigned_employee_name || 'Unassigned'}>
@@ -2685,9 +2685,9 @@ Created Time: ${report.created_time}
                           <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.customer_profile?.full_name || 'N/A'}>
                             {task.customer_profile?.full_name || 'N/A'}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap">
+                          <td className="px-2 sm:px-3 py-3 break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.current_status}>
                             <Badge className={getStatusColor(task.current_status)}>
-                              <span className="text-xs">{task.current_status}</span>
+                              <span className="text-xs break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{task.current_status}</span>
                             </Badge>
                           </td>
                           <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
@@ -3722,7 +3722,7 @@ Created Time: ${report.created_time}
                         />
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assign Date</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
