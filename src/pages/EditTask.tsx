@@ -1981,34 +1981,63 @@ const EditTask = () => {
             console.log('Response headers:', response.headers);
             
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('API Error:', response.status, errorText);
+                console.error('Failed to call view webhook:', response.status, response.statusText);
+                
+                // Try to get error details for logging
+                let userFriendlyMessage = "Unable to view document. Please try again.";
+                try {
+                    const errorText = await response.text();
+                    console.error('Error response body:', errorText);
+                    
+                    // Try to parse JSON error response
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        if (errorData.error) {
+                            // Show user-friendly message based on error type
+                            if (errorData.error.includes("File not found") || errorData.error.includes("not found")) {
+                                userFriendlyMessage = "Document not found.";
+                            } else if (errorData.error.includes("Invalid session")) {
+                                userFriendlyMessage = "Session expired. Please log in again.";
+                            } else {
+                                userFriendlyMessage = "Unable to view document. Please try again.";
+                            }
+                        }
+                    } catch (parseError) {
+                        // If not JSON, use default message
+                        console.error('Error is not JSON format');
+                    }
+                } catch (e) {
+                    console.error('Could not parse error response');
+                }
+                
                 toast({
                     title: "Error",
-                    description: `Failed to get document view: ${response.status} ${response.statusText}`,
+                    description: userFriendlyMessage,
                     variant: "destructive",
                 });
                 return;
             }
 
-            // Check the content type to determine response format
-            const contentType = response.headers.get('content-type');
-            console.log('Content-Type:', contentType);
-
-            // Clone the response so we can read it multiple times
-            const responseClone = response.clone();
-
-            // Handle JSON response (contains URL or data)
-            if (contentType && contentType.includes('application/json')) {
-                const data = await response.json();
-                console.log('JSON response:', data);
+            // Since the API returns binary image data (as shown in Postman), handle it directly
+            console.log('Response received, processing binary data...');
+            
+            try {
+                // Get the response as a blob (binary data)
+                const blob = await response.blob();
+                console.log('Blob created, size:', blob.size, 'bytes');
+                console.log('Blob type:', blob.type);
                 
-                // Extract URL from response (check multiple possible field names)
-                const url = data.url || data.document_url || data.image_url || data.file_url || data.data?.url;
+                // Create a URL for the blob
+                const fileUrl = URL.createObjectURL(blob);
+                console.log('Created blob URL:', fileUrl);
                 
-                if (url) {
-                    setDocumentUrl(url);
-                    setDocumentType('url');
+                // Determine file type based on blob type or try to detect from content
+                const blobType = blob.type;
+                console.log('Detected blob type:', blobType);
+                
+                // Set document URL and type for modal display
+                setDocumentUrl(fileUrl);
+                setDocumentType(blobType || 'unknown');
                 setShowDocumentModal(true);
                 setZoomLevel(100);
                 setPanX(0);
@@ -2016,154 +2045,40 @@ const EditTask = () => {
                 
                 toast({
                     title: "Success",
-                    description: "Document loaded successfully",
+                    description: "Document opened successfully",
                 });
-                } else {
-                    toast({
-                        title: "Error",
-                        description: "No document URL found in response",
-                        variant: "destructive",
-                    });
-                }
-            } 
-            // Handle binary/blob response or text response
-            else {
+                
+                // Clean up the blob URL after some time to free memory
+                setTimeout(() => {
+                    URL.revokeObjectURL(fileUrl);
+                    console.log('Blob URL cleaned up');
+                }, 30000); // 30 seconds
+                
+            } catch (blobError) {
+                console.error('Error creating blob from response:', blobError);
+                
+                // Fallback: try to get response as text first
                 try {
-                    // First, read as text to check if it's a simple error response or SVG
-                    const responseText = await response.text();
-                    console.log('Response as text (first 500 chars):', responseText.substring(0, 500));
-                    console.log('Response length:', responseText.length);
+                    const textResponse = await response.text();
+                    console.log('Response as text (first 200 chars):', textResponse.substring(0, 200));
                     
-                    // If response is just a number or very short text, it's likely an error
-                    if (responseText.length < 50 && /^\d+$/.test(responseText.trim())) {
-                        console.error('API returned numeric response (possibly error):', responseText);
-                        toast({
-                            title: "Error",
-                            description: `Document not available. The API returned: ${responseText}. Please check if the document exists.`,
-                            variant: "destructive",
-                        });
-                        return;
-                    }
-                    
-                    // Check if response is SVG XML
-                    const isSVG = responseText.trim().startsWith('<svg') || responseText.trim().startsWith('<?xml') && responseText.includes('<svg');
-                    
-                    // If it looks like a URL, use it directly
-                    if (responseText.trim().startsWith('http')) {
-                        console.log('Opening URL from response:', responseText.trim());
-                        setDocumentUrl(responseText.trim());
+                    // If it looks like a URL, try to open it
+                    if (textResponse.startsWith('http')) {
+                        console.log('Opening URL from response:', textResponse);
+                        setDocumentUrl(textResponse);
                         setDocumentType('url');
                         setShowDocumentModal(true);
                         setZoomLevel(100);
                         setPanX(0);
                         setPanY(0);
-                        
-                        toast({
-                            title: "Success",
-                            description: "Document loaded successfully",
-                        });
-                        return;
+                    } else {
+                        throw new Error('Response is not a URL');
                     }
-                    
-                    // Handle SVG XML response
-                    if (isSVG || contentType?.includes('image/svg+xml') || contentType?.includes('text/xml')) {
-                        console.log('Detected SVG content, creating blob URL');
-                        // Create blob from SVG text
-                        const svgBlob = new Blob([responseText], { type: 'image/svg+xml' });
-                        const svgUrl = URL.createObjectURL(svgBlob);
-                        setDocumentUrl(svgUrl);
-                        setDocumentType('image/svg+xml');
-                        setShowDocumentModal(true);
-                        setZoomLevel(100);
-                        setPanX(0);
-                        setPanY(0);
-                        
-                        toast({
-                            title: "Success",
-                            description: "Document loaded successfully",
-                        });
-                        return;
-                    }
-                    
-                    // If response is text but not a URL or SVG, try to convert to blob
-                    // Use the cloned response to get as blob
-                    const blob = await responseClone.blob();
-                    console.log('Blob created, size:', blob.size, 'bytes');
-                    console.log('Blob type:', blob.type);
-                    
-                    // Check if blob is too small (likely not valid image data)
-                    if (blob.size < 100) {
-                        console.error('Blob too small, likely not valid image data');
+                } catch (textError) {
+                    console.error('Error handling response as text:', textError);
                     toast({
                         title: "Error",
-                            description: `Document not available. Response size: ${blob.size} bytes. Please check if the document exists.`,
-                        variant: "destructive",
-                    });
-                        return;
-                    }
-                    
-                    // Create object URL from blob
-                    const objectUrl = URL.createObjectURL(blob);
-                    console.log('Created blob URL:', objectUrl);
-                    
-                    // Determine document type from content-type header or blob type
-                    let docType = contentType || blob.type || 'application/octet-stream';
-                    
-                    if (contentType?.includes('image/')) {
-                        docType = contentType;
-                    } else if (contentType?.includes('application/pdf')) {
-                        docType = 'application/pdf';
-                    } else if (!blob.type && blob.size > 0) {
-                        // Try to detect file type from blob content
-                        // Check first bytes for file signatures
-                        const arrayBuffer = await blob.arrayBuffer();
-                        const uint8Array = new Uint8Array(arrayBuffer);
-                        
-                        // JPEG: FF D8 FF
-                        if (uint8Array[0] === 0xFF && uint8Array[1] === 0xD8 && uint8Array[2] === 0xFF) {
-                            docType = 'image/jpeg';
-                        }
-                        // PNG: 89 50 4E 47
-                        else if (uint8Array[0] === 0x89 && uint8Array[1] === 0x50 && uint8Array[2] === 0x4E && uint8Array[3] === 0x47) {
-                            docType = 'image/png';
-                        }
-                        // PDF: 25 50 44 46 (%PDF)
-                        else if (uint8Array[0] === 0x25 && uint8Array[1] === 0x50 && uint8Array[2] === 0x44 && uint8Array[3] === 0x46) {
-                            docType = 'application/pdf';
-                        }
-                        // GIF: 47 49 46 38 (GIF8)
-                        else if (uint8Array[0] === 0x47 && uint8Array[1] === 0x49 && uint8Array[2] === 0x46 && uint8Array[3] === 0x38) {
-                            docType = 'image/gif';
-                        }
-                        // WebP: Check for RIFF...WEBP
-                        else if (uint8Array[0] === 0x52 && uint8Array[1] === 0x49 && uint8Array[2] === 0x46 && uint8Array[3] === 0x46) {
-                            // Check further for WEBP signature
-                            const textDecoder = new TextDecoder();
-                            const header = textDecoder.decode(uint8Array.slice(0, 12));
-                            if (header.includes('WEBP')) {
-                                docType = 'image/webp';
-                            }
-                        }
-                    }
-                    
-                    // Set document URL and type
-                    setDocumentUrl(objectUrl);
-                    setDocumentType(docType);
-                    setShowDocumentModal(true);
-                    setZoomLevel(100);
-                    setPanX(0);
-                    setPanY(0);
-                    
-                    toast({
-                        title: "Success",
-                        description: "Document opened successfully",
-                    });
-                    
-                } catch (blobError) {
-                    console.error('Error handling response as blob:', blobError);
-                    toast({
-                        title: "Error",
-                        description: "Failed to process document response. Please check if the document exists.",
+                        description: "Failed to process document response",
                         variant: "destructive",
                     });
                 }

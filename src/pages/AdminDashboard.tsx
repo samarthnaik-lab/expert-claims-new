@@ -2290,8 +2290,8 @@ Created Time: ${report.created_time}
         return;
       }
 
-      // Call the n8n webhook API to get document view URL
-      console.log('Calling n8n webhook for document view...');
+      // Call the support API to get document view URL for Gap Analysis
+      console.log('Calling support/partnerdocumentview API for document view...');
       console.log('Document ID:', documentId);
       
       const requestBody = {
@@ -2299,16 +2299,20 @@ Created Time: ${report.created_time}
       };
       console.log('Request body:', requestBody);
       
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/partnerdocumentview', {
+      // Supabase service role key
+      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+      
+      const response = await fetch('http://localhost:3000/support/partnerdocumentview', {
         method: 'POST',
         headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Content-Profile': 'expc',
+          'Accept': '*/*',
+          'Accept-Language': 'en-US,en;q=0.9',
           'Accept-Profile': 'expc',
-          'session_id': 'a9bfe0a4-1e6c-4c69-860f-ec50846a7da6',
-          'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc',
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${supabaseServiceRoleKey}`,
+          'Content-Profile': 'expc',
+          'Content-Type': 'application/json',
+          'jwt_token': jwtToken,
+          'session_id': sessionId
         },
         body: JSON.stringify(requestBody)
       });
@@ -2317,78 +2321,50 @@ Created Time: ${report.created_time}
       console.log('Response headers:', response.headers);
       
       if (!response.ok) {
-        console.error('Failed to call view webhook:', response.status, response.statusText);
-        
-        // Try to get error details
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        try {
-          const errorData = await response.text();
-          console.error('Error response body:', errorData);
-          errorMessage += ` - ${errorData}`;
-        } catch (e) {
-          console.error('Could not parse error response');
-        }
-        
         toast({
           title: "Error",
-          description: `Failed to get document view URL: ${errorMessage}`,
+          description: "Failed to get document view URL",
           variant: "destructive",
         });
         return;
       }
 
-      // Since the API returns binary image data (as shown in Postman), handle it directly
-      console.log('Response received, processing binary data...');
-      
-      try {
-        // Get the response as a blob (binary data)
-        const blob = await response.blob();
-        console.log('Blob created, size:', blob.size, 'bytes');
-        console.log('Blob type:', blob.type);
+      const contentType = response.headers.get('content-type');
+      console.log('Content-Type:', contentType);
+
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log('JSON response:', data);
         
-        // Create a URL for the blob
-        const fileUrl = URL.createObjectURL(blob);
-        console.log('Created blob URL:', fileUrl);
-        
-        // Determine file type based on blob type or try to detect from content
-        const blobType = blob.type;
-        console.log('Detected blob type:', blobType);
-        
-        // Set document URL and type for modal display
-        setDocumentUrl(fileUrl);
-        setDocumentType(blobType || 'unknown');
-        setShowDocumentModal(true);
-        
-        toast({
-          title: "Success",
-          description: "Document opened successfully",
-        });
-        
-        // Clean up the blob URL after some time to free memory
-        setTimeout(() => {
-          URL.revokeObjectURL(fileUrl);
-          console.log('Blob URL cleaned up');
-        }, 30000); // 30 seconds
-        
-      } catch (blobError) {
-        console.error('Error creating blob from response:', blobError);
-        
-        // Fallback: try to get response as text first
+        if (data.url || data.document_url) {
+          const url = data.url || data.document_url;
+          setDocumentUrl(url);
+          setDocumentType('url');
+          setShowDocumentModal(true);
+        } else {
+          toast({
+            title: "Error",
+            description: "No document URL in response",
+            variant: "destructive",
+          });
+        }
+      } else {
         try {
-          const textResponse = await response.text();
-          console.log('Response as text (first 200 chars):', textResponse.substring(0, 200));
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          setDocumentUrl(objectUrl);
           
-          // If it looks like a URL, try to open it
-          if (textResponse.startsWith('http')) {
-            console.log('Opening URL from response:', textResponse);
-            setDocumentUrl(textResponse);
-            setDocumentType('url');
-            setShowDocumentModal(true);
+          if (contentType?.includes('image/')) {
+            setDocumentType(contentType);
+          } else if (contentType?.includes('application/pdf')) {
+            setDocumentType('application/pdf');
           } else {
-            throw new Error('Response is not a URL');
+            setDocumentType('application/octet-stream');
           }
+          
+          setShowDocumentModal(true);
         } catch (textError) {
-          console.error('Error handling response as text:', textError);
+          console.error('Error handling response as blob:', textError);
           toast({
             title: "Error",
             description: "Failed to process document response",
