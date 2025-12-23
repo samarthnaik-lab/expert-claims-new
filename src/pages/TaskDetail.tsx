@@ -15,6 +15,7 @@ import { formatDateDDMMYYYY } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CaseService, CaseDetails } from '@/services/caseService';
+import { EmployeeService } from '@/services/employeeService';
 
 // Extended interface for the actual API response
 interface ExtendedCaseDetails extends CaseDetails {
@@ -251,6 +252,8 @@ const TaskDetail = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [viewingDocumentId, setViewingDocumentId] = useState<string | null>(null);
+  const [employees, setEmployees] = useState<{employee_id: number, employee_name: string}[]>([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
   
   // Document viewer modal states
   const [showDocumentModal, setShowDocumentModal] = useState(false);
@@ -357,6 +360,56 @@ const TaskDetail = () => {
       setDocuments(caseDetails.case_documents);
     }
   }, [caseDetails]);
+
+  // Fetch employees for user name mapping
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        setEmployeesLoading(true);
+        const sessionStr = localStorage.getItem('expertclaims_session');
+        if (sessionStr) {
+          const session = JSON.parse(sessionStr);
+          const sessionId = session.sessionId || '';
+          const jwtToken = session.jwtToken || '';
+          
+          if (sessionId && jwtToken) {
+            const employeeList = await EmployeeService.getEmployees(sessionId, jwtToken);
+            setEmployees(employeeList);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+      } finally {
+        setEmployeesLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
+  // Helper function to get user name from ID
+  const getUserName = (userId: string | number | null | undefined): string => {
+    if (!userId) return 'Unknown';
+    
+    const userIdStr = String(userId);
+    const userIdNum = parseInt(userIdStr);
+    
+    // Check if it's a number (employee_id)
+    if (!isNaN(userIdNum)) {
+      const employee = employees.find(emp => emp.employee_id === userIdNum);
+      if (employee) {
+        return employee.employee_name;
+      }
+    }
+    
+    // Check if caseDetails has employee info
+    if (caseDetails?.employees && caseDetails.employees.employee_id === userIdNum) {
+      return `${caseDetails.employees.first_name} ${caseDetails.employees.last_name}`.trim();
+    }
+    
+    // Fallback: check if history object has user info
+    return userIdStr;
+  };
 
   // Control body scroll when modal is open
   useEffect(() => {
@@ -2020,7 +2073,7 @@ const TaskDetail = () => {
                               Document ID: {doc.document_id}
                             </p>
                             <p className="text-xs text-gray-400">
-                              {doc.upload_time ? new Date(doc.upload_time).toLocaleString() : 'Upload time not available'}
+                              {doc.upload_time ? formatDateDDMMYYYY(doc.upload_time) : 'Upload time not available'}
                             </p>
                           </div>
                         </div>
@@ -2099,7 +2152,7 @@ const TaskDetail = () => {
                             <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
                               <div className="flex items-center space-x-1">
                                 <User className="h-3 w-3" />
-                                <span>Changed by User ID: {history.changed_by}</span>
+                                <span>Changed by: {getUserName(history.changed_by)}</span>
                               </div>
                               <div className="flex items-center space-x-1">
                                 <span className="text-xs bg-gray-100 px-2 py-1 rounded">
@@ -2119,11 +2172,11 @@ const TaskDetail = () => {
                                 </div>
                                 <div>
                                   <p className="text-gray-600">Changed By</p>
-                                  <p className="font-medium">User {history.changed_by}</p>
+                                  <p className="font-medium">{getUserName(history.changed_by)}</p>
                                 </div>
                                 <div>
                                   <p className="text-gray-600">Changed To</p>
-                                  <p className="font-medium">User {history.changed_to}</p>
+                                  <p className="font-medium">{getUserName(history.changed_to)}</p>
                                 </div>
                               </div>
                             </div>
@@ -2212,6 +2265,11 @@ const TaskDetail = () => {
                          Payment Phases ({caseDetails.case_payment_phases.length})
                        </h4>
                        <p className="text-sm text-gray-500">Real data from API</p>
+                       {caseDetails.due_date && (
+                         <p className="text-sm text-gray-600 mt-2">
+                           Assigned Date: <span className="font-medium">{formatDateDDMMYYYY(caseDetails.due_date)}</span>
+                         </p>
+                       )}
                      </div>
                      {caseDetails.case_payment_phases.map((phase: any, index: number) => (
                        <div key={phase.case_phase_id || index} className="border rounded-lg p-4 bg-gray-50">
@@ -2237,16 +2295,15 @@ const TaskDetail = () => {
                                    Assigned Date: {formatDateDDMMYYYY(phase.due_date)}
                                  </p>
                                )}
-                               {phase.payment_date && (
-                                 <p className="text-xs text-green-600 font-medium">
-                                   Payment Date: {formatDateDDMMYYYY(phase.payment_date)}
-                                 </p>
-                               )}
-                             {phase.status === 'pending' && phase.due_date && (
-                                 <p className="text-xs text-red-500">
-                                   Due by: {formatDateDDMMYYYY(phase.due_date)}
+                               <p className="text-xs font-medium">
+                                 Payment Date: {phase.payment_date ? (
+                                   <span className="text-green-600">{formatDateDDMMYYYY(phase.payment_date)}</span>
+                                 ) : phase.due_date ? (
+                                   <span className="text-gray-600">{formatDateDDMMYYYY(phase.due_date)}</span>
+                                 ) : (
+                                   <span className="text-gray-500">Not available</span>
+                                 )}
                                </p>
-                             )}
                              </div>
                              <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                <Label className="text-sm font-medium text-gray-700">Invoice Number</Label>
@@ -2271,25 +2328,49 @@ const TaskDetail = () => {
                          <div className="text-center">
                            <p className="text-sm text-gray-600">Total Claim Amount</p>
                            <p className="text-2xl font-bold text-gray-900">
-                             ₹{caseDetails.case_payment_phases.reduce((sum: number, phase: any) => sum + (phase.phase_amount || 0), 0).toLocaleString('en-IN')}
+                             ₹{(() => {
+                               const serviceAmount = parseFloat((caseDetails as any)['service amount'] || (caseDetails as any).service_amount || '0') || 0;
+                               return serviceAmount > 0 ? serviceAmount.toLocaleString('en-IN') : caseDetails.case_payment_phases.reduce((sum: number, phase: any) => sum + (phase.phase_amount || 0), 0).toLocaleString('en-IN');
+                             })()}
                            </p>
                          </div>
                          <div className="text-center">
                            <p className="text-sm text-gray-600">Pending Amount</p>
                            <p className="text-2xl font-bold text-red-600">
-                             ₹{caseDetails.case_payment_phases
-                               .filter((phase: any) => phase.status === 'pending')
-                               .reduce((sum: number, phase: any) => sum + (phase.phase_amount || 0), 0)
-                               .toLocaleString('en-IN')}
+                             ₹{(() => {
+                               const serviceAmount = parseFloat((caseDetails as any)['service amount'] || (caseDetails as any).service_amount || '0') || 0;
+                               const calculateTotal = (phases: any[]) => {
+                                 return phases.reduce((sum: number, phase: any) => {
+                                   if (!phase) return sum;
+                                   const amount = phase.phase_amount ?? phase.paid_amount ?? 0;
+                                   if (amount === null || amount === undefined) return sum;
+                                   const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount));
+                                   return sum + (isNaN(numAmount) ? 0 : numAmount);
+                                 }, 0);
+                               };
+                               const totalPaymentPhases = calculateTotal(caseDetails.case_payment_phases);
+                               const pendingAmount = serviceAmount > 0 ? Math.max(0, serviceAmount - totalPaymentPhases) : caseDetails.case_payment_phases
+                                 .filter((phase: any) => phase.status === 'pending')
+                                 .reduce((sum: number, phase: any) => sum + (phase.phase_amount || 0), 0);
+                               return pendingAmount.toLocaleString('en-IN');
+                             })()}
                            </p>
                          </div>
                        </div>
                        <div className="mt-3 text-center">
                          <p className="text-sm text-gray-600">
-                           Paid Amount: ₹{caseDetails.case_payment_phases
-                             .filter((phase: any) => phase.status === 'paid')
-                             .reduce((sum: number, phase: any) => sum + (phase.paid_amount || 0), 0)
-                             .toLocaleString('en-IN')}
+                           Paid Amount: ₹{(() => {
+                             const calculateTotal = (phases: any[]) => {
+                               return phases.reduce((sum: number, phase: any) => {
+                                 if (!phase) return sum;
+                                 const amount = phase.phase_amount ?? phase.paid_amount ?? 0;
+                                 if (amount === null || amount === undefined) return sum;
+                                 const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount));
+                                 return sum + (isNaN(numAmount) ? 0 : numAmount);
+                               }, 0);
+                             };
+                             return calculateTotal(caseDetails.case_payment_phases).toLocaleString('en-IN');
+                           })()}
                          </p>
                        </div>
                      </div>

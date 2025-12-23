@@ -91,11 +91,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               console.log('Updated session role from stored user details:', sessionToUse.userRole);
             }
             
-            // Set loading to false after a brief delay to ensure state is updated
-            setTimeout(() => {
-              setIsLoading(false);
-              console.log('✅ Session check complete. User remains logged in.');
-            }, 100);
+            // Set loading to false immediately after setting auth state
+            setIsLoading(false);
+            console.log('✅ Session check complete. User remains logged in.');
           } else {
             // Session has expired
             const timeSinceExpiry = now - parsedSession.expiresAt;
@@ -130,10 +128,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               
               console.log('✅ Session refreshed successfully with role:', refreshedSession.userRole);
               
-              setTimeout(() => {
-                setIsLoading(false);
-                console.log('✅ Session check complete. Session refreshed.');
-              }, 100);
+              // Set loading to false immediately after setting auth state
+              setIsLoading(false);
+              console.log('✅ Session check complete. Session refreshed.');
             }
           }
         } catch (error) {
