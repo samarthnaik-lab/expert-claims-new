@@ -906,19 +906,36 @@ const TaskDetail = () => {
       if (!response.ok) {
         console.error('Failed to call view webhook:', response.status, response.statusText);
         
-        // Try to get error details
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        // Try to get error details for logging
+        let userFriendlyMessage = "Unable to view document. Please try again.";
         try {
-          const errorData = await response.text();
-          console.error('Error response body:', errorData);
-          errorMessage += ` - ${errorData}`;
+          const errorText = await response.text();
+          console.error('Error response body:', errorText);
+          
+          // Try to parse JSON error response
+          try {
+            const errorData = JSON.parse(errorText);
+            if (errorData.error) {
+              // Show user-friendly message based on error type
+              if (errorData.error.includes("File not found") || errorData.error.includes("not found")) {
+                userFriendlyMessage = "Document not found.";
+              } else if (errorData.error.includes("Invalid session")) {
+                userFriendlyMessage = "Session expired. Please log in again.";
+              } else {
+                userFriendlyMessage = "Unable to view document. Please try again.";
+              }
+            }
+          } catch (parseError) {
+            // If not JSON, use default message
+            console.error('Error is not JSON format');
+          }
         } catch (e) {
           console.error('Could not parse error response');
         }
         
         toast({
           title: "Error",
-          description: `Failed to get document view URL: ${errorMessage}`,
+          description: userFriendlyMessage,
           variant: "destructive",
         });
         return;
