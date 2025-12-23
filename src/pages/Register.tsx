@@ -109,6 +109,33 @@ const Register = () => {
   
   const navigate = useNavigate();
 
+  // Helper function to format date from YYYY-MM-DD to dd/mm/yyyy
+  const formatDateToDisplay = (dateString: string): string => {
+    if (!dateString) return '';
+    const date = new Date(dateString + 'T00:00:00');
+    if (isNaN(date.getTime())) return dateString;
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  // Helper function to format date from dd/mm/yyyy to YYYY-MM-DD
+  const formatDateToInput = (dateString: string): string => {
+    if (!dateString) return '';
+    // If already in YYYY-MM-DD format, return as is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return dateString;
+    // If in dd/mm/yyyy format, convert to YYYY-MM-DD
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0');
+      const year = parts[2];
+      return `${year}-${month}-${day}`;
+    }
+    return dateString;
+  };
+
   // Fetch partners if source is already set to "Referral" on component mount
   useEffect(() => {
     if (formData.source === 'Referral') {
@@ -249,11 +276,21 @@ const Register = () => {
       requiredFields.push(!formData.partner_type, !formData.license_id, !formData.license_expiring_date);
     }
     
+    // Add employee (Support Team) specific required fields
+    if (formData.role === 'employee') {
+      requiredFields.push(!formData.department, !formData.designation);
+    }
+    
     if (requiredFields.some(field => field)) {
       let errorMessage = "Please fill in all required fields";
       if (isMobileRequired && (!formData.mobile || formData.mobile.length !== 10)) {
         const roleText = formData.role === 'admin' ? 'admin' : 'customer';
         errorMessage = `Mobile number is required and must be 10 digits for ${roleText} role`;
+      }
+      if (formData.role === 'employee') {
+        if (!formData.department || !formData.designation) {
+          errorMessage = "Department and Designation are required fields for Support Team role";
+        }
       }
       toast({
         title: "Error",
@@ -458,10 +495,27 @@ const Register = () => {
         });
         navigate('/admin-dashboard');
       } else {
-        const message = (responseBody && (responseBody.message || responseBody.error || JSON.stringify(responseBody))) || 'Failed to create user';
+        // Extract message from backend response
+        let errorMessage = 'Failed to create user';
+        
+        if (responseBody) {
+          // Handle array response (backend might return array with error object)
+          if (Array.isArray(responseBody) && responseBody.length > 0) {
+            errorMessage = responseBody[0].message || responseBody[0].error || errorMessage;
+          } 
+          // Handle object response
+          else if (typeof responseBody === 'object' && responseBody.message) {
+            errorMessage = responseBody.message;
+          }
+          // Handle string response
+          else if (typeof responseBody === 'string') {
+            errorMessage = responseBody;
+          }
+        }
+        
         toast({ 
           title: "Error", 
-          description: message, 
+          description: errorMessage, 
           variant: "destructive" 
         });
       }
@@ -683,12 +737,13 @@ const Register = () => {
                       value={formData.joining_date}
                       onChange={(e) => handleInputChange('joining_date', e.target.value)}
                     />
+                    <p className="text-xs text-gray-500 mt-1">Format: dd/mm/yyyy</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="designation">Designation</Label>
+                    <Label htmlFor="designation">Designation *</Label>
                     <div className="relative">
                       <Input
                         id="designation"
@@ -703,6 +758,7 @@ const Register = () => {
                         }}
                         placeholder="Select or type designation"
                         className="w-full pr-10"
+                        required
                       />
                       <ChevronDown 
                         className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 cursor-pointer hover:text-gray-600"
@@ -729,7 +785,7 @@ const Register = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="department">Department</Label>
+                    <Label htmlFor="department">Department *</Label>
                     <div className="relative">
                       <Input
                         id="department"
@@ -744,6 +800,7 @@ const Register = () => {
                         }}
                         placeholder="Select or type department"
                         className="w-full pr-10"
+                        required
                       />
                       <ChevronDown 
                         className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 cursor-pointer hover:text-gray-600"
@@ -1167,6 +1224,7 @@ const Register = () => {
                       onChange={(e) => handleInputChange('license_expiring_date', e.target.value)}
                       required
                     />
+                    <p className="text-xs text-gray-500 mt-1">Format: dd/mm/yyyy</p>
                   </div>
 
                   <div>

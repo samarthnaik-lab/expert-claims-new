@@ -9,6 +9,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, ArrowLeft, Calendar, User, FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { formatDateDDMMYYYY } from '@/lib/utils';
 
 const TaskManagement = () => {
   const navigate = useNavigate();
@@ -229,7 +230,7 @@ const TaskManagement = () => {
                       <th className="text-left p-4 font-semibold text-white">Est. Duration</th>
                       <th className="text-left p-4 font-semibold text-white">Total Hours Spent</th>
                       <th className="text-left p-4 font-semibold text-white">Customer Rating</th>
-                      <th className="text-left p-4 font-semibold text-white">Due Date</th>
+                      <th className="text-left p-4 font-semibold text-white">Assign Date</th>
                       <th className="text-left p-4 font-semibold text-white">Action</th>
                     </tr>
                   </thead>
@@ -327,7 +328,7 @@ const TaskManagement = () => {
                           <div className="flex items-center space-x-2">
                             <Calendar className="h-4 w-4 text-purple-500" />
                             <span className="text-gray-700 font-medium">
-                              {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
+                              {task.due_date ? formatDateDDMMYYYY(task.due_date) : 'N/A'}
                             </span>
                           </div>
                         </td>

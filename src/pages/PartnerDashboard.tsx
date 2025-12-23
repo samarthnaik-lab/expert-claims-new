@@ -41,7 +41,7 @@ import {
   LogOut,
   RefreshCw,
   Eye,
-  Calendar,
+  Calendar as CalendarIcon,
   Phone,
   Mail,
   Filter,
@@ -51,6 +51,7 @@ import {
   X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatDateDDMMYYYY } from "@/lib/utils";
 import { ReferralService, ReferralCase } from "@/services/referralService";
 import {
   PartnerStatusService,
@@ -116,23 +117,15 @@ const PartnerDashboard = () => {
   const [backlogStatusFilter, setBacklogStatusFilter] = useState("all");
   const [backlogStartDate, setBacklogStartDate] = useState("");
   const [backlogEndDate, setBacklogEndDate] = useState("");
-  const [startDateOpen, setStartDateOpen] = useState(false);
-  const [endDateOpen, setEndDateOpen] = useState(false);
+  const [fromDateCalendarOpen, setFromDateCalendarOpen] = useState(false);
+  const [toDateCalendarOpen, setToDateCalendarOpen] = useState(false);
+  const [currentPageBacklog, setCurrentPageBacklog] = useState(1);
+  const [pageSizeBacklog, setPageSizeBacklog] = useState(10);
 
-  // Helper function to format date to dd/mm/yyyy
-  const formatDateToDDMMYYYY = (date: Date | undefined): string => {
-    if (!date) return "";
-    try {
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    } catch {
-      return "";
-    }
-  };
+  // Sorting for backlog data - use allBacklogData for searching across all records
+  const { sortedData: sortedBacklogData, sortConfig: backlogSortConfig, handleSort: handleBacklogSort } = useTableSort(allBacklogData.length > 0 ? allBacklogData : backlogData);
 
-  // Helper function to parse dd/mm/yyyy to Date object
+  // Helper function to parse dd/mm/yyyy or YYYY-MM-DD to Date object
   const parseDDMMYYYY = (dateString: string): Date | null => {
     if (!dateString) return null;
     try {
@@ -147,7 +140,7 @@ const PartnerDashboard = () => {
           return date;
         }
       }
-      // Fallback: try parsing as ISO date string (YYYY-MM-DD)
+      // Handle YYYY-MM-DD format (stored format)
       if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
         const date = new Date(dateString);
         if (!isNaN(date.getTime())) return date;
@@ -157,91 +150,6 @@ const PartnerDashboard = () => {
       return null;
     }
   };
-
-  // Convert Date to YYYY-MM-DD format (for internal storage)
-  const dateToYYYYMMDD = (date: Date | null | undefined): string => {
-    if (!date) return "";
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  // Get Date object from stored value (handles both dd/mm/yyyy and YYYY-MM-DD)
-  const getDateFromValue = (value: string): Date | undefined => {
-    if (!value) return undefined;
-    const parsed = parseDDMMYYYY(value);
-    if (parsed) return parsed;
-    // Try as YYYY-MM-DD
-    if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      const date = new Date(value);
-      if (!isNaN(date.getTime())) return date;
-    }
-    return undefined;
-  };
-
-  // Format input value (enforce dd/mm/yyyy format while typing)
-  const formatDateInput = (value: string): string => {
-    // Remove all non-digit characters
-    const digits = value.replace(/\D/g, '');
-    
-    // Format as dd/mm/yyyy
-    if (digits.length === 0) return '';
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
-  };
-
-  // Handler for typing dates manually
-  const handleStartDateType = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatDateInput(e.target.value);
-    // Limit to 10 characters (dd/mm/yyyy)
-    if (formatted.length <= 10) {
-      // Store as YYYY-MM-DD if valid, otherwise store the typed value
-      const parsed = parseDDMMYYYY(formatted);
-      if (parsed) {
-        setBacklogStartDate(dateToYYYYMMDD(parsed));
-      } else {
-        // Store the formatted value temporarily (will be validated on blur)
-        setBacklogStartDate(formatted);
-      }
-    }
-  };
-
-  const handleEndDateType = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatDateInput(e.target.value);
-    // Limit to 10 characters (dd/mm/yyyy)
-    if (formatted.length <= 10) {
-      // Store as YYYY-MM-DD if valid, otherwise store the typed value
-      const parsed = parseDDMMYYYY(formatted);
-      if (parsed) {
-        setBacklogEndDate(dateToYYYYMMDD(parsed));
-      } else {
-        // Store the formatted value temporarily (will be validated on blur)
-        setBacklogEndDate(formatted);
-      }
-    }
-  };
-
-  // Get display value for input (convert YYYY-MM-DD to dd/mm/yyyy for display)
-  const getDisplayValue = (value: string): string => {
-    if (!value) return "";
-    // If it's already in dd/mm/yyyy format, return as-is
-    if (value.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-      return value;
-    }
-    // If it's in YYYY-MM-DD format, convert to dd/mm/yyyy
-    const date = getDateFromValue(value);
-    if (date) {
-      return formatDateToDDMMYYYY(date);
-    }
-    return value;
-  };
-  const [currentPageBacklog, setCurrentPageBacklog] = useState(1);
-  const [pageSizeBacklog, setPageSizeBacklog] = useState(10);
-
-  // Sorting for backlog data - use allBacklogData for searching across all records
-  const { sortedData: sortedBacklogData, sortConfig: backlogSortConfig, handleSort: handleBacklogSort } = useTableSort(allBacklogData.length > 0 ? allBacklogData : backlogData);
 
   // Reset page to 1 when search term or filters change
   useEffect(() => {
@@ -1273,7 +1181,7 @@ const PartnerDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-emerald-50">
       {/* Modern Header */}
       <header className="bg-primary-500 backdrop-blur-md shadow-sm border-b border-primary-600 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-[80%] mx-auto px-2 sm:px-3 lg:px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-lg">
@@ -1332,7 +1240,7 @@ const PartnerDashboard = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-[80%] mx-auto px-2 sm:px-3 lg:px-4 py-8">
         {/* Welcome Section */}
         <div className="mb-8 animate-fade-in ">
           <h2 className="text-3xl font-bold text-gray-900 mb-6">
@@ -1572,25 +1480,25 @@ const PartnerDashboard = () => {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Case ID
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Customer
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Case Type
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Status
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                          Task Referral Date
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Case Value
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Actions
                           </th>
                         </tr>
@@ -1655,9 +1563,10 @@ const PartnerDashboard = () => {
                               </Badge>
                             </td>
                             <td className="p-4 text-sm text-gray-600">
-                              {referral.referral_date ||
-                                (referral.created_time
-                                  ? referral.created_time.split("T")[0]
+                              {referral.referral_date
+                                ? formatDateDDMMYYYY(referral.referral_date)
+                                : (referral.created_time
+                                  ? formatDateDDMMYYYY(referral.created_time)
                                   : "Not Assigned")}
                             </td>
                             <td className="p-4 text-sm text-gray-600">
@@ -1860,89 +1769,135 @@ const PartnerDashboard = () => {
                       <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                         From Date:
                       </label>
-                      <div className="relative flex items-center">
-                        <Input
-                          type="text"
-                          value={getDisplayValue(backlogStartDate)}
-                          onChange={handleStartDateType}
-                          placeholder="dd/mm/yyyy"
-                          maxLength={10}
-                          className="border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:ring-purple-500 transition-all duration-300 pr-10"
-                        />
-                        <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute right-0 h-full px-3 hover:bg-transparent"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setStartDateOpen(!startDateOpen);
-                              }}
-                            >
-                              <Calendar className="h-4 w-4 text-purple-600" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={getDateFromValue(backlogStartDate)}
-                              onSelect={(date) => {
-                                if (date) {
-                                  setBacklogStartDate(dateToYYYYMMDD(date));
-                                  setStartDateOpen(false);
+                      <Popover open={fromDateCalendarOpen} onOpenChange={setFromDateCalendarOpen}>
+                        <PopoverTrigger asChild>
+                          <div className="relative">
+                            <Input
+                              type="text"
+                              readOnly
+                              value={backlogStartDate ? (() => {
+                                try {
+                                  const dateStr = backlogStartDate;
+                                  if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                    const [year, month, day] = dateStr.split('-').map(Number);
+                                    return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+                                  }
+                                  const date = new Date(dateStr);
+                                  if (!isNaN(date.getTime())) {
+                                    const day = String(date.getDate()).padStart(2, '0');
+                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                    const year = date.getFullYear();
+                                    return `${day}/${month}/${year}`;
+                                  }
+                                  return '';
+                                } catch {
+                                  return '';
                                 }
-                              }}
-                              initialFocus
+                              })() : ''}
+                              placeholder="DD/MM/YYYY"
+                              onClick={() => setFromDateCalendarOpen(true)}
+                              className="border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:ring-purple-500 transition-all duration-300 cursor-pointer pr-10 w-[140px]"
                             />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
+                            <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                          </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={backlogStartDate ? (() => {
+                              try {
+                                const dateStr = backlogStartDate;
+                                if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                  const [year, month, day] = dateStr.split('-').map(Number);
+                                  return new Date(year, month - 1, day);
+                                }
+                                const date = new Date(dateStr);
+                                return !isNaN(date.getTime()) ? date : undefined;
+                              } catch {
+                                return undefined;
+                              }
+                            })() : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const formattedDate = `${year}-${month}-${day}`;
+                                setBacklogStartDate(formattedDate);
+                                setFromDateCalendarOpen(false);
+                              }
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="flex items-center space-x-2">
                       <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                         To Date:
                       </label>
-                      <div className="relative flex items-center">
-                        <Input
-                          type="text"
-                          value={getDisplayValue(backlogEndDate)}
-                          onChange={handleEndDateType}
-                          placeholder="dd/mm/yyyy"
-                          maxLength={10}
-                          className="border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:ring-purple-500 transition-all duration-300 pr-10"
-                        />
-                        <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute right-0 h-full px-3 hover:bg-transparent"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setEndDateOpen(!endDateOpen);
-                              }}
-                            >
-                              <Calendar className="h-4 w-4 text-purple-600" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={getDateFromValue(backlogEndDate)}
-                              onSelect={(date) => {
-                                if (date) {
-                                  setBacklogEndDate(dateToYYYYMMDD(date));
-                                  setEndDateOpen(false);
+                      <Popover open={toDateCalendarOpen} onOpenChange={setToDateCalendarOpen}>
+                        <PopoverTrigger asChild>
+                          <div className="relative">
+                            <Input
+                              type="text"
+                              readOnly
+                              value={backlogEndDate ? (() => {
+                                try {
+                                  const dateStr = backlogEndDate;
+                                  if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                    const [year, month, day] = dateStr.split('-').map(Number);
+                                    return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+                                  }
+                                  const date = new Date(dateStr);
+                                  if (!isNaN(date.getTime())) {
+                                    const day = String(date.getDate()).padStart(2, '0');
+                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                    const year = date.getFullYear();
+                                    return `${day}/${month}/${year}`;
+                                  }
+                                  return '';
+                                } catch {
+                                  return '';
                                 }
-                              }}
-                              initialFocus
+                              })() : ''}
+                              placeholder="DD/MM/YYYY"
+                              onClick={() => setToDateCalendarOpen(true)}
+                              className="border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:ring-purple-500 transition-all duration-300 cursor-pointer pr-10 w-[140px]"
                             />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
+                            <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                          </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={backlogEndDate ? (() => {
+                              try {
+                                const dateStr = backlogEndDate;
+                                if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                  const [year, month, day] = dateStr.split('-').map(Number);
+                                  return new Date(year, month - 1, day);
+                                }
+                                const date = new Date(dateStr);
+                                return !isNaN(date.getTime()) ? date : undefined;
+                              } catch {
+                                return undefined;
+                              }
+                            })() : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const formattedDate = `${year}-${month}-${day}`;
+                                setBacklogEndDate(formattedDate);
+                                setToDateCalendarOpen(false);
+                              }
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <Button
                       variant="outline"
@@ -1994,7 +1949,7 @@ const PartnerDashboard = () => {
                             sortColumn={backlogSortConfig?.column || ''}
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                           />
                           <SortableTableHeader
                             column="case_summary"
@@ -2003,7 +1958,7 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]"
                           />
                           <SortableTableHeader
                             column="case_description"
@@ -2012,7 +1967,7 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[150px]"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[150px]"
                           />
                           <SortableTableHeader
                             column="backlog_referral_date"
@@ -2021,7 +1976,7 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                           />
                           <SortableTableHeader
                             column="status"
@@ -2030,12 +1985,12 @@ const PartnerDashboard = () => {
                             sortDirection={backlogSortConfig?.direction || 'asc'}
                             onSort={handleBacklogSort}
                             sortable={false}
-                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                            className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                           />
-                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[120px]">
+                          <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[120px]">
                             Assigned Expert
                           </th>
-                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[180px]">
+                          <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[180px]">
                             Actions
                           </th>
                         </tr>
@@ -2104,7 +2059,7 @@ const PartnerDashboard = () => {
                               key={item.backlog_id || index}
                               className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors duration-200"
                             >
-                              <td className="px-2 sm:px-3 py-3">
+                              <td className="px-2 sm:px-3 py-3 text-center">
                                 <span 
                                   className="font-mono text-xs sm:text-sm text-blue-600 hover:text-blue-800 cursor-pointer break-words"
                                   style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
@@ -2114,25 +2069,21 @@ const PartnerDashboard = () => {
                                   {item.backlog_id}
                                 </span>
                               </td>
-                              <td className="px-2 sm:px-3 py-3">
+                              <td className="px-2 sm:px-3 py-3 text-center">
                                 <div className="font-medium text-xs sm:text-sm text-gray-900 break-words max-w-[120px] sm:max-w-none" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.case_summary || "No Summary"}>
                                   {item.case_summary || "No Summary"}
                                 </div>
                               </td>
-                              <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-700 break-words hidden lg:table-cell max-w-[150px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.case_description || "No Description"}>
+                              <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-700 break-words hidden lg:table-cell max-w-[150px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.case_description || "No Description"}>
                                 {item.case_description || "No Description"}
                               </td>
-                              <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+                              <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 whitespace-nowrap">
                                 {item.backlog_referral_date
-                                  ? new Date(item.backlog_referral_date).toLocaleDateString("en-GB", {
-                                      day: "2-digit",
-                                      month: "short",
-                                      year: "2-digit",
-                                    })
+                                  ? formatDateDDMMYYYY(item.backlog_referral_date)
                                   : "N/A"}
                               </td>
 
-                              <td className="px-2 sm:px-3 py-3 whitespace-nowrap">
+                              <td className="px-2 sm:px-3 py-3 text-center whitespace-nowrap">
                               <Badge
                                 className={`${
                                   item.status?.toLowerCase() === "new"
@@ -2147,11 +2098,11 @@ const PartnerDashboard = () => {
                                   {item.status ? item.status : "N/A"}
                                 </Badge>
                               </td>
-                              <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.assigned_consultant_name || 'Not Assigned'}>
+                              <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.assigned_consultant_name || 'Not Assigned'}>
                                 {item.assigned_consultant_name ? item.assigned_consultant_name : 'Not Assigned'}
                               </td>
-                              <td className="px-2 sm:px-3 py-3 whitespace-nowrap min-w-[180px]">
-                                <div className="flex items-center gap-1 sm:gap-2">
+                              <td className="px-2 sm:px-3 py-3 text-center whitespace-nowrap min-w-[180px]">
+                                <div className="flex items-center justify-center gap-1 sm:gap-2">
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -2425,19 +2376,19 @@ const PartnerDashboard = () => {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Case ID
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Customer
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Total Bonus Amount
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Bonus Status
                           </th>
-                          <th className="text-left p-4 font-semibold text-gray-700">
+                          <th className="text-center p-4 font-semibold text-gray-700">
                             Payment Date
                           </th>
                           {/* <th className="text-left p-4 font-semibold text-gray-700">Actions</th> */}
@@ -2451,22 +2402,22 @@ const PartnerDashboard = () => {
                               index % 2 === 0 ? "bg-white" : "bg-gray-50/30"
                             }`}
                           >
-                            <td className="p-4">
+                            <td className="p-4 text-center">
                               <span className="font-mono text-sm text-gray-900">
                                 {bonus.case_id}
                               </span>
                             </td>
-                            <td className="p-4 text-gray-700">
+                            <td className="p-4 text-center text-gray-700">
                               {bonus.customer_first_name || "Unknown"}{" "}
                               {bonus.customer_last_name || "Customer"}
                             </td>
-                            <td className="p-4">
+                            <td className="p-4 text-center">
                               <span className="font-semibold text-green-600">
                                 ₹{bonus.stage_bonus_amount.toLocaleString()}
                               </span>
                             </td>
-                            <td className="p-4">
-                              <div className="flex flex-col items-start space-y-1">
+                            <td className="p-4 text-center">
+                              <div className="flex flex-col items-center space-y-1">
                                 <Badge
                                   className={`${getBonusStatusColor(
                                     bonusStatus || "unknown"
@@ -2477,7 +2428,7 @@ const PartnerDashboard = () => {
                               </div>
                             </td>
                             <td className="p-4 text-sm text-gray-600">
-                              {bonus.payment_date || "Not Paid Yet"}
+                              {bonus.payment_date ? formatDateDDMMYYYY(bonus.payment_date) : "Not Paid Yet"}
                             </td>
                             <td className="p-4">
                               {/* <div className="flex items-center space-x-2">
