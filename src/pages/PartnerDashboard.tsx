@@ -13,8 +13,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -110,6 +116,127 @@ const PartnerDashboard = () => {
   const [backlogStatusFilter, setBacklogStatusFilter] = useState("all");
   const [backlogStartDate, setBacklogStartDate] = useState("");
   const [backlogEndDate, setBacklogEndDate] = useState("");
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
+
+  // Helper function to format date to dd/mm/yyyy
+  const formatDateToDDMMYYYY = (date: Date | undefined): string => {
+    if (!date) return "";
+    try {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return "";
+    }
+  };
+
+  // Helper function to parse dd/mm/yyyy to Date object
+  const parseDDMMYYYY = (dateString: string): Date | null => {
+    if (!dateString) return null;
+    try {
+      // Handle dd/mm/yyyy format
+      const parts = dateString.split('/');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+        const year = parseInt(parts[2], 10);
+        const date = new Date(year, month, day);
+        if (!isNaN(date.getTime()) && date.getDate() === day && date.getMonth() === month && date.getFullYear() === year) {
+          return date;
+        }
+      }
+      // Fallback: try parsing as ISO date string (YYYY-MM-DD)
+      if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const date = new Date(dateString);
+        if (!isNaN(date.getTime())) return date;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Convert Date to YYYY-MM-DD format (for internal storage)
+  const dateToYYYYMMDD = (date: Date | null | undefined): string => {
+    if (!date) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Get Date object from stored value (handles both dd/mm/yyyy and YYYY-MM-DD)
+  const getDateFromValue = (value: string): Date | undefined => {
+    if (!value) return undefined;
+    const parsed = parseDDMMYYYY(value);
+    if (parsed) return parsed;
+    // Try as YYYY-MM-DD
+    if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) return date;
+    }
+    return undefined;
+  };
+
+  // Format input value (enforce dd/mm/yyyy format while typing)
+  const formatDateInput = (value: string): string => {
+    // Remove all non-digit characters
+    const digits = value.replace(/\D/g, '');
+    
+    // Format as dd/mm/yyyy
+    if (digits.length === 0) return '';
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+  };
+
+  // Handler for typing dates manually
+  const handleStartDateType = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatDateInput(e.target.value);
+    // Limit to 10 characters (dd/mm/yyyy)
+    if (formatted.length <= 10) {
+      // Store as YYYY-MM-DD if valid, otherwise store the typed value
+      const parsed = parseDDMMYYYY(formatted);
+      if (parsed) {
+        setBacklogStartDate(dateToYYYYMMDD(parsed));
+      } else {
+        // Store the formatted value temporarily (will be validated on blur)
+        setBacklogStartDate(formatted);
+      }
+    }
+  };
+
+  const handleEndDateType = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatDateInput(e.target.value);
+    // Limit to 10 characters (dd/mm/yyyy)
+    if (formatted.length <= 10) {
+      // Store as YYYY-MM-DD if valid, otherwise store the typed value
+      const parsed = parseDDMMYYYY(formatted);
+      if (parsed) {
+        setBacklogEndDate(dateToYYYYMMDD(parsed));
+      } else {
+        // Store the formatted value temporarily (will be validated on blur)
+        setBacklogEndDate(formatted);
+      }
+    }
+  };
+
+  // Get display value for input (convert YYYY-MM-DD to dd/mm/yyyy for display)
+  const getDisplayValue = (value: string): string => {
+    if (!value) return "";
+    // If it's already in dd/mm/yyyy format, return as-is
+    if (value.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+      return value;
+    }
+    // If it's in YYYY-MM-DD format, convert to dd/mm/yyyy
+    const date = getDateFromValue(value);
+    if (date) {
+      return formatDateToDDMMYYYY(date);
+    }
+    return value;
+  };
   const [currentPageBacklog, setCurrentPageBacklog] = useState(1);
   const [pageSizeBacklog, setPageSizeBacklog] = useState(10);
 
@@ -388,6 +515,8 @@ const PartnerDashboard = () => {
       if (response.ok) {
         const data = await response.json();
         setAllReferrals(data);
+        // Update totalReferrals with the actual count of all referrals (for pagination)
+        setTotalReferrals(data.length);
       }
     } catch (error) {
       console.error("Error fetching all referrals:", error);
@@ -1038,9 +1167,14 @@ const PartnerDashboard = () => {
 
   // Pagination logic - server-side pagination with client-side search filtering
   const displayReferrals = filteredReferrals; // Use filtered referrals for search
-  const totalPages = Math.ceil(totalReferrals / pageSize);
+  // Use allReferrals.length for total count (since it contains all referrals)
+  // When searching, use filteredReferrals.length, otherwise use allReferrals.length or totalReferrals
+  const actualTotal = searchTerm 
+    ? filteredReferrals.length 
+    : (allReferrals.length > 0 ? allReferrals.length : (totalReferrals > 0 ? totalReferrals : referrals.length));
+  const totalPages = Math.ceil(actualTotal / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalReferrals);
+  const endIndex = Math.min(startIndex + pageSize, actualTotal);
 
   // Handle page size change
   const handlePageSizeChange = (newPageSize: string) => {
@@ -1562,10 +1696,12 @@ const PartnerDashboard = () => {
                     {/* Pagination Info */}
                     <div className="text-sm text-gray-600">
                       {searchTerm
-                        ? `Showing ${displayReferrals.length} of ${totalReferrals} entries (filtered)`
-                        : `Showing ${
+                        ? `Showing ${displayReferrals.length} of ${actualTotal} entries (filtered)`
+                        : displayReferrals.length > 0
+                        ? `Showing ${
                             startIndex + 1
-                          } to ${endIndex} of ${totalReferrals} entries`}
+                          } to ${Math.min(endIndex, actualTotal)} of ${actualTotal} entries`
+                        : `Showing 0 of ${actualTotal} entries`}
                     </div>
 
                     {/* Pagination Navigation - only show when not searching */}
@@ -1724,23 +1860,89 @@ const PartnerDashboard = () => {
                       <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                         From Date:
                       </label>
-                      <Input
-                        type="date"
-                        value={backlogStartDate}
-                        onChange={(e) => setBacklogStartDate(e.target.value)}
-                        className="border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:ring-purple-500 transition-all duration-300"
-                      />
+                      <div className="relative flex items-center">
+                        <Input
+                          type="text"
+                          value={getDisplayValue(backlogStartDate)}
+                          onChange={handleStartDateType}
+                          placeholder="dd/mm/yyyy"
+                          maxLength={10}
+                          className="border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:ring-purple-500 transition-all duration-300 pr-10"
+                        />
+                        <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 h-full px-3 hover:bg-transparent"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setStartDateOpen(!startDateOpen);
+                              }}
+                            >
+                              <Calendar className="h-4 w-4 text-purple-600" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={getDateFromValue(backlogStartDate)}
+                              onSelect={(date) => {
+                                if (date) {
+                                  setBacklogStartDate(dateToYYYYMMDD(date));
+                                  setStartDateOpen(false);
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                         To Date:
                       </label>
-                      <Input
-                        type="date"
-                        value={backlogEndDate}
-                        onChange={(e) => setBacklogEndDate(e.target.value)}
-                        className="border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:ring-purple-500 transition-all duration-300"
-                      />
+                      <div className="relative flex items-center">
+                        <Input
+                          type="text"
+                          value={getDisplayValue(backlogEndDate)}
+                          onChange={handleEndDateType}
+                          placeholder="dd/mm/yyyy"
+                          maxLength={10}
+                          className="border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:ring-purple-500 transition-all duration-300 pr-10"
+                        />
+                        <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 h-full px-3 hover:bg-transparent"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setEndDateOpen(!endDateOpen);
+                              }}
+                            >
+                              <Calendar className="h-4 w-4 text-purple-600" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={getDateFromValue(backlogEndDate)}
+                              onSelect={(date) => {
+                                if (date) {
+                                  setBacklogEndDate(dateToYYYYMMDD(date));
+                                  setEndDateOpen(false);
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
                     <Button
                       variant="outline"
@@ -1859,22 +2061,37 @@ const PartnerDashboard = () => {
                             const statusMatch = backlogStatusFilter === "all" || 
                               (backlogStatusFilter && item.status && item.status.toLowerCase() === backlogStatusFilter.toLowerCase());
 
-                            // Date range filter
+                            // Date range filter (handles dd/mm/yyyy format)
                             const dateMatch = (() => {
                               if (!backlogStartDate && !backlogEndDate) return true;
                               
                               const itemDate = item.backlog_referral_date ? new Date(item.backlog_referral_date) : null;
-                              if (!itemDate) return false;
+                              if (!itemDate || isNaN(itemDate.getTime())) return false;
 
-                              const startDate = backlogStartDate ? new Date(backlogStartDate) : null;
-                              const endDate = backlogEndDate ? new Date(backlogEndDate) : null;
+                              const startDate = backlogStartDate ? parseDDMMYYYY(backlogStartDate) : null;
+                              const endDate = backlogEndDate ? parseDDMMYYYY(backlogEndDate) : null;
 
                               if (startDate && endDate) {
-                                return itemDate >= startDate && itemDate <= endDate;
+                                // Set time to start/end of day for proper comparison
+                                const startOfDay = new Date(startDate);
+                                startOfDay.setHours(0, 0, 0, 0);
+                                const endOfDay = new Date(endDate);
+                                endOfDay.setHours(23, 59, 59, 999);
+                                const itemDateOnly = new Date(itemDate);
+                                itemDateOnly.setHours(0, 0, 0, 0);
+                                return itemDateOnly >= startOfDay && itemDateOnly <= endOfDay;
                               } else if (startDate) {
-                                return itemDate >= startDate;
+                                const startOfDay = new Date(startDate);
+                                startOfDay.setHours(0, 0, 0, 0);
+                                const itemDateOnly = new Date(itemDate);
+                                itemDateOnly.setHours(0, 0, 0, 0);
+                                return itemDateOnly >= startOfDay;
                               } else if (endDate) {
-                                return itemDate <= endDate;
+                                const endOfDay = new Date(endDate);
+                                endOfDay.setHours(23, 59, 59, 999);
+                                const itemDateOnly = new Date(itemDate);
+                                itemDateOnly.setHours(0, 0, 0, 0);
+                                return itemDateOnly <= endOfDay;
                               }
                               return true;
                             })();
@@ -1981,22 +2198,37 @@ const PartnerDashboard = () => {
                           );
                         })();
 
-                        // Date range filter
+                        // Date range filter (handles dd/mm/yyyy format)
                         const dateMatch = (() => {
                           if (!backlogStartDate && !backlogEndDate) return true;
                           
                           const itemDate = item.backlog_referral_date ? new Date(item.backlog_referral_date) : null;
-                          if (!itemDate) return false;
+                          if (!itemDate || isNaN(itemDate.getTime())) return false;
 
-                          const startDate = backlogStartDate ? new Date(backlogStartDate) : null;
-                          const endDate = backlogEndDate ? new Date(backlogEndDate) : null;
+                          const startDate = backlogStartDate ? parseDDMMYYYY(backlogStartDate) : null;
+                          const endDate = backlogEndDate ? parseDDMMYYYY(backlogEndDate) : null;
 
                           if (startDate && endDate) {
-                            return itemDate >= startDate && itemDate <= endDate;
+                            // Set time to start/end of day for proper comparison
+                            const startOfDay = new Date(startDate);
+                            startOfDay.setHours(0, 0, 0, 0);
+                            const endOfDay = new Date(endDate);
+                            endOfDay.setHours(23, 59, 59, 999);
+                            const itemDateOnly = new Date(itemDate);
+                            itemDateOnly.setHours(0, 0, 0, 0);
+                            return itemDateOnly >= startOfDay && itemDateOnly <= endOfDay;
                           } else if (startDate) {
-                            return itemDate >= startDate;
+                            const startOfDay = new Date(startDate);
+                            startOfDay.setHours(0, 0, 0, 0);
+                            const itemDateOnly = new Date(itemDate);
+                            itemDateOnly.setHours(0, 0, 0, 0);
+                            return itemDateOnly >= startOfDay;
                           } else if (endDate) {
-                            return itemDate <= endDate;
+                            const endOfDay = new Date(endDate);
+                            endOfDay.setHours(23, 59, 59, 999);
+                            const itemDateOnly = new Date(itemDate);
+                            itemDateOnly.setHours(0, 0, 0, 0);
+                            return itemDateOnly <= endOfDay;
                           }
                           return true;
                         })();
