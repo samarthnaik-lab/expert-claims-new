@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Calendar, User, FileText, Clock, ZoomIn, ZoomOut, RotateCcw, XCircle, CheckCircle } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { formatDateDDMMYYYY } from "@/lib/utils";
 
 interface BacklogDetail {
   status: any;
@@ -454,36 +455,18 @@ const AdminBacklogView = () => {
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Last Updated</h4>
-                    <p className="text-gray-700">{backlogDetail.updated_time 
-                      ? new Date(backlogDetail.updated_time).toLocaleDateString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "2-digit",
-                        })
-                      : "N/A"}</p>
+                    <p className="text-gray-700">{formatDateDDMMYYYY(backlogDetail.updated_time)}</p>
                   </div>
                 </div>
                 {/* Right Column */}
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Referral Date</h4>
-                    <p className="text-gray-700">{backlogDetail.backlog_referral_date
-                      ? new Date(backlogDetail.backlog_referral_date).toLocaleDateString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "2-digit",
-                        })
-                    : "N/A"}</p>
+                    <p className="text-gray-700">{formatDateDDMMYYYY(backlogDetail.backlog_referral_date)}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Created Date</h4>
-                    <p className="text-gray-700">{backlogDetail.created_time
-                      ? new Date(backlogDetail.created_time).toLocaleDateString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "2-digit",
-                        })
-                      : "N/A"}</p>
+                    <p className="text-gray-700">{formatDateDDMMYYYY(backlogDetail.created_time)}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Updated by</h4>
@@ -539,15 +522,17 @@ const AdminBacklogView = () => {
                             : "User"}
                         </span>
                         <span>
-                          {new Date(comment.created_time).toLocaleString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                            hour12: true,
-                          })}
+                          {comment.created_time ? (() => {
+                            const date = new Date(comment.created_time);
+                            const dateStr = formatDateDDMMYYYY(date);
+                            const timeStr = date.toLocaleTimeString("en-GB", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                              hour12: true,
+                            });
+                            return `${dateStr} ${timeStr}`;
+                          })() : "N/A"}
                         </span>
                       </div>
                     </div>

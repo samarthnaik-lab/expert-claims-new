@@ -33,7 +33,7 @@ import {
 
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDDMMYYYY } from "@/lib/utils";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { CaseTypeService, CaseType } from "@/services/caseTypeService";
@@ -847,7 +847,7 @@ const NewTask = () => {
     if (!newPayment.phase || !newPayment.due_date) {
       toast({
         title: "Error",
-        description: "Please fill all required fields (Phase and Due Date)",
+        description: "Please fill all required fields (Phase and Assigned Date)",
         variant: "destructive",
       });
       return;
@@ -1755,7 +1755,7 @@ const NewTask = () => {
     try {
       console.log("=== UPLOAD DOCUMENTS FUNCTION ===");
       console.log("Case ID:", caseId);
-      console.log("Employee ID:", employeeId);
+      console.log("User ID:", userId);
       console.log("Selected documents:", formData.selectedDocuments);
       console.log("Available document categories:", documentCategories);
       console.log("Document uploads:", documentUploads);
@@ -2037,7 +2037,7 @@ const NewTask = () => {
       if (!formData.due_date) {
         toast({
           title: "Error",
-          description: "Due date is required",
+          description: "Assigned date is required",
           variant: "destructive",
         });
         setIsSubmitting(false);
@@ -3713,7 +3713,7 @@ const NewTask = () => {
                                 {payment.phase_name}
                               </p>
                               <p className="text-sm text-gray-600">
-                                Due: {payment.due_date}
+                                Due: {formatDateDDMMYYYY(payment.due_date)}
                               </p>
                             </div>
                             <div>

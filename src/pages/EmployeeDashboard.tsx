@@ -16,6 +16,7 @@ import SortableTableHeader from '@/components/ui/SortableTableHeader';
 import { useTableSort } from '@/hooks/useTableSort';
 import { useAuth } from '@/contexts/AuthContext';
 import { SessionExpiry } from '@/components/SessionExpiry';
+import { formatDateDDMMYYYY } from '@/lib/utils';
 
 // Task interface based on the API response
 interface Task {
@@ -1290,13 +1291,7 @@ const EmployeeDashboard = () => {
                                 {item.case_description || "No Description"}
                               </td>
                               <td className="p-4 text-sm text-gray-600">
-                                {item.backlog_referral_date
-                                  ? new Date(item.backlog_referral_date).toLocaleDateString("en-GB", {
-                                      day: "2-digit",
-                                      month: "short",
-                                      year: "2-digit",
-                                    })
-                                : "N/A"}
+                                {formatDateDDMMYYYY(item.backlog_referral_date)}
                               </td>
                               <td className="p-4">
                                 <Badge
@@ -1560,7 +1555,7 @@ const EmployeeDashboard = () => {
                               {task.ticket_stage || 'Unknown Status'}
                             </Badge>
                           </td>
-                          <td className="p-4 text-sm text-gray-600">{task.due_date || 'No Due Date'}</td>
+                          <td className="p-4 text-sm text-gray-600">{formatDateDDMMYYYY(task.due_date)}</td>
                           <td className="p-4">
                             <div className="flex items-center space-x-2">
                               <Button 

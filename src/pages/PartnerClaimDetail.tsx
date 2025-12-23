@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Shield, FileText, User, Calendar, Phone, Mail, MapPin, DollarSign, Clock, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 import { ClaimService, ClaimDetail } from '@/services/claimService';
 import { useToast } from '@/hooks/use-toast';
+import { formatDateDDMMYYYY } from '@/lib/utils';
 
 const PartnerClaimDetail = () => {
   const { case_id } = useParams();
@@ -292,7 +293,7 @@ const PartnerClaimDetail = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Last Updated</label>
-                  <p className="text-lg font-semibold text-gray-900">{claim.updated_time ? claim.updated_time.split('T')[0] : 'N/A'}</p>
+                  <p className="text-lg font-semibold text-gray-900">{claim.updated_time ? formatDateDDMMYYYY(claim.updated_time) : 'N/A'}</p>
                 </div>
               </CardContent>
             </Card>

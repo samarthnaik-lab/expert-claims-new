@@ -908,17 +908,17 @@ const EditRegister = () => {
 
                 {/* Hide password field for customer role */}
                 {formData.role !== 'customer' && (
-                  <div>
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) => handleInputChange('password', e.target.value)}
-                      placeholder="Leave blank to keep current password"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Leave blank to keep current password</p>
-                  </div>
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    placeholder="Leave blank to keep current password"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Leave blank to keep current password</p>
+                </div>
                 )}
               </div>
 

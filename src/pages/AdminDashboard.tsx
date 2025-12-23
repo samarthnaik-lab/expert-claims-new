@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserService, AdminUser } from '@/services/userService';
 import SortableTableHeader from '@/components/ui/SortableTableHeader';
 import { useTableSort } from '@/hooks/useTableSort';
+import { formatDateDDMMYYYY } from '@/lib/utils';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -482,7 +483,7 @@ const AdminDashboard = () => {
   // Determine which user set to filter from
   // When filtering/searching, we need all users; otherwise use paginated users
   // If filtering but allUsersForSearch is empty, use users as fallback (will be limited to current page)
-  const usersToFilter = isSearchingOrFiltering 
+  const usersToFilter = isSearchingOrFiltering
     ? (allUsersForSearch.length > 0 ? allUsersForSearch : users) // Use allUsersForSearch if available when filtering
     : users; // Use paginated users when not filtering
   
@@ -504,18 +505,18 @@ const AdminDashboard = () => {
   const allFilteredUsers = (isSearchingOrFiltering && allUsersForSearch.length === 0 && loadingAllUsers)
     ? [] // Show empty while loading all users for filtering
     : usersToFilter.filter(user => {
-        const searchLower = userSearchTerm.toLowerCase();
-        const matchesSearch = !userSearchTerm || (
-          (user.id && user.id.toLowerCase().includes(searchLower)) ||
-          (user.name && user.name.toLowerCase().includes(searchLower)) ||
-          (user.role && user.role.toLowerCase().includes(searchLower)) ||
-          (user.status && user.status.toLowerCase().includes(searchLower)) ||
-          (user.email && user.email.toLowerCase().includes(searchLower))
-        );
+    const searchLower = userSearchTerm.toLowerCase();
+    const matchesSearch = !userSearchTerm || (
+      (user.id && user.id.toLowerCase().includes(searchLower)) ||
+      (user.name && user.name.toLowerCase().includes(searchLower)) ||
+      (user.role && user.role.toLowerCase().includes(searchLower)) ||
+      (user.status && user.status.toLowerCase().includes(searchLower)) ||
+      (user.email && user.email.toLowerCase().includes(searchLower))
+    );
         const matchesRole = userRoleFilter === 'all' || (user.role && user.role === userRoleFilter);
-        const matchesPartnerType = userPartnerTypeFilter === 'all' || ((user as any).partner_type && (user as any).partner_type === userPartnerTypeFilter);
+    const matchesPartnerType = userPartnerTypeFilter === 'all' || ((user as any).partner_type && (user as any).partner_type === userPartnerTypeFilter);
         return matchesSearch && matchesRole && matchesPartnerType;
-      });
+  });
 
   // Paginate filtered users
   // When searching/filtering: use client-side pagination on filtered results
@@ -882,8 +883,8 @@ const AdminDashboard = () => {
             }));
 
             // Store paginated users
-            setUsers(transformedUsers);
-            setHasMoreUsers(transformedUsers.length >= parseInt(userPageLimit));
+              setUsers(transformedUsers);
+              setHasMoreUsers(transformedUsers.length >= parseInt(userPageLimit));
             console.log('Transformed users:', transformedUsers);
           } else if (firstResult.status === 'error' || firstResult.status === 'failure') {
             console.error('API returned error:', firstResult);
@@ -2434,7 +2435,7 @@ Created Time: ${report.created_time}
             <div>
               <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
               <p className="text-white/80 mt-1">
-                Welcome, {adminName} • Manage Tasks, Users, Leave Management And Gap Analysis  
+                Welcome, {adminName} • Manage Tasks, Users, Leave Requests And Gap Analysis  
               </p>
             </div>
             <div className="flex items-center space-x-3">
@@ -2504,7 +2505,7 @@ Created Time: ${report.created_time}
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="tasks">Task Management</TabsTrigger>
             <TabsTrigger value="users">User Management</TabsTrigger>
-            <TabsTrigger value="leave">Leave Management</TabsTrigger>
+            <TabsTrigger value="leave">Leave Requests</TabsTrigger>
             <TabsTrigger value="cases">Gap Analysis</TabsTrigger>
             {/* <TabsTrigger value="reports">Reports</TabsTrigger> */}
             {/* <TabsTrigger value="settings">Settings</TabsTrigger> */}
@@ -2565,7 +2566,7 @@ Created Time: ${report.created_time}
                 >
                   <CardContent className="p-6 text-center">
                     <Calendar className="h-8 w-8 mx-auto mb-3 text-gray-600" />
-                    <h3 className="font-semibold text-gray-900">Leave Management</h3>
+                    <h3 className="font-semibold text-gray-900">Leave Requests</h3>
                   </CardContent>
                 </Card>
               </div>
@@ -2662,7 +2663,7 @@ Created Time: ${report.created_time}
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[100px]">Assignee</th>
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[120px]">Customer</th>
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Due Date</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Assigned Date</th>
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[160px]">Actions</th>
                       </tr>
                     </thead>
@@ -2691,30 +2692,30 @@ Created Time: ${report.created_time}
                             </Badge>
                           </td>
                           <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
-                            {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
+                            {formatDateDDMMYYYY(task.due_date)}
                           </td>
                           <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 min-w-[160px]">
                             <div className="flex items-center gap-1 sm:gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => navigate(`/task/${task.task_id}`)}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/task/${task.task_id}`)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3 text-xs"
                                 title="View"
-                              >
+                            >
                                 <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">View</span>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditTask(task)}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditTask(task)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3 text-xs"
                                 title="Edit"
-                              >
+                            >
                                 <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">Edit</span>
-                              </Button>
+                            </Button>
                             </div>
                           </td>
                         </tr>
@@ -2901,36 +2902,36 @@ Created Time: ${report.created_time}
                           <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={formatPartnerType((user as any).partner_type)}>{formatPartnerType((user as any).partner_type)}</td>
                           <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">
                             <div className="flex items-center gap-1 sm:gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewUser(user)}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewUser(user)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
                                 title="View"
-                              >
+                            >
                                 <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">View</span>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditUser(user)}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditUser(user)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
                                 title="Edit"
-                              >
+                            >
                                 <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">Edit</span>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteUser(user)}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteUser(user)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
                                 title="Delete"
-                              >
+                            >
                                 <Trash className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">Delete</span>
-                              </Button>
+                            </Button>
                             </div>
                           </td>
                         </tr>
@@ -2977,7 +2978,7 @@ Created Time: ${report.created_time}
                     if (isSearchingOrFiltering) {
                       // Client-side pagination - check if there are more filtered results
                       if (endIndex < allFilteredUsers.length) {
-                        setUserCurrentPage(prev => prev + 1);
+                      setUserCurrentPage(prev => prev + 1);
                       }
                     } else {
                       // API pagination - move to next page
@@ -2999,7 +3000,7 @@ Created Time: ${report.created_time}
 
           <TabsContent value="leave" className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">Leave Management</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Leave Requests</h2>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-700">Show:</span>
                 <Select
@@ -3056,8 +3057,8 @@ Created Time: ${report.created_time}
                             <td className="px-4 py-4 min-w-0 break-words text-sm font-medium text-blue-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.application_id}</td>
                             <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.employees.first_name} {request.employees.last_name}</td>
                             <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.leave_types?.type_name || 'N/A'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.start_date}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.end_date}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatDateDDMMYYYY(request.start_date)}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatDateDDMMYYYY(request.end_date)}</td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.total_days}</td>
                             <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={request.reason}>{request.reason}</td>
                             <td className="px-4 py-4 whitespace-nowrap">
@@ -3066,7 +3067,7 @@ Created Time: ${report.created_time}
                               </Badge>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-                              {new Date(request.applied_date).toLocaleDateString()}
+                              {formatDateDDMMYYYY(request.applied_date)}
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
                               {(() => {
@@ -3302,14 +3303,14 @@ Created Time: ${report.created_time}
                           .filter((item) => {
                             // Search filter
                             const matchesSearch = !casesSearchTerm || (() => {
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                            const searchLower = casesSearchTerm.toLowerCase();
+                            return (
+                              item.case_summary?.toLowerCase().includes(searchLower) ||
+                              item.case_description?.toLowerCase().includes(searchLower) ||
+                              item.backlog_id?.toString().includes(searchLower) ||
+                              item.case_type_id?.toString().includes(searchLower) ||
+                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                            );
                             })();
                             
                             // Assigned Expert filter
@@ -3355,7 +3356,7 @@ Created Time: ${report.created_time}
                                   {item.case_types?.case_type_name || `Type ${item.case_type_id}` || "N/A"}
                                 </td> */}
                                 <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-600 hidden lg:table-cell">
-                                  {item.backlog_referral_date || "N/A"}
+                                  {formatDateDDMMYYYY(item.backlog_referral_date)}
                                 </td>
                                 <td className="p-3 sm:p-4">
                                   <Badge className={statusBadgeClass}>
@@ -3426,14 +3427,14 @@ Created Time: ${report.created_time}
                           Showing {((currentPageCases - 1) * pageSizeCases) + 1} to {Math.min(currentPageCases * pageSizeCases, casesData.filter((item) => {
                             // Search filter
                             const matchesSearch = !casesSearchTerm || (() => {
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                            const searchLower = casesSearchTerm.toLowerCase();
+                            return (
+                              item.case_summary?.toLowerCase().includes(searchLower) ||
+                              item.case_description?.toLowerCase().includes(searchLower) ||
+                              item.backlog_id?.toString().includes(searchLower) ||
+                              item.case_type_id?.toString().includes(searchLower) ||
+                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                            );
                             })();
                             
                             // Assigned Expert filter
@@ -3446,14 +3447,14 @@ Created Time: ${report.created_time}
                           }).length)} of {casesData.filter((item) => {
                             // Search filter
                             const matchesSearch = !casesSearchTerm || (() => {
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                            const searchLower = casesSearchTerm.toLowerCase();
+                            return (
+                              item.case_summary?.toLowerCase().includes(searchLower) ||
+                              item.case_description?.toLowerCase().includes(searchLower) ||
+                              item.backlog_id?.toString().includes(searchLower) ||
+                              item.case_type_id?.toString().includes(searchLower) ||
+                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                            );
                             })();
                             
                             // Assigned Expert filter
@@ -3479,14 +3480,14 @@ Created Time: ${report.created_time}
                             Page {currentPageCases} of {Math.ceil(casesData.filter((item) => {
                               // Search filter
                               const matchesSearch = !casesSearchTerm || (() => {
-                                const searchLower = casesSearchTerm.toLowerCase();
-                                return (
-                                  item.case_summary?.toLowerCase().includes(searchLower) ||
-                                  item.case_description?.toLowerCase().includes(searchLower) ||
-                                  item.backlog_id?.toString().includes(searchLower) ||
-                                  item.case_type_id?.toString().includes(searchLower) ||
-                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                                );
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
                               })();
                               
                               // Assigned Expert filter
@@ -3502,14 +3503,14 @@ Created Time: ${report.created_time}
                             onClick={() => setCurrentPageCases(prev => Math.min(Math.ceil(casesData.filter((item) => {
                               // Search filter
                               const matchesSearch = !casesSearchTerm || (() => {
-                                const searchLower = casesSearchTerm.toLowerCase();
-                                return (
-                                  item.case_summary?.toLowerCase().includes(searchLower) ||
-                                  item.case_description?.toLowerCase().includes(searchLower) ||
-                                  item.backlog_id?.toString().includes(searchLower) ||
-                                  item.case_type_id?.toString().includes(searchLower) ||
-                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                                );
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
                               })();
                               
                               // Assigned Expert filter
@@ -3521,14 +3522,14 @@ Created Time: ${report.created_time}
                             disabled={currentPageCases >= Math.ceil(casesData.filter((item) => {
                               // Search filter
                               const matchesSearch = !casesSearchTerm || (() => {
-                                const searchLower = casesSearchTerm.toLowerCase();
-                                return (
-                                  item.case_summary?.toLowerCase().includes(searchLower) ||
-                                  item.case_description?.toLowerCase().includes(searchLower) ||
-                                  item.backlog_id?.toString().includes(searchLower) ||
-                                  item.case_type_id?.toString().includes(searchLower) ||
-                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                                );
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
                               })();
                               
                               // Assigned Expert filter
@@ -3740,7 +3741,7 @@ Created Time: ${report.created_time}
                             </Badge>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
+                            {formatDateDDMMYYYY(task.due_date)}
                           </td>
                         </tr>
                       ))}
@@ -4027,19 +4028,19 @@ Created Time: ${report.created_time}
                       <div>
                         <label className="text-sm font-medium text-gray-500">Referral Date</label>
                         <p className="text-gray-900 font-medium">
-                          {selectedBacklogItem.backlog_referral_date || "N/A"}
+                          {formatDateDDMMYYYY(selectedBacklogItem.backlog_referral_date)}
                         </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Created Time</label>
+                        <label className="text-sm font-medium text-gray-500">Created Date</label>
                         <p className="text-gray-900 font-medium">
-                          {selectedBacklogItem.created_time ? new Date(selectedBacklogItem.created_time).toLocaleString() : "N/A"}
+                          {formatDateDDMMYYYY(selectedBacklogItem.created_time)}
                         </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Updated Time</label>
+                        <label className="text-sm font-medium text-gray-500">Last Updated Date</label>
                         <p className="text-gray-900 font-medium">
-                          {selectedBacklogItem.updated_time ? new Date(selectedBacklogItem.updated_time).toLocaleString() : "N/A"}
+                          {formatDateDDMMYYYY(selectedBacklogItem.updated_time)}
                         </p>
                       </div>
                     </CardContent>

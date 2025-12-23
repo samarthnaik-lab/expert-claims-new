@@ -416,6 +416,7 @@
 
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { formatDateDDMMYYYY } from '@/lib/utils';
 
 // Function to convert number to words (unchanged)
 function convertToWords(n: number): string {
@@ -564,7 +565,7 @@ export const prepareInvoiceData = (paymentStage: any, caseData: any, customerDat
 
   return {
     invoiceNumber: generateInvoiceNumber(),
-    invoiceDate: new Date().toLocaleDateString('en-GB'),
+    invoiceDate: formatDateDDMMYYYY(new Date()),
     companyDetails: defaultCompanyDetails,
     customerDetails: {
       name: customerName || 'Not added name',

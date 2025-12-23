@@ -352,13 +352,13 @@ const Login = () => {
     // For customer role, validate mobile number and use customer-specific endpoint
     if (role === 'customer') {
       if (!formData.mobile) {
-        toast({
-          title: "Error",
-          description: "Please enter your mobile number",
-          variant: "destructive",
-        });
-        return;
-      }
+      toast({
+        title: "Error",
+        description: "Please enter your mobile number",
+        variant: "destructive",
+      });
+      return;
+    }
 
       setIsSendingOtp(true);
 
@@ -478,7 +478,7 @@ const Login = () => {
           : "OTP has been sent to your mobile number. Please enter the OTP code.";
         const message = result.message || defaultMessage;
         const maskedMessage = role === 'admin' ? message : maskMobileNumber(message); // Only mask for non-admin (mobile numbers)
-        
+
         toast({
           title: "OTP Sent Successfully",
           description: maskedMessage,
@@ -704,7 +704,7 @@ const Login = () => {
             description: result.message || `Welcome to your ${role} portal!`,
           });
           
-          navigate('/employee-dashboard');
+            navigate('/employee-dashboard');
         } else {
           toast({
             title: "Login Failed",
@@ -852,26 +852,26 @@ const Login = () => {
             
             {/* OTP Field - Only show after OTP is sent */}
             {otpSent && loginStep === 'otp_sent' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="otp" className="text-gray-700 font-semibold">OTP <span className="text-red-500">*</span></Label>
-                  <div className="relative">
-                    <KeyRound className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="otp"
-                      value={formData.otp}
-                      onChange={(e) => handleOtpChange(e.target.value)}
-                      onKeyDown={handleKeyPress}
-                      onBlur={() => handleFieldBlur('otp')}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="otp" className="text-gray-700 font-semibold">OTP <span className="text-red-500">*</span></Label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input
+                    id="otp"
+                    value={formData.otp}
+                    onChange={(e) => handleOtpChange(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    onBlur={() => handleFieldBlur('otp')}
                       placeholder="Enter 4-digit OTP"
-                      className="pl-10 h-12 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-                    />
-                    {touched.otp && errors.otp && (
-                      <p className="text-xs text-red-500 mt-1">{errors.otp}</p>
-                    )}
-                  </div>
+                    className="pl-10 h-12 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                  />
+                  {touched.otp && errors.otp && (
+                    <p className="text-xs text-red-500 mt-1">{errors.otp}</p>
+                  )}
                 </div>
               </div>
+            </div>
             )}
           </div>
         );
