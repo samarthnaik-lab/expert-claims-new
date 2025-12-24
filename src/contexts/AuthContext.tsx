@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { AuthService, LoginCredentials } from '@/services/authService';
 import { getUserDetailsFromStorage, clearUserDetailsFromStorage } from '@/services/userService';
 import { UserDetails } from '@/types/auth';
@@ -37,9 +37,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
+  const authStateSetRef = useRef(false);
 
   // Check for existing session on mount
   useEffect(() => {
+    authStateSetRef.current = false; // Reset ref on each check
     const checkExistingSession = () => {
       console.log('🔍 Checking existing session...');
       const storedSession = localStorage.getItem('expertclaims_session');
@@ -100,9 +102,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // If still missing critical fields, only then logout
             if (!parsedSession.sessionId || !parsedSession.jwtToken || !parsedSession.userId) {
               console.error('❌ Cannot recover session - missing critical fields');
+              // Set loading to false BEFORE clearing session to prevent race condition
+              setIsLoading(false);
               setSession(null);
               setIsAuthenticated(false);
-              setIsLoading(false);
               return;
             }
           }
@@ -140,17 +143,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             } : parsedSession;
             
             // Set session and authentication state synchronously
+            // IMPORTANT: Use React's state batching to ensure both states update together
+            // Set authenticated state BEFORE setting loading to false to prevent race condition
             setSession(sessionToUse);
             setIsAuthenticated(true);
+            authStateSetRef.current = true; // Mark that auth state has been set
             
             if (correctRole !== parsedSession.userRole) {
               localStorage.setItem('expertclaims_session', JSON.stringify(sessionToUse));
               console.log('Updated session role from stored user details:', sessionToUse.userRole);
             }
             
-            // Set loading to false immediately after setting auth state
-            setIsLoading(false);
-            console.log('✅ Session check complete. User remains logged in.');
+            // Use double requestAnimationFrame to ensure React has processed state updates
+            // This ensures ProtectedRoute sees the updated auth state before checking
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                if (authStateSetRef.current) {
+                  setIsLoading(false);
+                  console.log('✅ Session check complete. User remains logged in.');
+                }
+              });
+            });
           } else {
             // Session has expired
             const timeSinceExpiry = now - parsedSession.expiresAt;
@@ -160,11 +173,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             if (timeSinceExpiry >= gracePeriod && !isAdmin && correctRole !== 'admin') {
               // Session expired beyond grace period for non-admin users
               console.log('❌ Session expired beyond grace period, logging out...');
+              // Set loading to false BEFORE clearing session to prevent race condition
+              setIsLoading(false);
               localStorage.removeItem('expertclaims_session');
               clearUserDetailsFromStorage();
               setSession(null);
               setIsAuthenticated(false);
-              setIsLoading(false);
             } else {
               // Session expired but within grace period OR is admin - restore session
               if ((isAdmin || correctRole === 'admin') && timeSinceExpiry >= gracePeriod) {
@@ -179,15 +193,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 expiresAt: now + (365 * 24 * 60 * 60 * 1000) // Extend to 365 days
               };
               
+              // IMPORTANT: Set authenticated state BEFORE setting loading to false
               setSession(refreshedSession);
               setIsAuthenticated(true);
+              authStateSetRef.current = true; // Mark that auth state has been set
               localStorage.setItem('expertclaims_session', JSON.stringify(refreshedSession));
               
               console.log('✅ Session refreshed successfully with role:', refreshedSession.userRole);
               
-              // Set loading to false immediately after setting auth state
-              setIsLoading(false);
-              console.log('✅ Session check complete. Session refreshed.');
+              // Use double requestAnimationFrame to ensure React has processed state updates
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  if (authStateSetRef.current) {
+                    setIsLoading(false);
+                    console.log('✅ Session check complete. Session refreshed.');
+                  }
+                });
+              });
             }
           }
         } catch (error) {
@@ -215,10 +237,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               // Save the recovered session
               localStorage.setItem('expertclaims_session', JSON.stringify(recoveredSession));
               
+              // IMPORTANT: Set authenticated state BEFORE setting loading to false
               setSession(recoveredSession);
               setIsAuthenticated(true);
-              setIsLoading(false);
-              console.log('✅ Session recovered successfully');
+              authStateSetRef.current = true; // Mark that auth state has been set
+              
+              // Use double requestAnimationFrame to ensure React has processed state updates
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  if (authStateSetRef.current) {
+                    setIsLoading(false);
+                    console.log('✅ Session recovered successfully');
+                  }
+                });
+              });
               return;
             }
           } catch (recoveryError) {
@@ -227,6 +259,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // Only logout if recovery failed
           console.log('❌ Cannot recover session, logging out...');
+          // Set loading to false BEFORE clearing session to prevent race condition
+          setIsLoading(false);
           try {
             localStorage.removeItem('expertclaims_session');
             clearUserDetailsFromStorage();
@@ -235,7 +269,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
           setSession(null);
           setIsAuthenticated(false);
-          setIsLoading(false);
         }
       } else {
         // No stored session found - check for individual session items as fallback
@@ -260,16 +293,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Save the reconstructed session
           localStorage.setItem('expertclaims_session', JSON.stringify(reconstructedSession));
           
+          // IMPORTANT: Set authenticated state BEFORE setting loading to false
           setSession(reconstructedSession);
           setIsAuthenticated(true);
-          setIsLoading(false);
-          console.log('✅ Session reconstructed from individual items');
+          authStateSetRef.current = true; // Mark that auth state has been set
+          
+          // Use double requestAnimationFrame to ensure React has processed state updates
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              if (authStateSetRef.current) {
+                setIsLoading(false);
+                console.log('✅ Session reconstructed from individual items');
+              }
+            });
+          });
         } else {
           // No stored session found
           console.log('❌ No stored session found');
+          // Set loading to false BEFORE clearing session to prevent race condition
+          setIsLoading(false);
           setSession(null);
           setIsAuthenticated(false);
-          setIsLoading(false);
         }
       }
     };

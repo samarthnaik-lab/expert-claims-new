@@ -11,7 +11,7 @@ import { MessageCircle, Upload, FileText, LogOut, Phone, Shield, TrendingUp, Clo
 import { AuthService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
 import { SessionExpiry } from '@/components/SessionExpiry';
-import { buildApiUrl, getApiKey } from '@/config/api';
+import { buildApiUrl } from '@/config/api';
 import { formatDateDDMMYYYY } from '@/lib/utils';
 
 const CustomerPortal = () => {
@@ -493,8 +493,6 @@ const CustomerPortal = () => {
         console.log('Customer Case API Body:', { user_id: userId, page: page, size: limit });
         console.log('Session data:', { sessionId: sessionId ? 'present' : 'missing', jwtToken: jwtToken ? 'present' : 'missing' });
   
-        // Get API key dynamically
-        const apiKey = getApiKey();
         const apiUrl = buildApiUrl('customer/customer-case');
         console.log('Calling Customer Case API:', apiUrl);
   
@@ -506,8 +504,6 @@ const CustomerPortal = () => {
               'accept': '*/*',
               'accept-language': 'en-US,en;q=0.9',
               'accept-profile': 'expc',
-              'apikey': apiKey,
-              'authorization': `Bearer ${apiKey}`,
               'content-profile': 'expc',
               'session_id': sessionId,
               'jwt_token': jwtToken,

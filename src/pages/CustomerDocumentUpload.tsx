@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield, Upload, FileText, X, CheckCircle, AlertCircle, Trash2, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { buildApiUrl, getApiKey } from '@/config/api';
+import { buildApiUrl } from '@/config/api';
 
 interface UploadedFile {
   id: string;
@@ -233,8 +233,6 @@ const CustomerDocumentUpload = () => {
         const pageSize = 50; // Fetch larger pages
         let hasMore = true;
 
-        // Get API key dynamically
-        const apiKey = getApiKey();
         const apiUrl = buildApiUrl('customer/customer-case');
         console.log('Calling Customer Case API:', apiUrl);
         console.log('Session data:', { sessionId: sessionId ? 'present' : 'missing', jwtToken: jwtToken ? 'present' : 'missing' });
@@ -256,8 +254,6 @@ const CustomerDocumentUpload = () => {
               'accept': '*/*',
               'accept-language': 'en-US,en;q=0.9',
               'accept-profile': 'expc',
-              'apikey': apiKey,
-              'authorization': `Bearer ${apiKey}`,
               'content-profile': 'expc',
               'jwt_token': jwtToken,
               'session_id': sessionId

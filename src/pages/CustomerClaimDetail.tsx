@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Shield, FileText, User, Calendar, Phone, Mail, MapPin, DollarSign, Clock, CheckCircle, AlertCircle, XCircle, MessageCircle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { formatDateDDMMYYYY } from '@/lib/utils';
-import { buildApiUrl, getApiKey } from '@/config/api';
+import { buildApiUrl } from '@/config/api';
 
 
 
@@ -278,8 +278,6 @@ const CustomerClaimDetail = () => {
 
         console.log('Looking for case_id:', case_id);
   
-        // Get API key dynamically
-        const apiKey = getApiKey();
         const apiUrl = buildApiUrl('customer/customer-case');
         console.log('Calling Customer Case API:', apiUrl);
         console.log('Session data:', { sessionId: sessionId ? 'present' : 'missing', jwtToken: jwtToken ? 'present' : 'missing' });
@@ -301,8 +299,6 @@ const CustomerClaimDetail = () => {
               'accept': '*/*',
               'accept-language': 'en-US,en;q=0.9',
               'accept-profile': 'expc',
-              'apikey': apiKey,
-              'authorization': `Bearer ${apiKey}`,
               'content-profile': 'expc',
               'jwt_token': jwtToken,
               'session_id': sessionId
@@ -499,9 +495,6 @@ const CustomerClaimDetail = () => {
       // Call the support/view API to get document
       console.log('Calling support/view API for document ID:', documentId);
       
-      // Get API key dynamically
-      const apiKey = getApiKey();
-      
       const requestBody = {
         document_id: documentId
       };
@@ -509,13 +502,12 @@ const CustomerClaimDetail = () => {
       const response = await fetch(buildApiUrl('support/view'), {
         method: 'POST',
         headers: {
-          'apikey': apiKey,
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Profile': 'expc',
           'Accept-Profile': 'expc',
           'session_id': sessionId,
           'jwt_token': jwtToken,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
         },
         body: JSON.stringify(requestBody)
       });
