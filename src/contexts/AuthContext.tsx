@@ -47,8 +47,65 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (storedSession) {
         try {
-          const parsedSession: Session = JSON.parse(storedSession);
+          let parsedSession: Session;
+          
+          // Try to parse the session with better error handling
+          try {
+            parsedSession = JSON.parse(storedSession);
+          } catch (parseError) {
+            console.error('❌ Failed to parse session JSON:', parseError);
+            // Try to recover by checking if there are individual session items
+            const jwtToken = localStorage.getItem('jwtToken');
+            const sessionId = localStorage.getItem('sessionId');
+            const userId = localStorage.getItem('userId');
+            const userRole = localStorage.getItem('userRole');
+            const expiresAtStr = localStorage.getItem('expiresAt');
+            
+            if (jwtToken && sessionId && userId) {
+              console.log('🔄 Attempting to reconstruct session from individual items...');
+              parsedSession = {
+                sessionId,
+                jwtToken,
+                userId,
+                userRole: userRole || 'customer',
+                expiresAt: expiresAtStr ? parseInt(expiresAtStr) : Date.now() + (365 * 24 * 60 * 60 * 1000)
+              };
+              // Save the reconstructed session
+              localStorage.setItem('expertclaims_session', JSON.stringify(parsedSession));
+              console.log('✅ Session reconstructed successfully');
+            } else {
+              throw new Error('Cannot reconstruct session - insufficient data');
+            }
+          }
+          
           const now = Date.now();
+          
+          // Validate session structure - ensure all required fields exist
+          if (!parsedSession.sessionId || !parsedSession.jwtToken || !parsedSession.userId) {
+            console.warn('⚠️ Session missing required fields, attempting to recover...');
+            // Try to get missing fields from individual localStorage items
+            if (!parsedSession.sessionId) {
+              parsedSession.sessionId = localStorage.getItem('sessionId') || '';
+            }
+            if (!parsedSession.jwtToken) {
+              parsedSession.jwtToken = localStorage.getItem('jwtToken') || '';
+            }
+            if (!parsedSession.userId) {
+              parsedSession.userId = localStorage.getItem('userId') || '';
+            }
+            if (!parsedSession.userRole) {
+              parsedSession.userRole = localStorage.getItem('userRole') || 'customer';
+            }
+            
+            // If still missing critical fields, only then logout
+            if (!parsedSession.sessionId || !parsedSession.jwtToken || !parsedSession.userId) {
+              console.error('❌ Cannot recover session - missing critical fields');
+              setSession(null);
+              setIsAuthenticated(false);
+              setIsLoading(false);
+              return;
+            }
+          }
           
           // Ensure expiresAt exists and is a valid number
           if (!parsedSession.expiresAt || isNaN(parsedSession.expiresAt)) {
@@ -134,8 +191,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           }
         } catch (error) {
-          console.error('❌ Error parsing stored session:', error);
-          // Only clear on parse error, don't logout if session structure is wrong
+          console.error('❌ Error processing stored session:', error);
+          // Don't immediately logout - try to recover first
+          console.log('🔄 Attempting to recover session from individual localStorage items...');
+          
+          try {
+            const jwtToken = localStorage.getItem('jwtToken');
+            const sessionId = localStorage.getItem('sessionId');
+            const userId = localStorage.getItem('userId');
+            const userRole = localStorage.getItem('userRole');
+            const expiresAtStr = localStorage.getItem('expiresAt');
+            
+            if (jwtToken && sessionId && userId) {
+              console.log('✅ Recovered session from individual items');
+              const recoveredSession: Session = {
+                sessionId,
+                jwtToken,
+                userId,
+                userRole: userRole || 'customer',
+                expiresAt: expiresAtStr ? parseInt(expiresAtStr) : Date.now() + (365 * 24 * 60 * 60 * 1000)
+              };
+              
+              // Save the recovered session
+              localStorage.setItem('expertclaims_session', JSON.stringify(recoveredSession));
+              
+              setSession(recoveredSession);
+              setIsAuthenticated(true);
+              setIsLoading(false);
+              console.log('✅ Session recovered successfully');
+              return;
+            }
+          } catch (recoveryError) {
+            console.error('❌ Failed to recover session:', recoveryError);
+          }
+          
+          // Only logout if recovery failed
+          console.log('❌ Cannot recover session, logging out...');
           try {
             localStorage.removeItem('expertclaims_session');
             clearUserDetailsFromStorage();
@@ -147,11 +238,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setIsLoading(false);
         }
       } else {
-        // No stored session found
-        console.log('❌ No stored session found');
-        setSession(null);
-        setIsAuthenticated(false);
-        setIsLoading(false);
+        // No stored session found - check for individual session items as fallback
+        console.log('❌ No stored session found, checking individual items...');
+        const jwtToken = localStorage.getItem('jwtToken');
+        const sessionId = localStorage.getItem('sessionId');
+        const userId = localStorage.getItem('userId');
+        
+        if (jwtToken && sessionId && userId) {
+          console.log('✅ Found individual session items, reconstructing session...');
+          const reconstructedSession: Session = {
+            sessionId,
+            jwtToken,
+            userId,
+            userRole: localStorage.getItem('userRole') || 'customer',
+            expiresAt: (() => {
+              const expiresAtStr = localStorage.getItem('expiresAt');
+              return expiresAtStr ? parseInt(expiresAtStr) : Date.now() + (365 * 24 * 60 * 60 * 1000);
+            })()
+          };
+          
+          // Save the reconstructed session
+          localStorage.setItem('expertclaims_session', JSON.stringify(reconstructedSession));
+          
+          setSession(reconstructedSession);
+          setIsAuthenticated(true);
+          setIsLoading(false);
+          console.log('✅ Session reconstructed from individual items');
+        } else {
+          // No stored session found
+          console.log('❌ No stored session found');
+          setSession(null);
+          setIsAuthenticated(false);
+          setIsLoading(false);
+        }
       }
     };
 

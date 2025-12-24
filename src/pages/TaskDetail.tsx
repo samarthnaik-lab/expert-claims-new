@@ -388,9 +388,34 @@ const TaskDetail = () => {
     fetchEmployees();
   }, []);
 
-  // Helper function to get user name from ID
-  const getUserName = (userId: string | number | null | undefined): string => {
+  // Helper function to get user name from ID, optionally with history object for additional context
+  const getUserName = (userId: string | number | null | undefined, history?: any): string => {
     if (!userId) return 'Unknown';
+    
+    // First, check if history object has user information directly
+    if (history) {
+      // Check for changed_by_user or changed_by_name fields
+      if (history.changed_by_user?.full_name || history.changed_by_user?.name) {
+        return history.changed_by_user.full_name || history.changed_by_user.name;
+      }
+      if (history.changed_by_name) {
+        return history.changed_by_name;
+      }
+      // Check for employee object in history
+      if (history.employee?.first_name && history.employee?.last_name) {
+        return `${history.employee.first_name} ${history.employee.last_name}`.trim();
+      }
+      if (history.employee?.employee_name) {
+        return history.employee.employee_name;
+      }
+      // Check for user object in history
+      if (history.user?.full_name || history.user?.name) {
+        return history.user.full_name || history.user.name;
+      }
+      if (history.user?.first_name && history.user?.last_name) {
+        return `${history.user.first_name} ${history.user.last_name}`.trim();
+      }
+    }
     
     const userIdStr = String(userId);
     const userIdNum = parseInt(userIdStr);
@@ -408,7 +433,7 @@ const TaskDetail = () => {
       return `${caseDetails.employees.first_name} ${caseDetails.employees.last_name}`.trim();
     }
     
-    // Fallback: check if history object has user info
+    // Fallback: return the userId as string
     return userIdStr;
   };
 
@@ -1338,31 +1363,6 @@ const TaskDetail = () => {
                       {caseDetails.due_date ? formatDateDDMMYYYY(caseDetails.due_date) : 'Not set'}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Claim Amount</p>
-                    <p className="font-medium">
-                      {(() => {
-                        // Check multiple possible field names for claim amount (API uses "claim amount" with space)
-                        const claimAmountRaw = (caseDetails as any)["claim amount"]
-                          ?? caseDetails.claim_amount 
-                          ?? (caseDetails as any).claims_amount 
-                          ?? (caseDetails as any).claimAmount 
-                          ?? (caseDetails as any).claimsAmount
-                          ?? null;
-                        
-                        // Convert to number if it's a string, handle 0 as valid value
-                        if (claimAmountRaw !== null && claimAmountRaw !== undefined && claimAmountRaw !== '') {
-                          const claimAmount = typeof claimAmountRaw === 'string' ? parseFloat(claimAmountRaw) : Number(claimAmountRaw);
-                          if (!isNaN(claimAmount)) {
-                            console.log('Claim amount found:', claimAmount);
-                            return `${claimAmount.toLocaleString()} ${caseDetails.value_currency || 'INR'}`;
-                          }
-                        }
-                        console.log('Claim amount not found. Raw value:', claimAmountRaw, 'Available fields:', Object.keys(caseDetails || {}));
-                        return 'Not set';
-                      })()}
-                    </p>
-                  </div>
                   {/* <div>
                     <p className="text-sm text-gray-600">Assigned To</p>
                     <p className="font-medium">{caseDetails.assigned_to || 'N/A'}</p>
@@ -2151,7 +2151,7 @@ const TaskDetail = () => {
                             <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
                               <div className="flex items-center space-x-1">
                                 <User className="h-3 w-3" />
-                                <span>Changed by: {getUserName(history.changed_by)}</span>
+                                <span>Changed by: {getUserName(history.changed_by, history)}</span>
                               </div>
                               <div className="flex items-center space-x-1">
                                 <span className="text-xs bg-gray-100 px-2 py-1 rounded">
@@ -2171,11 +2171,11 @@ const TaskDetail = () => {
                                 </div>
                                 <div>
                                   <p className="text-gray-600">Changed By</p>
-                                  <p className="font-medium">{getUserName(history.changed_by)}</p>
+                                  <p className="font-medium">{getUserName(history.changed_by, history)}</p>
                                 </div>
                                 <div>
                                   <p className="text-gray-600">Changed To</p>
-                                  <p className="font-medium">{getUserName(history.changed_to)}</p>
+                                  <p className="font-medium">{getUserName(history.changed_to, history)}</p>
                                 </div>
                               </div>
                             </div>
@@ -2325,11 +2325,23 @@ const TaskDetail = () => {
                        <h4 className="font-semibold text-gray-900 mb-3">Payment Summary</h4>
                        <div className="grid grid-cols-2 gap-4">
                          <div className="text-center">
-                           <p className="text-sm text-gray-600">Total Claim Amount</p>
+                           <p className="text-sm text-gray-600">Total Service Amount</p>
                            <p className="text-2xl font-bold text-gray-900">
                              ₹{(() => {
-                               const serviceAmount = parseFloat((caseDetails as any)['service amount'] || (caseDetails as any).service_amount || '0') || 0;
-                               return serviceAmount > 0 ? serviceAmount.toLocaleString('en-IN') : caseDetails.case_payment_phases.reduce((sum: number, phase: any) => sum + (phase.phase_amount || 0), 0).toLocaleString('en-IN');
+                               // Get service amount from caseDetails (check multiple possible field names)
+                               const serviceAmountRaw = (caseDetails as any)["service amount"]
+                                 ?? (caseDetails as any).service_amount
+                                 ?? (caseDetails as any).serviceAmount
+                                 ?? null;
+                               
+                               if (serviceAmountRaw !== null && serviceAmountRaw !== undefined && serviceAmountRaw !== '') {
+                                 const serviceAmount = typeof serviceAmountRaw === 'number' 
+                                   ? serviceAmountRaw 
+                                   : parseFloat(String(serviceAmountRaw));
+                                 return isNaN(serviceAmount) ? '0' : serviceAmount.toLocaleString('en-IN');
+                               }
+                               
+                               return '0';
                              })()}
                            </p>
                          </div>
@@ -2337,20 +2349,32 @@ const TaskDetail = () => {
                            <p className="text-sm text-gray-600">Pending Amount</p>
                            <p className="text-2xl font-bold text-red-600">
                              ₹{(() => {
-                               const serviceAmount = parseFloat((caseDetails as any)['service amount'] || (caseDetails as any).service_amount || '0') || 0;
+                               // Get service amount
+                               const serviceAmountRaw = (caseDetails as any)["service amount"]
+                                 ?? (caseDetails as any).service_amount
+                                 ?? (caseDetails as any).serviceAmount
+                                 ?? null;
+                               
+                               const serviceAmount = serviceAmountRaw !== null && serviceAmountRaw !== undefined && serviceAmountRaw !== ''
+                                 ? (typeof serviceAmountRaw === 'number' ? serviceAmountRaw : parseFloat(String(serviceAmountRaw)))
+                                 : 0;
+                               
+                               // Calculate total from all payment phases (sum of all stages)
                                const calculateTotal = (phases: any[]) => {
                                  return phases.reduce((sum: number, phase: any) => {
                                    if (!phase) return sum;
+                                   // Try multiple ways to get the amount
                                    const amount = phase.phase_amount ?? phase.paid_amount ?? 0;
                                    if (amount === null || amount === undefined) return sum;
                                    const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount));
                                    return sum + (isNaN(numAmount) ? 0 : numAmount);
                                  }, 0);
                                };
+                               
                                const totalPaymentPhases = calculateTotal(caseDetails.case_payment_phases);
-                               const pendingAmount = serviceAmount > 0 ? Math.max(0, serviceAmount - totalPaymentPhases) : caseDetails.case_payment_phases
-                                 .filter((phase: any) => phase.status === 'pending')
-                                 .reduce((sum: number, phase: any) => sum + (phase.phase_amount || 0), 0);
+                               
+                               // Calculate pending amount: Service Amount - Total of all payment stages
+                               const pendingAmount = Math.max(0, (isNaN(serviceAmount) ? 0 : serviceAmount) - totalPaymentPhases);
                                return pendingAmount.toLocaleString('en-IN');
                              })()}
                            </p>
@@ -2359,16 +2383,20 @@ const TaskDetail = () => {
                        <div className="mt-3 text-center">
                          <p className="text-sm text-gray-600">
                            Paid Amount: ₹{(() => {
+                             // Calculate total from all payment phases (sum of all stages, not filtered by status)
                              const calculateTotal = (phases: any[]) => {
                                return phases.reduce((sum: number, phase: any) => {
                                  if (!phase) return sum;
+                                 // Try multiple ways to get the amount
                                  const amount = phase.phase_amount ?? phase.paid_amount ?? 0;
                                  if (amount === null || amount === undefined) return sum;
                                  const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount));
                                  return sum + (isNaN(numAmount) ? 0 : numAmount);
                                }, 0);
                              };
-                             return calculateTotal(caseDetails.case_payment_phases).toLocaleString('en-IN');
+                             
+                             const paidAmount = calculateTotal(caseDetails.case_payment_phases);
+                             return paidAmount.toLocaleString('en-IN');
                            })()}
                          </p>
                        </div>

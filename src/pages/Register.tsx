@@ -708,8 +708,17 @@ const Register = () => {
                   <Label htmlFor="mobile">Mobile Number{(formData.role === 'admin' || formData.role === 'customer') ? ' *' : ''}</Label>
                   <Input
                     id="mobile"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={formData.mobile}
-                    onChange={(e) => handleInputChange('mobile', e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Only allow digits
+                      if (/^\d*$/.test(value) && value.length <= 10) {
+                        handleInputChange('mobile', value);
+                      }
+                    }}
                     placeholder="Enter mobile number"
                     maxLength={10}
                     minLength={10}
@@ -721,8 +730,17 @@ const Register = () => {
                   <Label htmlFor="emergency_contact">Emergency Contact</Label>
                   <Input
                     id="emergency_contact"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={formData.emergency_contact}
-                    onChange={(e) => handleInputChange('emergency_contact', e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Only allow digits
+                      if (/^\d*$/.test(value) && value.length <= 10) {
+                        handleInputChange('emergency_contact', value);
+                      }
+                    }}
                     placeholder="Enter emergency contact"
                     maxLength={10}
                     minLength={10}
@@ -911,11 +929,20 @@ const Register = () => {
                     <Label htmlFor="work_phonenumber">Work Phone Number</Label>
                     <Input
                       id="work_phonenumber"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={formData.work_phonenumber}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Only allow digits
+                        if (/^\d*$/.test(value) && value.length <= 10) {
+                          handleInputChange('work_phonenumber', value);
+                        }
+                      }}
+                      placeholder="Enter work phone number"
                       maxLength={10}
                       minLength={10}
-                      onChange={(e) => handleInputChange('work_phonenumber', e.target.value)}
-                      placeholder="Enter work phone number"
                     />
                   </div>
                 </div>
