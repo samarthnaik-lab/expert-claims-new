@@ -254,20 +254,17 @@ const AdminBacklogView = () => {
         document_id: documentId
       };
       
-      // Supabase service role key
-      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
-      
       const response = await fetch(buildApiUrl('support/partnerdocumentview'), {
         method: 'POST',
         headers: {
           'Accept': '*/*',
           'Accept-Language': 'en-US,en;q=0.9',
           'Accept-Profile': 'expc',
-          'Authorization': `Bearer ${supabaseServiceRoleKey}`,
           'Content-Profile': 'expc',
           'Content-Type': 'application/json',
+          'session_id': sessionId,
           'jwt_token': jwtToken,
-          'session_id': sessionId
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
         },
         body: JSON.stringify(requestBody)
       });

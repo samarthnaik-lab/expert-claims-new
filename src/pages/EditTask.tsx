@@ -305,29 +305,39 @@ const EditTask = () => {
         try {
             console.log('Fetching task data for ID:', taskId);
 
+            // Get session details
+            const sessionStr = localStorage.getItem('expertclaims_session');
+            let sessionId = '';
+            let jwtToken = '';
+
+            if (sessionStr) {
+                try {
+                    const session = JSON.parse(sessionStr);
+                    sessionId = session.sessionId || '';
+                    jwtToken = session.jwtToken || '';
+                } catch (e) {
+                    console.error('Error parsing session:', e);
+                }
+            }
+
+            if (!sessionId || !jwtToken) {
+                toast({
+                    title: "Error",
+                    description: "Please log in to view task details",
+                    variant: "destructive",
+                });
+                navigate('/admin-dashboard');
+                return;
+            }
+
             const response = await fetch(buildApiUrl('support/everything-cases'), {
                 method: 'POST',
                 headers: {
                     'accept': '*/*',
-                    'accept-language': 'en-US,en;q=0.9',
-                    'accept-profile': 'srtms',
-                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-                    'authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
                     'content-type': 'application/json',
-                    'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k',
-                    'origin': 'http://localhost:8080',
-                    'priority': 'u=1, i',
-                    'referer': 'http://localhost:8080/',
-                    'sec-ch-ua': '"Not;A=Brand";v="99", "Google Chrome";v="139", "Chromium";v="139"',
-                    'sec-ch-ua-mobile': '?0',
-                    'sec-ch-ua-platform': '"Windows"',
-                    'sec-fetch-dest': 'empty',
-                    'sec-fetch-mode': 'cors',
-                    'sec-fetch-site': 'cross-site',
-                    'session_id': 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2',
-                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
-                    'Range': '0-100',
-                    'Prefer': 'count=exact'
+                    'session_id': sessionId,
+                    'jwt_token': jwtToken,
+                    ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
                 },
                 body: JSON.stringify({
                     case_id: taskId
@@ -698,9 +708,30 @@ const EditTask = () => {
     const fetchUsers = async () => {
         setIsLoadingUsers(true);
         try {
-            // Use effective session data or fallback to mock data
-            const sessionId = effectiveSession?.sessionId || 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2';
-            const jwtToken = effectiveSession?.jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k';
+            // Get session from localStorage
+            const sessionStr = localStorage.getItem('expertclaims_session');
+            let sessionId = '';
+            let jwtToken = '';
+
+            if (sessionStr) {
+                try {
+                    const session = JSON.parse(sessionStr);
+                    sessionId = session.sessionId || '';
+                    jwtToken = session.jwtToken || '';
+                } catch (e) {
+                    console.error('Error parsing session:', e);
+                }
+            }
+
+            if (!sessionId || !jwtToken) {
+                toast({
+                    title: "Warning",
+                    description: "Please log in to load employees",
+                    variant: "destructive",
+                });
+                setIsLoadingUsers(false);
+                return;
+            }
 
             const employeesData = await EmployeeService.getEmployees(sessionId, jwtToken);
             console.log('Received employees from API:', employeesData);
@@ -745,9 +776,30 @@ const EditTask = () => {
         try {
             console.log('Starting to fetch customers...');
 
-            // Use effective session data or fallback to mock data
-            const sessionId = effectiveSession?.sessionId || 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2';
-            const jwtToken = effectiveSession?.jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBhYmFzZSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k';
+            // Get session from localStorage
+            const sessionStr = localStorage.getItem('expertclaims_session');
+            let sessionId = '';
+            let jwtToken = '';
+
+            if (sessionStr) {
+                try {
+                    const session = JSON.parse(sessionStr);
+                    sessionId = session.sessionId || '';
+                    jwtToken = session.jwtToken || '';
+                } catch (e) {
+                    console.error('Error parsing session:', e);
+                }
+            }
+
+            if (!sessionId || !jwtToken) {
+                toast({
+                    title: "Warning",
+                    description: "Please log in to load customers",
+                    variant: "destructive",
+                });
+                setIsLoadingCustomers(false);
+                return;
+            }
 
             console.log('Using session ID:', sessionId);
             console.log('Using JWT token:', jwtToken);
@@ -802,9 +854,30 @@ const EditTask = () => {
     const fetchCaseTypes = async () => {
         setIsLoadingCaseTypes(true);
         try {
-            // Use effective session data or fallback to mock data
-            const sessionId = effectiveSession?.sessionId || 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2';
-            const jwtToken = effectiveSession?.jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k';
+            // Get session from localStorage
+            const sessionStr = localStorage.getItem('expertclaims_session');
+            let sessionId = '';
+            let jwtToken = '';
+
+            if (sessionStr) {
+                try {
+                    const session = JSON.parse(sessionStr);
+                    sessionId = session.sessionId || '';
+                    jwtToken = session.jwtToken || '';
+                } catch (e) {
+                    console.error('Error parsing session:', e);
+                }
+            }
+
+            if (!sessionId || !jwtToken) {
+                toast({
+                    title: "Warning",
+                    description: "Please log in to load case types",
+                    variant: "destructive",
+                });
+                setIsLoadingCaseTypes(false);
+                return;
+            }
 
             const caseTypesData = await CaseTypeService.getCaseTypes(sessionId, jwtToken);
             console.log('Received case types from API:', caseTypesData);
@@ -853,9 +926,30 @@ const EditTask = () => {
     const fetchDocuments = async (caseTypeId: number) => {
         setIsLoadingDocuments(true);
         try {
-            // Use effective session data or fallback to mock data
-            const sessionId = effectiveSession?.sessionId || 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2';
-            const jwtToken = effectiveSession?.jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBhYmFzZSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k';
+            // Get session from localStorage
+            const sessionStr = localStorage.getItem('expertclaims_session');
+            let sessionId = '';
+            let jwtToken = '';
+
+            if (sessionStr) {
+                try {
+                    const session = JSON.parse(sessionStr);
+                    sessionId = session.sessionId || '';
+                    jwtToken = session.jwtToken || '';
+                } catch (e) {
+                    console.error('Error parsing session:', e);
+                }
+            }
+
+            if (!sessionId || !jwtToken) {
+                toast({
+                    title: "Warning",
+                    description: "Please log in to load documents",
+                    variant: "destructive",
+                });
+                setIsLoadingDocuments(false);
+                return;
+            }
 
             const documentsData = await DocumentService.getDocumentsByCaseType(caseTypeId, sessionId, jwtToken);
             console.log('Received documents from API:', documentsData);
@@ -1136,17 +1230,39 @@ const EditTask = () => {
         try {
             console.log('Fetching employees...');
 
-            const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/2d7eb946-588f-436d-8ebe-ccb118babf12', {
+            // Get session details
+            const sessionStr = localStorage.getItem('expertclaims_session');
+            let sessionId = '';
+            let jwtToken = '';
+
+            if (sessionStr) {
+                try {
+                    const session = JSON.parse(sessionStr);
+                    sessionId = session.sessionId || '';
+                    jwtToken = session.jwtToken || '';
+                } catch (e) {
+                    console.error('Error parsing session:', e);
+                }
+            }
+
+            if (!sessionId || !jwtToken) {
+                toast({
+                    title: "Warning",
+                    description: "Please log in to load employees",
+                    variant: "destructive",
+                });
+                setIsLoadingEmployees(false);
+                return;
+            }
+
+            const response = await fetch(buildApiUrl('support/getemployees'), {
                 method: 'GET',
                 headers: {
                     'accept': '*/*',
-                    'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-                    'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
                     'content-type': 'application/json',
-                    'origin': 'http://localhost:8080',
-                    'referer': 'http://localhost:8080/',
-                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'
+                    'session_id': sessionId,
+                    'jwt_token': jwtToken,
+                    ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
                 }
             });
 
@@ -1586,70 +1702,58 @@ const EditTask = () => {
                         }
 
                         try {
-                            // Call the API to create the category
-                            const createCategoryResponse = await fetch(
-                                'https://n8n.srv952553.hstgr.cloud/webhook/insertcatagory',
-                                {
-                                    method: 'POST',
-                                    headers: {
-                                        'accept': '*/*',
-                                        'accept-language': 'en-US,en;q=0.9',
-                                        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-                                        'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-                                        'content-type': 'application/json',
-                                    },
-                                    body: JSON.stringify({
-                                        case_type_id: selectedCaseType.case_type_id,
-                                        document_type: actualDocumentName
-                                    })
-                                }
-                            );
+                            // Get session details for category creation
+                            const sessionStr = localStorage.getItem('expertclaims_session');
+                            let sessionId = '';
+                            let jwtToken = '';
 
-                            if (createCategoryResponse.ok) {
-                                const categoryData = await createCategoryResponse.json();
-                                console.log('Category created successfully:', categoryData);
-                                
-                                // Extract category_id from response
-                                // The response structure may vary, so we try different possible fields
-                                categoryId = categoryData?.category_id || 
-                                            categoryData?.data?.category_id || 
-                                            categoryData?.body?.category_id ||
-                                            categoryData?.id ||
-                                            categoryData?.[0]?.category_id ||
-                                            categoryData?.[0]?.id;
-
-                                if (categoryId !== undefined && categoryId !== null) {
-                                    // Update documentCategories state for future use
-                                    setDocumentCategories((prev) => ({
-                                        ...prev,
-                                        [actualDocumentName]: categoryId,
-                                    }));
-                                    
-                                    // Also add to documents list if not already there
-                                    const docExists = documents.some(
-                                        (doc) => doc.document_name && doc.document_name.trim() === actualDocumentName.trim()
-                                    );
-                                    
-                                    if (!docExists) {
-                                        setDocuments((prev) => [
-                                            ...prev,
-                                            {
-                                                document_id: 0,
-                                                document_name: actualDocumentName,
-                                                category_id: categoryId,
-                                                case_type_id: selectedCaseType.case_type_id,
-                                            } as Document
-                                        ]);
-                                    }
-                                    
-                                    console.log(`Category created with ID: ${categoryId} for document: ${actualDocumentName}`);
-                                } else {
-                                    throw new Error('Category ID not found in API response');
+                            if (sessionStr) {
+                                try {
+                                    const session = JSON.parse(sessionStr);
+                                    sessionId = session.sessionId || '';
+                                    jwtToken = session.jwtToken || '';
+                                } catch (e) {
+                                    console.error('Error parsing session:', e);
                                 }
-                            } else {
-                                const errorText = await createCategoryResponse.text();
-                                throw new Error(`Failed to create category: ${createCategoryResponse.status} - ${errorText}`);
                             }
+
+                            if (!sessionId || !jwtToken) {
+                                throw new Error('Session not available. Please log in again.');
+                            }
+
+                            // Note: Document categories are typically created automatically during document upload
+                            // If a separate endpoint is needed, it should be added to the backend
+                            // For now, we'll skip category creation and let document upload handle it
+                            console.warn('Category creation endpoint not available. Category will be created during document upload.');
+                            
+                            // Set a default category_id of 0 - it will be created during upload
+                            categoryId = 0;
+
+                            // Category will be created during document upload
+                            // Update documentCategories state with placeholder
+                            setDocumentCategories((prev) => ({
+                                ...prev,
+                                [actualDocumentName]: categoryId,
+                            }));
+                            
+                            // Also add to documents list if not already there
+                            const docExists = documents.some(
+                                (doc) => doc.document_name && doc.document_name.trim() === actualDocumentName.trim()
+                            );
+                            
+                            if (!docExists) {
+                                setDocuments((prev) => [
+                                    ...prev,
+                                    {
+                                        document_id: 0,
+                                        document_name: actualDocumentName,
+                                        category_id: categoryId,
+                                        case_type_id: selectedCaseType.case_type_id,
+                                    } as Document
+                                ]);
+                            }
+                            
+                            console.log(`Category will be created during upload for document: ${actualDocumentName}`);
                         } catch (error: any) {
                             console.error('Error creating category:', error);
                             failCount++;
@@ -1674,15 +1778,29 @@ const EditTask = () => {
                         formDataToSend.append("updated_by", userId);
                     }
 
+                    // Get session for document upload
+                    const uploadSessionStr = localStorage.getItem('expertclaims_session');
+                    let uploadSessionId = '';
+                    let uploadJwtToken = '';
+
+                    if (uploadSessionStr) {
+                        try {
+                            const uploadSession = JSON.parse(uploadSessionStr);
+                            uploadSessionId = uploadSession.sessionId || '';
+                            uploadJwtToken = uploadSession.jwtToken || '';
+                        } catch (e) {
+                            console.error('Error parsing session for upload:', e);
+                        }
+                    }
+
                     const uploadPromise = fetch(
                         buildApiUrl("api/upload"),
                         {
                             method: "POST",
                             headers: {
-                                apikey:
-                                    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-                                Authorization:
-                                    "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
+                                'session_id': uploadSessionId,
+                                'jwt_token': uploadJwtToken,
+                                ...(uploadJwtToken && { 'Authorization': `Bearer ${uploadJwtToken}` }),
                                 // Don't set Content-Type for FormData - browser will set it automatically with boundary
                             },
                             body: formDataToSend,
@@ -1837,19 +1955,29 @@ const EditTask = () => {
 
         // Use taskId (full case ID from URL like "ECSI-25-230") as priority
         const caseId = taskId || currentTaskData?.case_id?.toString();
-        let sessionId = "fddc661a-dfb4-4896-b7b1-448e1adf7bc2";
-        let jwtToken =
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc";
-
+        
+        // Get session from localStorage
         const sessionData = localStorage.getItem("expertclaims_session");
+        let sessionId = '';
+        let jwtToken = '';
+
         if (sessionData) {
             try {
                 const session = JSON.parse(sessionData);
-                sessionId = session.sessionId || session.session_id || sessionId;
-                jwtToken = session.jwtToken || session.jwt_token || jwtToken;
+                sessionId = session.sessionId || session.session_id || '';
+                jwtToken = session.jwtToken || session.jwt_token || '';
             } catch (error) {
                 console.error("Error parsing session data for deleteDocument:", error);
             }
+        }
+
+        if (!sessionId || !jwtToken) {
+            toast({
+                title: "Error",
+                description: "Please log in to delete documents",
+                variant: "destructive",
+            });
+            return;
         }
 
         let employeeId = 1;
@@ -1872,15 +2000,12 @@ const EditTask = () => {
                 {
                     method: "PATCH",
                     headers: {
-                        apikey:
-                            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-                        Authorization:
-                            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
                         "Accept-Profile": "expc",
                         "Content-Profile": "expc",
                         session_id: sessionId,
                         jwt_token: jwtToken,
                         "Content-Type": "application/json",
+                        ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
                     },
                     body: JSON.stringify({
                         document_id: documentId,
@@ -1948,8 +2073,8 @@ const EditTask = () => {
                 return;
             }
 
-            // Call the n8n webhook API to get document view URL
-            console.log('Calling n8n webhook for document view...');
+            // Call the backend API to get document view URL
+            console.log('Calling backend API for document view...');
             console.log('Document ID:', documentId);
             
             const requestBody = {
@@ -1957,24 +2082,14 @@ const EditTask = () => {
             };
             console.log('Request body:', requestBody);
             
-            // Supabase service role key
-            const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
-            
             const response = await fetch(buildApiUrl('support/view'), {
                 method: 'POST',
                 headers: {
                     'Accept': '*/*',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Profile': 'expc',
-                    'Authorization': `Bearer ${supabaseServiceRoleKey}`,
-                    'Connection': 'keep-alive',
-                    'Content-Profile': 'expc',
                     'Content-Type': 'application/json',
-                    'Origin': 'http://localhost:8080',
-                    'Referer': 'http://localhost:8080/',
-                    'apikey': supabaseServiceRoleKey,
-                    'jwt_token': jwtToken,
                     'session_id': sessionId,
+                    'jwt_token': jwtToken,
+                    ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
                 },
                 body: JSON.stringify(requestBody)
             });
@@ -2195,18 +2310,39 @@ const EditTask = () => {
 
             console.log('Adding comment:', { case_id: caseId, user_id: userId, comment: newComment.text });
 
-            // Supabase anon key
-            const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o";
+            // Get session for comment
+            const commentSessionStr = localStorage.getItem('expertclaims_session');
+            let commentSessionId = '';
+            let commentJwtToken = '';
+
+            if (commentSessionStr) {
+                try {
+                    const commentSession = JSON.parse(commentSessionStr);
+                    commentSessionId = commentSession.sessionId || '';
+                    commentJwtToken = commentSession.jwtToken || '';
+                } catch (e) {
+                    console.error('Error parsing session for comment:', e);
+                }
+            }
+
+            if (!commentSessionId || !commentJwtToken) {
+                toast({
+                    title: "Error",
+                    description: "Please log in to add comments",
+                    variant: "destructive",
+                });
+                return;
+            }
 
             // Call assignee_comment_insert API
             const response = await fetch(buildApiUrl('support/assignee_comment_insert'), {
                 method: 'POST',
                 headers: {
-                    'accept': '/',
+                    'accept': '*/*',
                     'content-type': 'application/json',
-                    'apikey': supabaseAnonKey,
-                    'authorization': `Bearer ${supabaseAnonKey}`,
-                    'session_id': sessionId
+                    'session_id': commentSessionId,
+                    'jwt_token': commentJwtToken,
+                    ...(commentJwtToken && { 'Authorization': `Bearer ${commentJwtToken}` })
                 },
                 body: JSON.stringify({
                     case_id: caseId.toString(),
@@ -2289,18 +2425,15 @@ const EditTask = () => {
                     jwtToken = session.jwtToken || '';
                 }
 
-                const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
-
                 // GET API - Fetch latest invoice number
                 console.log('Fetching latest invoice number...');
                 const getResponse = await fetch(`${buildApiUrl('support/invoice_get')}?case_phase_id=${casePhaseId}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
-                        'apikey': API_KEY,
-                        'authorization': `Bearer ${API_KEY}`,
                         'session_id': sessionId,
-                        'jwt_token': jwtToken
+                        'jwt_token': jwtToken,
+                        ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
                     }
                 });
 
@@ -2369,10 +2502,9 @@ const EditTask = () => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'apikey': API_KEY,
-                        'authorization': `Bearer ${API_KEY}`,
                         'session_id': sessionId,
-                        'jwt_token': jwtToken
+                        'jwt_token': jwtToken,
+                        ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
                     },
                     body: JSON.stringify({
                         case_phase_id: casePhaseId,
@@ -2634,23 +2766,23 @@ const EditTask = () => {
                 }
             }
 
+            if (!sessionId || !jwtToken) {
+                toast({
+                    title: "Error",
+                    description: "Please log in to update payment phases",
+                    variant: "destructive",
+                });
+                return;
+            }
+
             const response = await fetch(buildApiUrl('support/updatepayment'), {
                 method: 'PATCH',
                 headers: {
                     'accept': '*/*',
-                    'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-                    'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
                     'content-type': 'application/json',
-                    'jwt_token': jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k',
-                    'session_id': sessionId || 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2',
-                    'Connection': 'keep-alive',
-                    'Origin': 'http://localhost:8080',
-                    'Referer': 'http://localhost:8080/',
-                    'Sec-Fetch-Dest': 'empty',
-                    'Sec-Fetch-Mode': 'cors',
-                    'Sec-Fetch-Site': 'same-site',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
+                    'session_id': sessionId,
+                    'jwt_token': jwtToken,
+                    ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
                 },
                 body: JSON.stringify(updateData)
             });
@@ -2833,23 +2965,23 @@ const EditTask = () => {
                 }
             }
 
+            if (!sessionId || !jwtToken) {
+                toast({
+                    title: "Error",
+                    description: "Please log in to create payment phases",
+                    variant: "destructive",
+                });
+                return;
+            }
+
             const response = await fetch(buildApiUrl('support/createcasepaymentphases'), {
                 method: 'POST',
                 headers: {
                     'accept': '*/*',
-                    'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-                    'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
                     'content-type': 'application/json',
-                    'jwt_token': jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k',
-                    'session_id': sessionId || 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2',
-                    'Connection': 'keep-alive',
-                    'Origin': 'http://localhost:8080',
-                    'Referer': 'http://localhost:8080/',
-                    'Sec-Fetch-Dest': 'empty',
-                    'Sec-Fetch-Mode': 'cors',
-                    'Sec-Fetch-Site': 'same-site',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
+                    'session_id': sessionId,
+                    'jwt_token': jwtToken,
+                    ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
                 },
                 body: JSON.stringify(createData)
             });
@@ -3027,15 +3159,39 @@ const EditTask = () => {
         console.log('FormData claims_amount:', formData.claims_amount);
         console.log('Full taskData JSON:', JSON.stringify(taskData, null, 2));
 
+            // Get session for task update
+            const updateSessionStr = localStorage.getItem('expertclaims_session');
+            let updateSessionId = '';
+            let updateJwtToken = '';
+
+            if (updateSessionStr) {
+                try {
+                    const updateSession = JSON.parse(updateSessionStr);
+                    updateSessionId = updateSession.sessionId || '';
+                    updateJwtToken = updateSession.jwtToken || '';
+                } catch (e) {
+                    console.error('Error parsing session for task update:', e);
+                }
+            }
+
+            if (!updateSessionId || !updateJwtToken) {
+                toast({
+                    title: "Error",
+                    description: "Please log in to update tasks",
+                    variant: "destructive",
+                });
+                setIsSubmitting(false);
+                return;
+            }
+
             // Call the update API
             const response = await fetch(buildApiUrl('support/update_Task'), {
                 method: 'PATCH',
                 headers: {
-                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-                    'session_id': 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2',
-                    'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'session_id': updateSessionId,
+                    'jwt_token': updateJwtToken,
+                    ...(updateJwtToken && { 'Authorization': `Bearer ${updateJwtToken}` })
                 },
                 body: JSON.stringify(taskData)
             });

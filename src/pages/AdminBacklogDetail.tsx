@@ -484,14 +484,24 @@ const AdminBacklogDetail = () => {
     setIsAddingComment(true);
     try {
       const sessionStr = localStorage.getItem('expertclaims_session');
-      let sessionId = '17e7ab32-86ad-411e-8ee3-c4a09e6780f7';
+      let sessionId = '';
       if (sessionStr) {
         try {
           const session = JSON.parse(sessionStr);
-          sessionId = session.sessionId || '17e7ab32-86ad-411e-8ee3-c4a09e6780f7';
+          sessionId = session.sessionId || '';
         } catch (e) {
           console.error('Error parsing session:', e);
         }
+      }
+
+      if (!sessionId) {
+        toast({
+          title: "Error",
+          description: "Please log in to add comment",
+          variant: "destructive",
+        });
+        setIsAddingComment(false);
+        return;
       }
 
       // Get jwt_token from localStorage
@@ -785,20 +795,28 @@ const AdminBacklogDetail = () => {
     setIsUpdatingBacklog(true);
     try {
       const sessionStr = localStorage.getItem('expertclaims_session');
-      let sessionId = '5fbe26f1-b3ec-468e-bd4e-1858d5535909';
-      let jwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiAiLCJwYXNzd29yZCI6IiIsImlhdCI6MTc2MzQ0MTU3MX0.7xlNPwb5F4qaRwJ42HxBWaR1aom2XdnFPY8onV9NqP8';
+      let sessionId = '';
+      let jwtToken = '';
 
       if (sessionStr) {
         try {
           const session = JSON.parse(sessionStr);
-          sessionId = session.sessionId || '5fbe26f1-b3ec-468e-bd4e-1858d5535909';
-          jwtToken = session.jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiAiLCJwYXNzd29yZCI6IiIsImlhdCI6MTc2MzQ0MTU3MX0.7xlNPwb5F4qaRwJ42HxBWaR1aom2XdnFPY8onV9NqP8';
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
         } catch (e) {
           console.error('Error parsing session:', e);
         }
       }
 
-      const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to update backlog",
+          variant: "destructive",
+        });
+        setIsUpdatingBacklog(false);
+        return;
+      }
 
       const requestBody = {
         backlog_id: backlogDetail.backlog_id,
@@ -977,9 +995,27 @@ const AdminBacklogDetail = () => {
     try {
       // Get session data
       const sessionStr = localStorage.getItem("expertclaims_session");
-      const session = sessionStr ? JSON.parse(sessionStr) : {};
-      const sessionId = session.sessionId || "fddc661a-dfb4-4896-b7b1-448e1adf7bc2";
-      const jwtToken = session.jwtToken || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc";
+      let sessionId = '';
+      let jwtToken = '';
+
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (e) {
+          console.error('Error parsing session:', e);
+        }
+      }
+
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to generate report",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Get user details
       let userId = 0;

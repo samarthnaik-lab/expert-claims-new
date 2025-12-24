@@ -68,7 +68,8 @@ export class AuthenticatedApiService {
 
   // Role-related API methods
   static async getRoles(authHeaders: { [key: string]: string }): Promise<ApiResponse<Role[]>> {
-    // Use n8n webhook for fetching roles
+    // TODO: Backend endpoint for getRoles does not exist yet
+    // This n8n webhook needs to be replaced with a backend endpoint when available
     const n8nWebhookUrl = 'https://n8n.srv952553.hstgr.cloud/webhook/58e6269b-6e6d-4236-a441-ff41824771be';
     
     try {

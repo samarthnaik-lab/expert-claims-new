@@ -252,11 +252,15 @@ const CustomerDocumentUpload = () => {
               'accept': '*/*',
               'accept-language': 'en-US,en;q=0.9',
               'accept-profile': 'expc',
+<<<<<<< HEAD
               'apikey': apiKey,
               'authorization': `Bearer ${apiKey}`,
+=======
+>>>>>>> 06778fa6b749cc9b7af4a63b09122d69a4b370da
               'content-profile': 'expc',
               'jwt_token': jwtToken,
-              'session_id': sessionId
+              'session_id': sessionId,
+              ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
             },
             body: formData,
           }
@@ -419,8 +423,6 @@ const CustomerDocumentUpload = () => {
         {
           method: 'POST',
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
             // Don't set Content-Type for FormData - browser will set it automatically with boundary
           },
           body: formData,
@@ -582,19 +584,44 @@ const CustomerDocumentUpload = () => {
         className: "bg-blue-50 border-blue-200 text-blue-800",
       });
 
+      // Get session from localStorage
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
+
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to submit documents",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // TODO: Backend endpoint for submit-documents does not exist yet
+      // This n8n webhook needs to be replaced with a backend endpoint when available
       // Call the submission API
       const response = await fetch(
         'https://n8n.srv952553.hstgr.cloud/webhook/submit-documents',
         {
           method: 'POST',
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5bmVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5bmVxIiwicm9sZSI6InJlZiI6IndyYm5sdmdlY3pueXFlbHJ5bmVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-            'session_id': 'd012f756-cb15-4ca2-abe2-57305d399f08',
-            'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc',
             'Accept-Profile': 'expc',
             'Content-Profile': 'expc',
             'Content-Type': 'application/json',
+            'session_id': sessionId,
+            'jwt_token': jwtToken,
+            ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
           },
           body: JSON.stringify(submissionData),
         }

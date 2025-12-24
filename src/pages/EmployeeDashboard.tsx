@@ -326,24 +326,23 @@ const EmployeeDashboard = () => {
         'content-type': 'application/json'
       };
 
-      // Supabase service role key
-      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
-
       if (department.toLowerCase() === 'technical_consultant') {
         // Use new Node.js API for technical consultants
         apiUrl = `${buildApiUrl('support/get_all_backlog_data')}?employee_id=${userId}`;
-        headers['apikey'] = supabaseServiceRoleKey;
-        headers['authorization'] = `Bearer ${supabaseServiceRoleKey}`;
         headers['session_id'] = sessionId || '';
         headers['jwt_token'] = jwtToken || '';
+        if (jwtToken) {
+          headers['Authorization'] = `Bearer ${jwtToken}`;
+        }
         console.log('Calling technical consultant API:', apiUrl, 'with employee_id:', userId);
       } else if (department.toLowerCase() === 'gap_analysis') {
         // Use new Node.js API for gap_analysis - gets all data with employee_id=0
         apiUrl = `${buildApiUrl('support/get_all_backlog_data')}?employee_id=0`;
-        headers['apikey'] = supabaseServiceRoleKey;
-        headers['authorization'] = `Bearer ${supabaseServiceRoleKey}`;
         headers['session_id'] = sessionId || '';
         headers['jwt_token'] = jwtToken || '';
+        if (jwtToken) {
+          headers['Authorization'] = `Bearer ${jwtToken}`;
+        }
         console.log('Calling gap_analysis API:', apiUrl);
       } else {
         // Use Node.js support API for other departments
@@ -428,12 +427,22 @@ const EmployeeDashboard = () => {
         return;
       }
 
+      // Get jwtToken from session
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let jwtToken = '';
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
+
       console.log('=== Calling employee_all_task API from EmployeeDashboard ===');
       console.log('User ID:', userId);
       console.log('Session ID:', sessionId);
-      
-      // Supabase anon key
-      const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o";
+      console.log('JWT Token:', jwtToken ? 'Present' : 'Missing');
       
       // Build URL with query parameters
       const employeeTaskUrl = new URL(buildApiUrl('support/employee_all_task'));
@@ -447,13 +456,13 @@ const EmployeeDashboard = () => {
       const response = await fetch(finalUrl, {
         method: 'GET',
         headers: {
-          'accept': '/',
+          'accept': '*/*',
           'content-type': 'application/json',
           'Content-Profile': 'expc',
           'Accept-Profile': 'expc',
-          'apikey': supabaseAnonKey,
-          'authorization': `Bearer ${supabaseAnonKey}`,
-          'session_id': sessionId
+          'session_id': sessionId,
+          'jwt_token': jwtToken,
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
         }
       });
 
@@ -477,27 +486,45 @@ const EmployeeDashboard = () => {
         }
         
         setAssignedTasks(tasksArray);
-        toast({
-          title: "Success",
-          description: `Successfully loaded ${tasksArray.length} assigned tasks`,
-        });
+        console.log(`✅ Successfully loaded ${tasksArray.length} assigned tasks`);
+        // Only show success toast if tasks were found
+        if (tasksArray.length === 0) {
+          console.log('No assigned tasks found for this user');
+        }
       } else {
         const errorText = await response.text();
         console.error('❌ Failed to fetch employee all tasks:', response.status);
         console.error('Error response:', errorText);
         setAssignedTasks([]);
+        
+        let errorMessage = "Failed to fetch assigned tasks";
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // If errorText is not JSON, use the text as is
+          if (errorText && errorText.length < 100) {
+            errorMessage = errorText;
+          }
+        }
+        
         toast({
           title: "Error",
-          description: "Failed to fetch assigned tasks",
+          description: errorMessage,
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error calling employee_all_task API:', error);
       setAssignedTasks([]);
+      const errorMessage = error?.message || "An error occurred while fetching assigned tasks";
       toast({
         title: "Error",
-        description: "An error occurred while fetching assigned tasks",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -513,6 +540,14 @@ const EmployeeDashboard = () => {
     fetchBacklogData();
     fetchEmployeeAllTasks(); // Call employee_all_task API when dashboard loads
   }, []);
+
+  // Refetch assigned tasks when switching to assigned-task tab
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'assigned-task') {
+      fetchEmployeeAllTasks();
+    }
+  }, [searchParams]);
 
   // Update status filter when URL parameters change
   useEffect(() => {
@@ -801,20 +836,17 @@ const EmployeeDashboard = () => {
       };
       console.log('Request body:', requestBody);
       
-      // Supabase service role key
-      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
-      
       const response = await fetch(buildApiUrl('support/partnerdocumentview'), {
         method: 'POST',
         headers: {
           'Accept': '*/*',
           'Accept-Language': 'en-US,en;q=0.9',
           'Accept-Profile': 'expc',
-          'Authorization': `Bearer ${supabaseServiceRoleKey}`,
           'Content-Profile': 'expc',
           'Content-Type': 'application/json',
+          'session_id': sessionId,
           'jwt_token': jwtToken,
-          'session_id': sessionId
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
         },
         body: JSON.stringify(requestBody)
       });
