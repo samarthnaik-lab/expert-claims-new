@@ -202,7 +202,7 @@ const PartnerClaimDetail = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Assign Date</label>
-                    <p className="text-lg font-semibold text-gray-900">{claim.due_date || 'Not Set'}</p>
+                    <p className="text-lg font-semibold text-gray-900">{claim.due_date ? formatDateDDMMYYYY(claim.due_date) : 'Not Set'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Case Value</label>
@@ -210,7 +210,7 @@ const PartnerClaimDetail = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Referral Date</label>
-                    <p className="text-lg font-semibold text-gray-900">{claim.referral_date || (claim.created_time ? claim.created_time.split('T')[0] : 'N/A')}</p>
+                    <p className="text-lg font-semibold text-gray-900">{claim.referral_date ? formatDateDDMMYYYY(claim.referral_date) : (claim.created_time ? formatDateDDMMYYYY(claim.created_time) : 'N/A')}</p>
                   </div>
                 </div>
                 <Separator />

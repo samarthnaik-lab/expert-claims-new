@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -255,6 +255,7 @@ const TaskDetail = () => {
   const [viewingDocumentId, setViewingDocumentId] = useState<string | null>(null);
   const [employees, setEmployees] = useState<{employee_id: number, employee_name: string}[]>([]);
   const [employeesLoading, setEmployeesLoading] = useState(false);
+  const [users, setUsers] = useState<{user_id: number | string, name: string, full_name?: string, first_name?: string, last_name?: string}[]>([]);
   
   // Document viewer modal states
   const [showDocumentModal, setShowDocumentModal] = useState(false);
@@ -362,7 +363,7 @@ const TaskDetail = () => {
     }
   }, [caseDetails]);
 
-  // Fetch employees for user name mapping
+  // Fetch employees and users for user name mapping
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -376,6 +377,59 @@ const TaskDetail = () => {
           if (sessionId && jwtToken) {
             const employeeList = await EmployeeService.getEmployees(sessionId, jwtToken);
             setEmployees(employeeList);
+            
+            // Also fetch users to map user_id to names
+            try {
+              const usersResponse = await fetch(`${buildApiUrl('admin/getusers')}?page=1&size=10000`, {
+                method: 'GET',
+                headers: {
+                  'accept': '*/*',
+                  'accept-language': 'en-US,en;q=0.9',
+                  'accept-profile': 'expc',
+                  'content-type': 'application/json',
+                  'jwt_token': jwtToken,
+                  'session_id': sessionId,
+                }
+              });
+              
+              if (usersResponse.ok) {
+                const usersResult = await usersResponse.json();
+                if (Array.isArray(usersResult) && usersResult.length > 0) {
+                  const firstResult = usersResult[0];
+                  if (firstResult.status === 'success' && firstResult.data) {
+                    const usersList = firstResult.data.map((user: any) => ({
+                      user_id: user.user_id || user.id || user.userid,
+                      name: user.name || user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+                      full_name: user.full_name || user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+                      first_name: user.first_name,
+                      last_name: user.last_name
+                    }));
+                    setUsers(usersList);
+                    console.log('✅ Users fetched successfully:', usersList.length, 'users');
+                    console.log('Sample users:', usersList.slice(0, 5).map(u => ({ id: u.user_id, name: u.name || u.full_name, first: u.first_name, last: u.last_name })));
+                    console.log('All user IDs:', usersList.map(u => u.user_id).slice(0, 20));
+                  }
+                } else if (usersResult.status === 'success' && usersResult.data) {
+                  const usersList = usersResult.data.map((user: any) => ({
+                    user_id: user.user_id || user.id || user.userid,
+                    name: user.name || user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+                    full_name: user.full_name || user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+                    first_name: user.first_name,
+                    last_name: user.last_name
+                  }));
+                  setUsers(usersList);
+                  console.log('✅ Users fetched successfully:', usersList.length, 'users');
+                  console.log('Sample users:', usersList.slice(0, 5).map(u => ({ id: u.user_id, name: u.name || u.full_name, first: u.first_name, last: u.last_name })));
+                  console.log('All user IDs:', usersList.map(u => u.user_id).slice(0, 20));
+                } else {
+                  console.warn('⚠️ Unexpected users API response format:', usersResult);
+                }
+              } else {
+                console.error('❌ Users API response not OK:', usersResponse.status);
+              }
+            } catch (usersError) {
+              console.error('Error fetching users:', usersError);
+            }
           }
         }
       } catch (error) {
@@ -390,10 +444,14 @@ const TaskDetail = () => {
 
   // Helper function to get user name from ID, optionally with history object for additional context
   const getUserName = (userId: string | number | null | undefined, history?: any): string => {
-    if (!userId) return 'Unknown';
+    if (!userId && userId !== 0) return 'Unknown';
     
     // First, check if history object has user information directly
     if (history) {
+      // Check for changed_by_profile with full_name (from API)
+      if (history.changed_by_profile?.full_name) {
+        return history.changed_by_profile.full_name;
+      }
       // Check for changed_by_user or changed_by_name fields
       if (history.changed_by_user?.full_name || history.changed_by_user?.name) {
         return history.changed_by_user.full_name || history.changed_by_user.name;
@@ -418,11 +476,35 @@ const TaskDetail = () => {
     }
     
     const userIdStr = String(userId);
-    const userIdNum = parseInt(userIdStr);
+    const userIdNum = parseInt(userIdStr, 10);
+    
+    // First check users array (for user_id) - try multiple matching strategies
+    if (!isNaN(userIdNum) && users.length > 0) {
+      // Try exact match first - check all possible formats
+      let user = users.find(u => {
+        const uId = u.user_id;
+        // Try multiple comparison methods
+        return (
+          uId === userId || 
+          uId === userIdNum || 
+          uId === userIdStr ||
+          String(uId) === userIdStr || 
+          Number(uId) === userIdNum ||
+          String(uId) === String(userIdNum)
+        );
+      });
+      
+      if (user) {
+        const name = user.full_name || user.name || (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}`.trim() : '');
+        if (name) {
+          return name;
+        }
+      }
+    }
     
     // Check if it's a number (employee_id)
     if (!isNaN(userIdNum)) {
-      const employee = employees.find(emp => emp.employee_id === userIdNum);
+      const employee = employees.find(emp => emp.employee_id === userIdNum || String(emp.employee_id) === userIdStr);
       if (employee) {
         return employee.employee_name;
       }
@@ -430,8 +512,24 @@ const TaskDetail = () => {
     
     // Check if caseDetails has employee info
     if (caseDetails?.employees && caseDetails.employees.employee_id === userIdNum) {
-      return `${caseDetails.employees.first_name} ${caseDetails.employees.last_name}`.trim();
+      const name = `${caseDetails.employees.first_name} ${caseDetails.employees.last_name}`.trim();
+      if (name) {
+        return name;
+      }
     }
+    
+    // Debug: log what we're returning (only when not found)
+    console.warn('⚠️ User not found for userId:', { 
+      userId, 
+      userIdStr, 
+      userIdNum, 
+      usersCount: users.length,
+      employeesCount: employees.length,
+      sampleUsers: users.slice(0, 5).map(u => ({ id: u.user_id, name: u.name || u.full_name, first: u.first_name, last: u.last_name })),
+      sampleEmployees: employees.slice(0, 5).map(e => ({ id: e.employee_id, name: e.employee_name })),
+      allUserIds: users.map(u => u.user_id).slice(0, 10),
+      historyData: history ? { changed_by: history.changed_by, keys: Object.keys(history) } : null
+    });
     
     // Fallback: return the userId as string
     return userIdStr;
@@ -2151,7 +2249,20 @@ const TaskDetail = () => {
                             <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
                               <div className="flex items-center space-x-1">
                                 <User className="h-3 w-3" />
-                                <span>Changed by: {getUserName(history.changed_by, history)}</span>
+                                <span>Changed by: {(() => {
+                                  const name = getUserName(history.changed_by, history);
+                                  // Temporary debug - log if showing ID instead of name
+                                  if (name === String(history.changed_by) && history.changed_by) {
+                                    console.log('🔍 Debug - Showing ID instead of name:', {
+                                      changed_by: history.changed_by,
+                                      historyKeys: Object.keys(history),
+                                      historyChangedByProfile: history.changed_by_profile,
+                                      usersCount: users.length,
+                                      employeesCount: employees.length
+                                    });
+                                  }
+                                  return name;
+                                })()}</span>
                               </div>
                               <div className="flex items-center space-x-1">
                                 <span className="text-xs bg-gray-100 px-2 py-1 rounded">
