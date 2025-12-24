@@ -206,7 +206,7 @@ const EditTask = () => {
     const [showPaymentPhaseModal, setShowPaymentPhaseModal] = useState(false);
     const [paymentPhaseForm, setPaymentPhaseForm] = useState({
         phase_name: '',
-        due_date: '',
+        payment_date: '',
         phase_amount: 0,
         status: 'pending' as 'paid' | 'pending'
     });
@@ -2850,7 +2850,7 @@ const EditTask = () => {
     const handleAddPaymentPhase = () => {
         setPaymentPhaseForm({
             phase_name: '',
-            due_date: '',
+            payment_date: '',
             phase_amount: 0,
             status: 'pending' as 'paid' | 'pending'
         });
@@ -2863,7 +2863,7 @@ const EditTask = () => {
         setPhaseNameComboboxOpen(false);
         setPaymentPhaseForm({
             phase_name: '',
-            due_date: '',
+            payment_date: '',
             phase_amount: 0,
             status: 'pending' as 'paid' | 'pending'
         });
@@ -2871,10 +2871,10 @@ const EditTask = () => {
 
     const handleSavePaymentPhaseFromModal = async () => {
         // Validate required fields
-        if (!paymentPhaseForm.phase_name || !paymentPhaseForm.due_date || !paymentPhaseForm.phase_amount || paymentPhaseForm.phase_amount <= 0) {
+        if (!paymentPhaseForm.phase_name || !paymentPhaseForm.payment_date || !paymentPhaseForm.phase_amount || paymentPhaseForm.phase_amount <= 0) {
             toast({
                 title: "Error",
-                description: "Please fill in Phase Name, Assign Date, and Phase Amount (must be greater than 0)",
+                description: "Please fill in Phase Name, Payment Date, and Phase Amount (must be greater than 0)",
                 variant: "destructive",
             });
             return;
@@ -2933,12 +2933,12 @@ const EditTask = () => {
             // Create payment phase data in the same format as task creation
             const paymentPhaseData = {
                 phase_name: paymentPhaseForm.phase_name,
-                due_date: paymentPhaseForm.due_date,
+                payment_date: paymentPhaseForm.payment_date,
                 phase_amount: paymentPhaseForm.phase_amount,
                 created_by: employeeId,
                 updated_by: employeeId,
                 case_type_id: caseTypeId,
-                payment_date: paymentPhaseForm.due_date, // Set payment_date to the same as due_date dynamically
+                due_date: null, // Set due_date to null as payment_date is the primary field
                 status: paymentPhaseForm.status || 'pending' // Use status from form
             };
 
@@ -3042,15 +3042,7 @@ const EditTask = () => {
                 return;
             }
 
-            if (!formData.due_date) {
-                toast({
-                    title: "Error",
-                    description: "Assign date is required",
-                    variant: "destructive",
-                });
-                setIsSubmitting(false);
-                return;
-            }
+            // Assign date is optional - removed validation check
 
             // if (!formData.customer_id) {
             //     toast({
@@ -4032,7 +4024,7 @@ const EditTask = () => {
                                 </div>
                             </div>
                             <div>
-                                <Label>Assign Date *</Label>
+                                <Label>Assign Date </Label>
                                 <Popover open={assignDateCalendarOpen} onOpenChange={setAssignDateCalendarOpen}>
                                     <PopoverTrigger asChild>
                                         <div className="relative">
@@ -4442,9 +4434,9 @@ const EditTask = () => {
                                                                     <Input
                                                                         type="text"
                                                                         readOnly
-                                                                        value={phase.due_date ? (() => {
+                                                                        value={(phase.payment_date || phase.due_date) ? (() => {
                                                                             try {
-                                                                                const dateStr = phase.due_date;
+                                                                                const dateStr = phase.payment_date || phase.due_date;
                                                                                 if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
                                                                                     const [year, month, day] = dateStr.split('-').map(Number);
                                                                                     return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
@@ -4480,9 +4472,9 @@ const EditTask = () => {
                                                             <PopoverContent className="w-auto p-0" align="start">
                                                                 <Calendar
                                                                     mode="single"
-                                                                    selected={phase.due_date ? (() => {
+                                                                    selected={(phase.payment_date || phase.due_date) ? (() => {
                                                                         try {
-                                                                            const dateStr = phase.due_date;
+                                                                            const dateStr = phase.payment_date || phase.due_date;
                                                                             if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
                                                                                 const [year, month, day] = dateStr.split('-').map(Number);
                                                                                 return new Date(year, month - 1, day);
@@ -4499,7 +4491,7 @@ const EditTask = () => {
                                                                             const month = String(date.getMonth() + 1).padStart(2, '0');
                                                                             const day = String(date.getDate()).padStart(2, '0');
                                                                             const formattedDate = `${year}-${month}-${day}`;
-                                                                            handlePaymentStageChange(index, 'due_date', formattedDate);
+                                                                            handlePaymentStageChange(index, 'payment_date', formattedDate);
                                                                             setPaymentDateCalendarOpenIndex(null);
                                                                         }
                                                                     }}
@@ -4760,15 +4752,15 @@ const EditTask = () => {
                                         </Popover>
                                     </div>
                                     <div>
-                                        <Label htmlFor="modal-due-date">Payment Date</Label>
+                                        <Label htmlFor="modal-payment-date">Payment Date</Label>
                                         <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                                             <PopoverTrigger asChild>
                                                 <div className="relative">
                                                     <Input
-                                                        id="modal-due-date"
+                                                        id="modal-payment-date"
                                                         type="text"
                                                         readOnly
-                                                            value={paymentPhaseForm.due_date ? format(new Date(paymentPhaseForm.due_date), 'dd/MM/yyyy') : ''}
+                                                            value={paymentPhaseForm.payment_date ? format(new Date(paymentPhaseForm.payment_date), 'dd/MM/yyyy') : ''}
                                                             placeholder="dd/mm/yyyy"
                                                         onClick={() => setCalendarOpen(true)}
                                                             className="mt-1 cursor-pointer pr-10 w-full"
@@ -4779,7 +4771,7 @@ const EditTask = () => {
                                                 <PopoverContent className="w-auto p-0 z-[100]" align="start">
                                                 <Calendar 
                                                     mode="single" 
-                                                    selected={paymentPhaseForm.due_date ? new Date(paymentPhaseForm.due_date) : undefined} 
+                                                    selected={paymentPhaseForm.payment_date ? new Date(paymentPhaseForm.payment_date) : undefined} 
                                                     onSelect={(date) => {
                                                         if (date) {
                                                             // Format date in local timezone (YYYY-MM-DD) to avoid timezone shift
@@ -4787,7 +4779,7 @@ const EditTask = () => {
                                                             const month = String(date.getMonth() + 1).padStart(2, '0');
                                                             const day = String(date.getDate()).padStart(2, '0');
                                                             const formattedDate = `${year}-${month}-${day}`;
-                                                            setPaymentPhaseForm(prev => ({ ...prev, due_date: formattedDate }));
+                                                            setPaymentPhaseForm(prev => ({ ...prev, payment_date: formattedDate }));
                                                             setCalendarOpen(false);
                                                         }
                                                     }} 
