@@ -1976,15 +1976,12 @@ Created Time: ${report.created_time}
         }
       }
       
-      const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
-      
       // Fetch all cases for gap analysis (employee_id=0)
       const response = await fetch(`${buildApiUrl('admin/gapanalysis')}?employee_id=0`, {
         method: 'GET',
         headers: {
           'accept': 'application/json',
           'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-          'authorization': `Bearer ${API_KEY}`,
           'content-type': 'application/json',
           'session_id': sessionId,
           'jwt_token': jwtToken
@@ -2025,15 +2022,12 @@ Created Time: ${report.created_time}
         }
       }
       
-      const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
-      
       // Fetch all cases for gap analysis (employee_id=0)
       const response = await fetch(`${buildApiUrl('admin/gapanalysis')}?employee_id=0`, {
         method: 'GET',
         headers: {
           'accept': 'application/json',
           'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-          'authorization': `Bearer ${API_KEY}`,
           'content-type': 'application/json',
           'session_id': sessionId,
           'jwt_token': jwtToken

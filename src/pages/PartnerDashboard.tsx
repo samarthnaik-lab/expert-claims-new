@@ -79,6 +79,67 @@ const PartnerDashboard = () => {
     if (statusFilter === "cancelled") return "Closed";
     return statusFilter;
   };
+
+  // Helper function to get partner_id for navigation - prioritizes partner_id from partners table
+  const getPartnerIdForNavigation = (): string => {
+    let partnerId = "";
+    
+    // First, try to get partner_id from user details (prioritize partner_id from partners table)
+    const possibleKeys = ["expertclaims_user_details", "user_details"];
+    for (const key of possibleKeys) {
+      const dataStr = localStorage.getItem(key);
+      if (dataStr) {
+        try {
+          const data = JSON.parse(dataStr);
+          const userData = Array.isArray(data) ? data[0] : data;
+          // Prioritize partner_id from partners table
+          if (userData && userData.partner_id) {
+            partnerId = userData.partner_id.toString();
+            break;
+          }
+        } catch (error) {
+          console.error(`Error parsing ${key}:`, error);
+        }
+      }
+    }
+    
+    // If still not found, try partner_details
+    if (!partnerId) {
+      const partnerDetails = localStorage.getItem('partner_details');
+      if (partnerDetails) {
+        try {
+          const partnerDetailsData = JSON.parse(partnerDetails);
+          if (partnerDetailsData.partner_id) {
+            partnerId = partnerDetailsData.partner_id.toString();
+          } else if (partnerDetailsData.data && partnerDetailsData.data.partner_info && partnerDetailsData.data.partner_info.partner_id) {
+            partnerId = partnerDetailsData.data.partner_info.partner_id.toString();
+          } else if (Array.isArray(partnerDetailsData) && partnerDetailsData.length > 0 && partnerDetailsData[0].partner_id) {
+            partnerId = partnerDetailsData[0].partner_id.toString();
+          }
+        } catch (error) {
+          console.error("Error parsing partner_details:", error);
+        }
+      }
+    }
+    
+    // Last resort: try session userId (but this is user_id, not partner_id)
+    if (!partnerId) {
+      const sessionStr = localStorage.getItem("expertclaims_session");
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          if (session.userId) {
+            partnerId = session.userId.toString();
+            console.log("Warning: Using session.userId as fallback (this may be user_id, not partner_id):", partnerId);
+          }
+        } catch (error) {
+          console.error("Error parsing session:", error);
+        }
+      }
+    }
+    
+    return partnerId;
+  };
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [partnerName, setPartnerName] = useState("Partner");
@@ -646,18 +707,20 @@ const PartnerDashboard = () => {
       }
       
       // Get session string for both partnerId fallback and JWT token
-      const sessionStr = localStorage.getItem("expertclaims_session");
       
       // Last resort: try session userId (but this is user_id, not partner_id)
-      if (!partnerId && sessionStr) {
-        try {
-          const session = JSON.parse(sessionStr);
-          if (session.userId) {
-            partnerId = session.userId.toString();
-            console.log("Warning: Using session.userId as fallback (this may be user_id, not partner_id):", partnerId);
+      const sessionStr = localStorage.getItem("expertclaims_session");
+      if (!partnerId) {
+        if (sessionStr) {
+          try {
+            const session = JSON.parse(sessionStr);
+            if (session.userId) {
+              partnerId = session.userId.toString();
+              console.log("Warning: Using session.userId as fallback (this may be user_id, not partner_id):", partnerId);
+            }
+          } catch (error) {
+            console.error("Error parsing session:", error);
           }
-        } catch (error) {
-          console.error("Error parsing session:", error);
         }
       }
       
@@ -1831,9 +1894,7 @@ const PartnerDashboard = () => {
                                   size="sm"
                                   variant="outline"
                                   onClick={() =>
-                                    navigate(
-                                      `/partner-claim/${referral.case_id}`
-                                    )
+                                    navigate(`/partner-claim/${referral.case_id}`)
                                   }
                                   className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300"
                                 >
@@ -2688,7 +2749,9 @@ const PartnerDashboard = () => {
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                onClick={() => navigate(`/partner-claim/${bonus.case_id}`)}
+                                onClick={() => {
+                                  navigate(`/partner-claim/${bonus.case_id}`);
+                                }}
                                 className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300"
                               >
                                 <Eye className="h-3 w-3 mr-1" />
