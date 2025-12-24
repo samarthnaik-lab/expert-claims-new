@@ -3874,7 +3874,7 @@ const EditTask = () => {
                                         value={formData.assigned_to}
                                         onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to: value }))}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select assignee" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -3896,38 +3896,31 @@ const EditTask = () => {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                {/* <div>
+                                <div>
                                     <Label>Customer</Label>
-                                    <div className="flex items-center space-x-3"> */}
-                                {/* <Select value={formData.customer_id || ''} onValueChange={handleCustomerChange}>
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select customer" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {isLoadingCustomers ? (
-                                                    <SelectItem value="loading" disabled>Loading customers...</SelectItem>
-                                                ) : customers.length > 0 ? (
-                                                    customers.map(customer => (
-                                                        <SelectItem key={customer.customer_id} value={customer.customer_id.toString()}>
-                                                            {customer.customer_name}
-                                                        </SelectItem>
-                                                    ))
-                                                ) : (
-                                                    <SelectItem value="no-customers" disabled>No customers available</SelectItem>
-                                                )}
-                                            </SelectContent>
-                                        </Select> */}
-                                {/* <Dialog open={createCustomerOpen} onOpenChange={setCreateCustomerOpen}> */}
-                                {/* <DialogTrigger asChild>
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                                        {currentCustomer?.customer_name ? (
+                                            <div className="w-full sm:flex-1 p-3 border rounded-md bg-gray-50 min-w-0 overflow-hidden">
+                                                <span className="text-sm font-medium truncate block">
+                                                    {currentCustomer.customer_name}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <div className="w-full sm:flex-1 p-3 border rounded-md bg-gray-50 min-w-0 overflow-hidden">
+                                                <span className="text-sm text-gray-500">No customer assigned</span>
+                                            </div>
+                                        )}
+                                        <Dialog open={createCustomerOpen} onOpenChange={setCreateCustomerOpen}>
+                                            <DialogTrigger asChild>
                                                 <Button
                                                     type="button"
                                                     variant="outline"
-                                                    className="bg-white border-2 border-gray-300 hover:border-primary-500 hover:bg-gray-50 text-black"
+                                                    className="bg-white border-2 border-gray-300 hover:border-primary-500 hover:bg-gray-50 text-black w-full sm:w-auto whitespace-nowrap flex-shrink-0"
                                                 >
                                                     Create New Customer
                                                 </Button>
-                                            </DialogTrigger> */}
-                                {/* <DialogContent className="sm:max-w-4xl w-[96vw] p-0">
+                                            </DialogTrigger>
+                                            <DialogContent className="sm:max-w-4xl w-[96vw] p-0">
                                                 <DialogHeader>
                                                     <DialogTitle className="px-4 sm:px-6 pt-4">Create New Customer</DialogTitle>
                                                 </DialogHeader>
@@ -3972,10 +3965,10 @@ const EditTask = () => {
                                                         Create Customer
                                                     </Button>
                                                 </DialogFooter>
-                                            </DialogContent> */}
-                                {/* </Dialog> */}
-                                {/* </div> */}
-                                {/* </div> */}
+                                            </DialogContent>
+                                        </Dialog>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -4755,7 +4748,7 @@ const EditTask = () => {
                                         <Label htmlFor="modal-payment-date">Payment Date</Label>
                                         <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                                             <PopoverTrigger asChild>
-                                                <div className="relative">
+                                                <div className="relative w-full">
                                                     <Input
                                                         id="modal-payment-date"
                                                         type="text"
@@ -4768,7 +4761,7 @@ const EditTask = () => {
                                                     <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                                                 </div>
                                             </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0 z-[100]" align="start">
+                                                <PopoverContent className="w-[240px] p-2 z-[100] max-w-[calc(100vw-4rem)]" align="start">
                                                 <Calendar 
                                                     mode="single" 
                                                     selected={paymentPhaseForm.payment_date ? new Date(paymentPhaseForm.payment_date) : undefined} 
@@ -4782,7 +4775,24 @@ const EditTask = () => {
                                                             setPaymentPhaseForm(prev => ({ ...prev, payment_date: formattedDate }));
                                                             setCalendarOpen(false);
                                                         }
-                                                    }} 
+                                                    }}
+                                                    className="p-2"
+                                                    classNames={{
+                                                        months: "flex flex-col space-y-2",
+                                                        month: "space-y-2",
+                                                        caption: "flex justify-center pt-1 relative items-center",
+                                                        caption_label: "text-xs font-medium",
+                                                        nav: "space-x-1 flex items-center",
+                                                        nav_button: "h-6 w-6 bg-transparent p-0 opacity-50 hover:opacity-100",
+                                                        nav_button_previous: "absolute left-1",
+                                                        nav_button_next: "absolute right-1",
+                                                        table: "w-full border-collapse space-y-1",
+                                                        head_row: "flex",
+                                                        head_cell: "text-muted-foreground rounded-md w-7 font-normal text-[0.7rem]",
+                                                        row: "flex w-full mt-1",
+                                                        cell: "h-7 w-7 text-center text-xs p-0 relative",
+                                                        day: "h-7 w-7 p-0 font-normal aria-selected:opacity-100 text-xs",
+                                                    }}
                                                 />
                                                 <div className="flex justify-between items-center p-3 border-t">
                                                     <Button
@@ -4795,7 +4805,7 @@ const EditTask = () => {
                                                             const month = String(today.getMonth() + 1).padStart(2, '0');
                                                             const day = String(today.getDate()).padStart(2, '0');
                                                             const formattedDate = `${year}-${month}-${day}`;
-                                                            setPaymentPhaseForm(prev => ({ ...prev, due_date: formattedDate }));
+                                                            setPaymentPhaseForm(prev => ({ ...prev, payment_date: formattedDate }));
                                                             setCalendarOpen(false);
                                                         }}
                                                         className="text-sm"
