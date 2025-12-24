@@ -301,14 +301,14 @@ const AdminDashboard = () => {
         const userStats = {
           total: allUsers.length,
           active: allUsers.filter(u => u.status?.toLowerCase() === 'active').length,
-          inactive: allUsers.filter(u => u.status?.toLowerCase() === 'inactive').length,
+          partners: allUsers.filter(u => u.role?.toLowerCase() === 'partner').length,
           employees: allUsers.filter(u => u.role?.toLowerCase() === 'employee' || u.designation?.toLowerCase() === 'employee').length,
         };
         return {
           cards: [
             { label: 'Total Users', value: userStats.total, color: 'blue' },
             { label: 'Active Users', value: userStats.active, color: 'green' },
-            { label: 'Inactive Users', value: userStats.inactive, color: 'gray' },
+            { label: 'Partners', value: userStats.partners, color: 'orange' },
             { label: 'Employees', value: userStats.employees, color: 'purple' },
           ],
           loading: loadingAllUsers
