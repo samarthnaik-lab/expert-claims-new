@@ -2144,7 +2144,7 @@ const TaskDetail = () => {
                                 Stage Change: {history.previous_stage} → {history.new_stage}
                               </h4>
                               <span className="text-sm text-gray-500">
-                                {new Date(history.created_time).toLocaleString()}
+                                {formatDateDDMMYYYY(history.created_time)}
                               </span>
                             </div>
                             <p className="text-gray-700 mt-1">{history.changed_reason || 'No reason provided'}</p>
@@ -2222,7 +2222,7 @@ const TaskDetail = () => {
                                 {event.event_type.replace('_', ' ')}
                               </h4>
                               <span className="text-sm text-gray-500">
-                                {new Date(event.created_at).toLocaleString()}
+                                {formatDateDDMMYYYY(event.created_at)}
                               </span>
                             </div>
                             <p className="text-gray-700 mt-1">{event.description}</p>
