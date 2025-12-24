@@ -51,8 +51,10 @@ export interface ClaimDetail {
   };
 }
 
+import { buildApiUrl } from '@/config/api';
+
 export class ClaimService {
-  private static readonly API_URL = 'http://localhost:3000/public/MyReferral';
+  private static readonly API_URL = buildApiUrl('public/MyReferral');
 
   static async getClaimDetails(caseId: string, sessionId: string, jwtToken: string, partnerId: number): Promise<ClaimDetail | null> {
     try {

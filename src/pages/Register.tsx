@@ -227,7 +227,7 @@ const Register = () => {
   const fetchPartners = async () => {
     setIsLoadingPartners(true);
     try {
-      const response = await fetch('http://localhost:3000/support/getpartner', {
+      const response = await fetch(buildApiUrl('support/getpartner'), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -391,7 +391,7 @@ const Register = () => {
       }
 
       // Use the createuser API for all roles
-      const apiUrl = 'http://localhost:3000/admin/createuser';
+      const apiUrl = buildApiUrl('admin/createuser');
 
       // Base request body structure matching the curl command
       let requestBody: any = {

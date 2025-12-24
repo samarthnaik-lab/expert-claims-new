@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { formatDateDDMMYYYY } from "@/lib/utils";
+import { buildApiUrl } from "@/config/api";
 
 interface BacklogDetail {
   status: any;
@@ -231,7 +232,7 @@ const AdminBacklogDetail = () => {
         }
       }
       
-      const response = await fetch('http://localhost:3000/admin/gettechnicalconsultant', {
+      const response = await fetch(buildApiUrl('admin/gettechnicalconsultant'), {
         method: 'GET',
         headers: {
           'accept': 'application/json',
@@ -291,7 +292,7 @@ const AdminBacklogDetail = () => {
       }
       
       const response = await fetch(
-        `http://localhost:3000/admin/backlog_id?backlog_id=${id}`,
+        `${buildApiUrl('admin/backlog_id')}?backlog_id=${id}`,
         {
           method: "GET",
           headers: {
@@ -384,7 +385,7 @@ const AdminBacklogDetail = () => {
         document_id: documentId
       };
       
-      const response = await fetch('http://localhost:3000/admin/documentview', {
+      const response = await fetch(buildApiUrl('admin/documentview'), {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -506,7 +507,7 @@ const AdminBacklogDetail = () => {
       }
       
       const response = await fetch(
-        "http://localhost:3000/admin/comments_insert",
+        buildApiUrl("admin/comments_insert"),
         {
           method: "POST",
           headers: {
@@ -636,7 +637,7 @@ const AdminBacklogDetail = () => {
         user_id: currentUser.employee_id
       };
 
-      const response = await fetch('http://localhost:3000/admin/updatecunsultantpolicy', {
+      const response = await fetch(buildApiUrl('admin/updatecunsultantpolicy'), {
         method: 'PATCH',
         headers: {
           'accept': 'application/json',
@@ -717,7 +718,7 @@ const AdminBacklogDetail = () => {
         user_id: currentUser.employee_id
       };
 
-      const response = await fetch('http://localhost:3000/admin/updatestatustechnicalconsultant', {
+      const response = await fetch(buildApiUrl('admin/updatestatustechnicalconsultant'), {
         method: 'PATCH',
         headers: {
           'accept': 'application/json',
@@ -806,7 +807,7 @@ const AdminBacklogDetail = () => {
         case_type_id: parseInt(selectedCaseType)
       };
 
-      const response = await fetch('http://localhost:3000/admin/update_backlog', {
+      const response = await fetch(buildApiUrl('admin/update_backlog'), {
         method: 'PATCH',
         headers: {
           'accept': '*/*',
@@ -897,7 +898,7 @@ const AdminBacklogDetail = () => {
       console.log('Add Summary - User ID:', userId, 'User Name:', userName, 'Email:', userEmail);
 
       // Call the API to add summary
-      const response = await fetch("http://localhost:3000/admin/addsummary", {
+      const response = await fetch(buildApiUrl("admin/addsummary"), {
         method: "POST",
         headers: {
           'Accept-Language': 'en-US,en;q=0.9',
@@ -992,7 +993,7 @@ const AdminBacklogDetail = () => {
       }
 
       // Call the API to update status with expert_description
-      const response = await fetch("http://localhost:3000/admin/updatestatustechnicalconsultant", {
+      const response = await fetch(buildApiUrl("admin/updatestatustechnicalconsultant"), {
         method: "PATCH",
         headers: {
           'accept': 'application/json',
@@ -1307,7 +1308,7 @@ const AdminBacklogDetail = () => {
           }
         }
 
-        const response = await fetch('http://localhost:3000/admin/updatestatustechnicalconsultant', {
+        const response = await fetch(buildApiUrl('admin/updatestatustechnicalconsultant'), {
           method: 'PATCH',
           headers: {
             'accept': 'application/json',

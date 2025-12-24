@@ -25,8 +25,10 @@ export interface PartnerStatusResponse {
   timestamp: string;
 }
 
+import { buildApiUrl } from '@/config/api';
+
 export class PartnerStatusService {
-  private static readonly API_URL = 'http://localhost:3000/api/partner-status-check';
+  private static readonly API_URL = buildApiUrl('api/partner-status-check');
 
   static async getPartnerStatus(partnerId: number, jwtToken?: string): Promise<PartnerStatusResponse[]> {
     try {

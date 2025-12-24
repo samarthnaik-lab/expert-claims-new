@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { UserDetails } from '@/types/auth';
+import { buildApiUrl } from '@/config/api';
 
 export interface LoginCredentials {
   email: string;
@@ -78,7 +79,7 @@ export class AuthService {
 
       console.log('Calling n8n webhook for role:', role, 'with data:', loginData);
       
-      const response = await fetch('http://localhost:3000/api/login', {
+      const response = await fetch(buildApiUrl('api/login'), {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -201,7 +202,7 @@ export class AuthService {
           // Fetch customer session details if customer role
           if (role === 'customer') {
             try {
-              const customerSessionResponse = await fetch(`http://localhost:3000/customer/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobile || '')}`, {
+              const customerSessionResponse = await fetch(`${buildApiUrl('customer/getcustomersessiondetails')}?mobile_number=${encodeURIComponent(mobile || '')}`, {
                 method: 'GET',
                 headers: {
                   'accept': 'application/json',
@@ -578,7 +579,7 @@ export class AuthService {
       };
 
       console.log('Step 2: Calling send_otp...');
-      const response = await fetch('http://localhost:3000/api/login', {
+      const response = await fetch(buildApiUrl('api/login'), {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -687,8 +688,8 @@ export class AuthService {
       }
 
       const webhookUrl = role === 'partner' 
-        ? `http://localhost:3000/api/getpartnerdetails?email=${encodeURIComponent(email)}`
-        : `http://localhost:3000/support/getuserdetails?email=${encodeURIComponent(email)}`;
+        ? `${buildApiUrl('api/getpartnerdetails')}?email=${encodeURIComponent(email)}`
+        : `${buildApiUrl('support/getuserdetails')}?email=${encodeURIComponent(email)}`;
       
       console.log('Calling webhook for role:', role, 'URL:', webhookUrl);
       

@@ -11,6 +11,7 @@ import { ArrowLeft, Calendar, User, FileText, Clock, ZoomIn, ZoomOut, RotateCcw,
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { formatDateDDMMYYYY } from "@/lib/utils";
+import { buildApiUrl } from "@/config/api";
 
 interface BacklogDetail {
   status: any;
@@ -204,7 +205,7 @@ const PartnerBacklogDetail = () => {
 
       // Use localhost:3000 API endpoint
       const response = await fetch(
-        `http://localhost:3000/public/backlog_id?backlog_id=${id}`,
+        `${buildApiUrl('public/backlog_id')}?backlog_id=${id}`,
         {
           method: "GET",
           headers: {
@@ -291,7 +292,7 @@ const PartnerBacklogDetail = () => {
       // Supabase service role key
       const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
       
-      const response = await fetch('http://localhost:3000/support/partnerdocumentview', {
+      const response = await fetch(buildApiUrl('support/partnerdocumentview'), {
         method: 'POST',
         headers: {
           'session_id': sessionId,

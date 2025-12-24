@@ -54,8 +54,10 @@ export interface ReferralApiResponse {
   message?: string;
 }
 
+import { buildApiUrl } from '@/config/api';
+
 export class ReferralService {
-  private static readonly API_URL = `http://localhost:3000/api/MyReferral`;
+  private static readonly API_URL = buildApiUrl('api/MyReferral');
 
   static async getMyReferrals(sessionId: string, jwtToken: string): Promise<ReferralCase[]> {
     try {

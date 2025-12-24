@@ -11,6 +11,7 @@ import { MessageCircle, Upload, FileText, LogOut, Phone, Shield, TrendingUp, Clo
 import { AuthService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
 import { SessionExpiry } from '@/components/SessionExpiry';
+import { buildApiUrl } from '@/config/api';
 
 const CustomerPortal = () => {
   const navigate = useNavigate();
@@ -226,7 +227,7 @@ const CustomerPortal = () => {
       }
       
       if (jwtToken || sessionId) {
-        const userIdResponse = await fetch('http://localhost:3000/customer/getuserid', {
+        const userIdResponse = await fetch(`${buildApiUrl('customer/getuserid')}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -362,7 +363,7 @@ const CustomerPortal = () => {
           }
         }
 
-        const response = await fetch('http://localhost:3000/customer/customer-dashboard', {
+        const response = await fetch(buildApiUrl('customer/customer-dashboard'), {
           method: 'POST',
           headers: {
             'accept': '*/*',
@@ -457,7 +458,54 @@ const CustomerPortal = () => {
       try {
         setLoading(true);
   
-        const userId = await getUserId();
+        // Get userid from customer session details (same as customer-dashboard)
+        const customerSessionRaw = localStorage.getItem('expertclaims_customer_session_details');
+        let mobileNumber = '';
+        let userId = null;
+        
+        if (customerSessionRaw) {
+          try {
+            const customerSessionData = JSON.parse(customerSessionRaw);
+            const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
+            mobileNumber = customerSession?.mobile_number || '';
+            userId = customerSession?.userid || null;
+          } catch (e) {
+            console.error('Error parsing customer session data:', e);
+          }
+        }
+        
+        // If we don't have userid yet, fetch from getcustomersessiondetails API
+        if (!userId && mobileNumber) {
+          try {
+            const sessionStr = localStorage.getItem('expertclaims_session');
+            let sessionId = '';
+            if (sessionStr) {
+              try {
+                const session = JSON.parse(sessionStr);
+                sessionId = session.sessionId || '';
+              } catch (error) {
+                console.error('Error parsing session:', error);
+              }
+            }
+            
+            const sessionResponse = await fetch(`${buildApiUrl('customer/getcustomersessiondetails')}?mobile_number=${encodeURIComponent(mobileNumber)}`, {
+              method: 'GET',
+              headers: {
+                'accept': 'application/json',
+                'content-type': 'application/json',
+                'session_id': sessionId
+              }
+            });
+            
+            if (sessionResponse.ok) {
+              const sessionData = await sessionResponse.json();
+              const sessionDetails = Array.isArray(sessionData) ? sessionData[0] : sessionData;
+              userId = sessionDetails?.userid || null;
+            }
+          } catch (error) {
+            console.error('Error fetching customer session details:', error);
+          }
+        }
   
         if (!userId) {
           console.error('No userid found after all attempts');
@@ -488,7 +536,7 @@ const CustomerPortal = () => {
         console.log('Customer Case API Body:', { user_id: userId, page: page, size: limit });
   
         const response = await fetch(
-          'http://localhost:3000/customer/customer-case',
+          buildApiUrl('customer/customer-case'),
           {
             method: 'POST',
             headers: {

@@ -62,6 +62,7 @@ import SortableTableHeader from "@/components/ui/SortableTableHeader";
 import { useTableSort } from "@/hooks/useTableSort";
 import { useAuth } from "@/contexts/AuthContext";
 import { SessionExpiry } from "@/components/SessionExpiry";
+import { buildApiUrl } from "@/config/api";
 
 const PartnerDashboard = () => {
   const navigate = useNavigate();
@@ -273,7 +274,7 @@ const PartnerDashboard = () => {
       }
 
       const response = await fetch(
-        `http://localhost:3000/api/568419fb-3d1d-4178-9d39-002d4100a3c0?partner_id=${partnerId}`,
+        `${buildApiUrl('api/568419fb-3d1d-4178-9d39-002d4100a3c0')}?partner_id=${partnerId}`,
         {
           method: "GET",
           headers: {
@@ -411,7 +412,7 @@ const PartnerDashboard = () => {
         }
       }
 
-      const baseUrl = "http://localhost:3000/api/MyReferral";
+      const baseUrl = buildApiUrl("api/MyReferral");
       const url = `${baseUrl}?partner_id=${partnerId}&page=1&size=10000`;
       const response = await fetch(url, {
         method: "GET",
@@ -453,7 +454,7 @@ const PartnerDashboard = () => {
         }
       }
 
-      const baseUrl = "http://localhost:3000/api/partner-status-check";
+      const baseUrl = buildApiUrl("api/partner-status-check");
       const response = await fetch(baseUrl, {
         method: "POST",
         headers: {
@@ -525,7 +526,7 @@ const PartnerDashboard = () => {
       }
 
       const response = await fetch(
-        `http://localhost:3000/api/referal_partner_id_data?backlog_referring_partner_id=${partnerId}`,
+        `${buildApiUrl('api/referal_partner_id_data')}?backlog_referring_partner_id=${partnerId}`,
         {
           method: "GET",
           headers: {
@@ -578,7 +579,7 @@ const PartnerDashboard = () => {
         }
       }
 
-      const baseUrl = "http://localhost:3000/api/MyReferral";
+      const baseUrl = buildApiUrl("api/MyReferral");
       const url = `${baseUrl}?partner_id=${partnerId}&page=${page}&size=${limit}`;
 
       console.log("Fetching referrals with URL:", url);
@@ -695,7 +696,7 @@ const PartnerDashboard = () => {
         }
       }
 
-      const baseUrl = "http://localhost:3000/api/partner-status-check";
+      const baseUrl = buildApiUrl("api/partner-status-check");
 
       console.log("Bonus API URL:", baseUrl);
       console.log("Bonus API Body:", {
@@ -888,7 +889,7 @@ const PartnerDashboard = () => {
       }
 
       const response = await fetch(
-        `http://localhost:3000/api/referal_partner_id_data?backlog_referring_partner_id=${partnerId}`,
+        `${buildApiUrl('api/referal_partner_id_data')}?backlog_referring_partner_id=${partnerId}`,
         {
           method: "GET",
           headers: {

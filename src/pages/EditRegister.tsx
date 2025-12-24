@@ -8,6 +8,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { UserService, NewUserData } from '@/services/userService';
+import { buildApiUrl } from '@/config/api';
 
 // Simple hash function for password (same as Login.tsx)
 const hashPassword = (password: string): string => {
@@ -140,7 +141,7 @@ const EditRegister = () => {
         type: 'edit'
       });
       
-      const url = `http://localhost:3000/admin/getusers?${params.toString()}`;
+      const url = `${buildApiUrl('admin/getusers')}?${params.toString()}`;
       
       console.log('Calling getusers API with URL:', url);
       console.log('Query parameters:', { id: userId, type: 'edit' });
@@ -185,7 +186,7 @@ const EditRegister = () => {
   const fetchPartners = async () => {
     setIsLoadingPartners(true);
     try {
-      const response = await fetch('http://localhost:3000/support/getpartner', {
+      const response = await fetch(buildApiUrl('support/getpartner'), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -566,7 +567,7 @@ const EditRegister = () => {
         console.log('Sending partner update payload:', partnerPayload);
         console.log('=====================');
 
-        response = await fetch('http://localhost:3000/admin/updateuser', {
+        response = await fetch(buildApiUrl('admin/updateuser'), {
           method: 'PATCH',
           headers: {
             'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
@@ -625,7 +626,7 @@ const EditRegister = () => {
         console.log('Sending admin update payload:', adminPayload);
         console.log('==================');
 
-        response = await fetch('http://localhost:3000/admin/updateuser', {
+        response = await fetch(buildApiUrl('admin/updateuser'), {
           method: 'PATCH',
           headers: {
             'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
@@ -692,7 +693,7 @@ const EditRegister = () => {
         console.log('Sending employee update payload:', employeePayload);
         console.log('====================');
 
-        response = await fetch('http://localhost:3000/admin/updateuser', {
+        response = await fetch(buildApiUrl('admin/updateuser'), {
           method: 'PATCH',
           headers: {
             'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
@@ -766,7 +767,7 @@ const EditRegister = () => {
         console.log('Sending customer update payload:', customerPayload);
         console.log('====================');
 
-        response = await fetch('http://localhost:3000/admin/updateuser', {
+        response = await fetch(buildApiUrl('admin/updateuser'), {
           method: 'PATCH',
           headers: {
             'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',

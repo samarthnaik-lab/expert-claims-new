@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { buildApiUrl } from "@/config/api";
 
 interface BacklogDetail {
   status: any;
@@ -269,7 +270,7 @@ const EmployeeBacklogEdit = () => {
         sessionId = session.sessionId || '';
       }
       
-      const response = await fetch('http://localhost:3000/support/gettechnicalconsultant', {
+      const response = await fetch(buildApiUrl('support/gettechnicalconsultant'), {
         method: 'GET',
         headers: {
           'accept': 'application/json',
@@ -335,7 +336,7 @@ const EmployeeBacklogEdit = () => {
 
       // Call the support API endpoint to get single backlog detail by ID
       const response = await fetch(
-        `http://localhost:3000/support/backlog_id?backlog_id=${id}`,
+        `${buildApiUrl('support/backlog_id')}?backlog_id=${id}`,
         {
           method: "GET",
           headers: {
@@ -448,7 +449,7 @@ const EmployeeBacklogEdit = () => {
       // Supabase service role key
       const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
       
-      const response = await fetch('http://localhost:3000/support/partnerdocumentview', {
+      const response = await fetch(buildApiUrl('support/partnerdocumentview'), {
         method: 'POST',
         headers: {
           'session_id': sessionId,
@@ -601,7 +602,7 @@ const EmployeeBacklogEdit = () => {
       const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
 
       const response = await fetch(
-        `http://localhost:3000/support/removedocument?document_id=${documentId}`,
+        `${buildApiUrl('support/removedocument')}?document_id=${documentId}`,
         {
           method: 'PATCH',
           headers: {
@@ -687,7 +688,7 @@ const EmployeeBacklogEdit = () => {
       }
 
       const response = await fetch(
-        "http://localhost:3000/support/comments_insert",
+        buildApiUrl("support/comments_insert"),
         {
           method: "POST",
           headers: {
@@ -854,7 +855,7 @@ const EmployeeBacklogEdit = () => {
       }
 
       // Call the new API to update status with expert_description
-      const response = await fetch("http://localhost:3000/support/updatestatustechnicalconsultant", {
+      const response = await fetch(buildApiUrl("support/updatestatustechnicalconsultant"), {
         method: "PATCH",
         headers: {
           'accept': 'application/json',
@@ -1147,7 +1148,7 @@ const EmployeeBacklogEdit = () => {
           user_id: currentUser.employee_id
         };
 
-        const response = await fetch('http://localhost:3000/support/updatestatustechnicalconsultant', {
+        const response = await fetch(buildApiUrl('support/updatestatustechnicalconsultant'), {
           method: 'PATCH',
           headers: {
             'accept': 'application/json',
@@ -1252,7 +1253,7 @@ const EmployeeBacklogEdit = () => {
         }
 
         // Call the support API to update consultant assignment
-        const response = await fetch('http://localhost:3000/support/updatecunsultantpolicy', {
+        const response = await fetch(buildApiUrl('support/updatecunsultantpolicy'), {
           method: 'PATCH',
           headers: {
             'accept': 'application/json',
@@ -1326,7 +1327,7 @@ const EmployeeBacklogEdit = () => {
         console.log('Updating case status:', requestBody);
 
         // Call the new API to update status
-        const response = await fetch('http://localhost:3000/support/updatestatustechnicalconsultant', {
+        const response = await fetch(buildApiUrl('support/updatestatustechnicalconsultant'), {
           method: 'PATCH',
           headers: {
             'accept': 'application/json',

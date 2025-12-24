@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Shield, FileText, User, Calendar, Phone, Mail, MapPin, DollarSign, Clock, CheckCircle, AlertCircle, XCircle, MessageCircle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { formatDateDDMMYYYY } from '@/lib/utils';
+import { buildApiUrl } from '@/config/api';
 
 
 
@@ -167,7 +168,7 @@ const CustomerClaimDetail = () => {
       }
       
       if (jwtToken || sessionId) {
-        const userIdResponse = await fetch('http://localhost:3000/customer/getuserid', {
+        const userIdResponse = await fetch(`${buildApiUrl('customer/getuserid')}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -280,23 +281,23 @@ const CustomerClaimDetail = () => {
           formData.append('page', page.toString());
           formData.append('size', pageSize.toString());
 
-          const response = await fetch(
-            'http://localhost:3000/customer/customer-case',
-            {
-              method: 'POST',
-              headers: {
-                'accept': '*/*',
-                'accept-language': 'en-US,en;q=0.9',
-                'accept-profile': 'expc',
-                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-                'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-                'content-profile': 'expc',
-                'jwt_token': jwtToken,
-                'session_id': sessionId
-              },
-              body: formData,
-            }
-          );
+        const response = await fetch(
+          buildApiUrl('customer/customer-case'),
+          {
+            method: 'POST',
+            headers: {
+              'accept': '*/*',
+              'accept-language': 'en-US,en;q=0.9',
+              'accept-profile': 'expc',
+              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
+              'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
+              'content-profile': 'expc',
+              'jwt_token': jwtToken,
+              'session_id': sessionId
+            },
+            body: formData,
+          }
+        );
 
           if (response.ok) {
             const data = await response.json();
@@ -391,7 +392,7 @@ const CustomerClaimDetail = () => {
       }
 
       const response = await fetch(
-        'http://localhost:3000/support/list-documents',
+        buildApiUrl('support/list-documents'),
         {
           method: 'POST',
           headers: {
@@ -485,7 +486,7 @@ const CustomerClaimDetail = () => {
       };
       console.log('Request body:', requestBody);
       
-      const response = await fetch('http://localhost:3000/support/view', {
+      const response = await fetch(buildApiUrl('support/view'), {
         method: 'POST',
         headers: {
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',

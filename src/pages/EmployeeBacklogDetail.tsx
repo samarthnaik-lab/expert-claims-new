@@ -9,6 +9,7 @@ import { ArrowLeft, User, RefreshCw, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { EmployeeService } from '@/services/employeeService';
 import { formatDateDDMMYYYY } from '@/lib/utils';
+import { buildApiUrl } from '@/config/api';
 
 // User interface for dropdown
 interface User {
@@ -53,7 +54,7 @@ const EmployeeBacklogDetail = () => {
         }
       }
       
-      const response = await fetch(`http://localhost:3000/support/backlog_id?backlog_id=${backlogId}`, {
+      const response = await fetch(`${buildApiUrl('support/backlog_id')}?backlog_id=${backlogId}`, {
         method: 'GET',
         headers: {
           'accept': '*/*',

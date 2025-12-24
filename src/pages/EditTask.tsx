@@ -24,6 +24,7 @@ import { DocumentService, Document } from '@/services/documentService';
 import { CustomerService, Customer } from '@/services/customerService';
 import { TaskService, TaskCreateRequest, TaskStakeholder, TaskCustomer } from '@/services/taskService';
 import { prepareInvoiceData, generateAndDownloadInvoice } from '@/services/invoiceService';
+import { buildApiUrl } from '@/config/api';
 
 // Extended Customer interface for the API response
 interface ExtendedCustomer {
@@ -304,7 +305,7 @@ const EditTask = () => {
         try {
             console.log('Fetching task data for ID:', taskId);
 
-            const response = await fetch(`http://localhost:3000/support/everything-cases`, {
+            const response = await fetch(buildApiUrl('support/everything-cases'), {
                 method: 'POST',
                 headers: {
                     'accept': '*/*',
@@ -666,7 +667,7 @@ const EditTask = () => {
     const fetchPartners = async () => {
     try {
       const response = await fetch(
-        "http://localhost:3000/support/getpartner",
+        buildApiUrl("support/getpartner"),
         {
           method: "GET",
           headers: {
@@ -955,7 +956,7 @@ const EditTask = () => {
             console.log("Fetching document categories for case type:", caseTypeId);
 
             const response = await fetch(
-                `http://localhost:3000/support/getdocumentcategories?case_type_id=${caseTypeId}`,
+                `${buildApiUrl('support/getdocumentcategories')}?case_type_id=${caseTypeId}`,
                 {
                     method: "GET",
                     headers: {
@@ -1674,7 +1675,7 @@ const EditTask = () => {
                     }
 
                     const uploadPromise = fetch(
-                        "http://localhost:3000/api/upload",
+                        buildApiUrl("api/upload"),
                         {
                             method: "POST",
                             headers: {
@@ -1867,7 +1868,7 @@ const EditTask = () => {
 
         try {
             const response = await fetch(
-                `http://localhost:3000/support/removecrmdocument?document_id=${documentId}`,
+                `${buildApiUrl('support/removecrmdocument')}?document_id=${documentId}`,
                 {
                     method: "PATCH",
                     headers: {
@@ -1959,7 +1960,7 @@ const EditTask = () => {
             // Supabase service role key
             const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
             
-            const response = await fetch('http://localhost:3000/support/view', {
+            const response = await fetch(buildApiUrl('support/view'), {
                 method: 'POST',
                 headers: {
                     'Accept': '*/*',
@@ -2198,7 +2199,7 @@ const EditTask = () => {
             const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o";
 
             // Call assignee_comment_insert API
-            const response = await fetch('http://localhost:3000/support/assignee_comment_insert', {
+            const response = await fetch(buildApiUrl('support/assignee_comment_insert'), {
                 method: 'POST',
                 headers: {
                     'accept': '/',
@@ -2292,7 +2293,7 @@ const EditTask = () => {
 
                 // GET API - Fetch latest invoice number
                 console.log('Fetching latest invoice number...');
-                const getResponse = await fetch(`http://localhost:3000/support/invoice_get?case_phase_id=${casePhaseId}`, {
+                const getResponse = await fetch(`${buildApiUrl('support/invoice_get')}?case_phase_id=${casePhaseId}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2364,7 +2365,7 @@ const EditTask = () => {
 
                 // POST API - Save new invoice number
                 console.log('Saving invoice number...');
-                const postResponse = await fetch('http://localhost:3000/support/invoice', {
+                const postResponse = await fetch(buildApiUrl('support/invoice'), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2617,7 +2618,7 @@ const EditTask = () => {
             };
 
             console.log('Updating payment phase with payload:', updateData);
-            console.log('API Request URL: http://localhost:3000/support/updatepayment');
+            console.log('API Request URL:', buildApiUrl('support/updatepayment'));
 
             // Get session_id and jwt_token from localStorage if not already set
             if (!sessionId || !jwtToken) {
@@ -2633,7 +2634,7 @@ const EditTask = () => {
                 }
             }
 
-            const response = await fetch('http://localhost:3000/support/updatepayment', {
+            const response = await fetch(buildApiUrl('support/updatepayment'), {
                 method: 'PATCH',
                 headers: {
                     'accept': '*/*',
@@ -2832,7 +2833,7 @@ const EditTask = () => {
                 }
             }
 
-            const response = await fetch('http://localhost:3000/support/createcasepaymentphases', {
+            const response = await fetch(buildApiUrl('support/createcasepaymentphases'), {
                 method: 'POST',
                 headers: {
                     'accept': '*/*',
@@ -3027,7 +3028,7 @@ const EditTask = () => {
         console.log('Full taskData JSON:', JSON.stringify(taskData, null, 2));
 
             // Call the update API
-            const response = await fetch('http://localhost:3000/support/update_Task', {
+            const response = await fetch(buildApiUrl('support/update_Task'), {
                 method: 'PATCH',
                 headers: {
                     'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',

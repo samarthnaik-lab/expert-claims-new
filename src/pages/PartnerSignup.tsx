@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { buildApiUrl } from "@/config/api";
 
 // Simple hash function for password (same as admin registration)
 const hashPassword = (password: string): string => {
@@ -281,7 +282,7 @@ const PartnerSignup = () => {
       console.log("Partner signup data:", signupData);
       
       // Call partner creation API
-      const response = await fetch('http://localhost:3000/support/partner_creation', {
+      const response = await fetch(buildApiUrl('support/partner_creation'), {
         method: 'POST',
         headers: {
           'accept': '*/*',
