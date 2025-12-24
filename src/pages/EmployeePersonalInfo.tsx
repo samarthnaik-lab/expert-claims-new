@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Lock, Save, Eye, EyeOff, Camera, Building2, CreditCard, Shield, Mail, Phone, MapPin, Calendar, Briefcase } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { buildApiUrl } from '@/config/api';
 
 interface EmployeeData {
   // Non-editable fields
@@ -156,70 +157,109 @@ const EmployeePersonalInfo = () => {
 
       console.log('Fetching employee data for user:', userId);
 
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/80f22dec-2b93-48c9-beee-fff9b87dda1e?employee_id=' + userId, {
+      // Get session details for headers
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (e) {
+          console.error('Error parsing session:', e);
+        }
+      }
+
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to view employee data",
+          variant: "destructive",
+        });
+        setDataLoading(false);
+        return;
+      }
+
+      const response = await fetch(`${buildApiUrl('admin/getuserbyid')}?user_id=${userId}`, {
         method: 'GET',
         headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
-          'session_id': '211b694f-495c-4b44-b8ad-68559589267d',
-          'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBhZG1pbkBleGFtcGxlLmNvbSIsInBhc3N3b3JkIjoiYWRtaW4xMjMiLCJpYXQiOjE3NTUxNzM4MDB9.hAzLoa_XBoVwJFl5vASaX617UAJLYQLjIc9kaxXwJyA',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'session_id': sessionId,
+          'jwt_token': jwtToken,
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
         },
       });
 
-      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(`Failed to fetch employee data: ${response.status}`);
+      }
 
-      if (Array.isArray(result) && result.length > 0) {
-        const employeeData = result[0];
+      const result = await response.json();
+      
+      // Handle response format from getuserbyid endpoint
+      // Response structure: { user_id, username, email, role, employees: {...}, ... }
+      const userData = result || {};
+      const employeeData = userData.employees || {};
+
+      if (employeeData || userData.user_id) {
+        // Format address if it's an object
+        let addressString = '';
+        if (employeeData.address) {
+          if (typeof employeeData.address === 'object') {
+            addressString = `${employeeData.address.street || ''}, ${employeeData.address.city || ''}, ${employeeData.address.state || ''} ${employeeData.address.pincode || ''}`.trim();
+          } else {
+            addressString = employeeData.address;
+          }
+        }
 
         setFormData({
-          username: 'sanvi.sharma',
-          email: 'sanvi.sharma@company.com',
-          role: 'Employee',
+          username: userData.username || '',
+          email: userData.email || '',
+          role: userData.role || 'Employee',
           employment_status: employeeData.employment_status || 'probation',
-          joining_date: employeeData.joining_date || '2023-01-15',
-          designation: employeeData.designation || 'Claims Processor',
-          department: employeeData.department || 'Claims Department',
-          manager_name: 'Manager Name', // Not in API response
+          joining_date: employeeData.joining_date || '',
+          designation: employeeData.designation || '',
+          department: employeeData.department || '',
+          manager_name: employeeData.manager || '',
 
           // Editable fields from API
-          first_name: employeeData.first_name || 'Sanvi',
-          last_name: employeeData.last_name || 'Sharma',
-          mobile: employeeData.work_mobile || '+91 9812345678',
-          gender: 'Female', // Not in API response
-          age: '25', // Not in API response
-          address: employeeData.address ?
-            `${employeeData.address.street || ''}, ${employeeData.address.city || ''}, ${employeeData.address.state || ''} ${employeeData.address.pincode || ''}`.trim() :
-            '45, Connaught Place, New Delhi, Delhi 110001',
-          emergency_contact: employeeData.emergency_contact?.phone || '+91 9876543219',
-          work_phonenumber: employeeData.work_phone || '+91 9876543212',
-          work_extension: employeeData.work_extension || '101',
-          office_location: employeeData.office_location || 'Delhi Office',
-          pan_number: employeeData.pan_number || 'FGHIJ6789K',
-          aadhar_number: employeeData.aadhar_number || '987654321098',
-          communication_preferences: 'Email', // Not in API response
-          language_preference: 'English', // Not in API response
-          notes: 'Employee notes', // Not in API response
+          first_name: employeeData.first_name || '',
+          last_name: employeeData.last_name || '',
+          mobile: employeeData.mobile_number || employeeData.work_mobile || '',
+          gender: employeeData.gender || '',
+          age: employeeData.age ? String(employeeData.age) : '',
+          address: addressString || '',
+          emergency_contact: employeeData.emergency_contact?.phone || (typeof employeeData.emergency_contact === 'string' ? employeeData.emergency_contact : ''),
+          work_phonenumber: employeeData.work_phone || '',
+          work_extension: employeeData.work_extension || '',
+          office_location: employeeData.office_location || '',
+          pan_number: employeeData.pan_number || '',
+          aadhar_number: employeeData.aadhar_number ? String(employeeData.aadhar_number) : '',
+          communication_preferences: employeeData.communication_preference || 'Email',
+          language_preference: 'English',
+          notes: employeeData.additional_notes || '',
 
           // Emergency contact details from API
-          emergency_contact_name: employeeData.emergency_contact?.name || 'Rohit Sharma',
-          emergency_contact_relation: employeeData.emergency_contact?.relation || 'Father',
+          emergency_contact_name: employeeData.emergency_contact?.name || employeeData.emergency_contact_name || '',
+          emergency_contact_relation: employeeData.emergency_contact?.relation || employeeData.emergency_contact_relation || '',
 
           // Bank details from API
-          bank_name: employeeData.bank_details?.bank_name || 'ICICI Bank',
-          account_number: employeeData.bank_details?.account_number || '987654321001',
-          ifsc_code: employeeData.bank_details?.ifsc || 'ICIC0005678',
-          account_holder_name: `${employeeData.first_name || 'Sanvi'} ${employeeData.last_name || 'Sharma'}`,
+          bank_name: employeeData.bank_details?.bank_name || (typeof employeeData.bank_details === 'string' ? '' : ''),
+          account_number: employeeData.bank_details?.account_number || '',
+          ifsc_code: employeeData.bank_details?.ifsc || employeeData.bank_details?.ifsc_code || '',
+          account_holder_name: `${employeeData.first_name || ''} ${employeeData.last_name || ''}`.trim() || '',
 
           // Profile image from API
           profile_image: employeeData.profile_picture_url || '',
 
           // Additional fields from API
           employee_id: employeeData.employee_id,
-          user_id: employeeData.user_id,
-          manager_id: employeeData.manager_id,
+          user_id: userData.user_id || employeeData.user_id,
+          manager_id: employeeData.manager_id || employeeData.reports_to,
           profile_picture_url: employeeData.profile_picture_url,
-          work_mobile: employeeData.work_mobile,
+          work_mobile: employeeData.mobile_number || employeeData.work_mobile,
           created_by: employeeData.created_by,
           updated_by: employeeData.updated_by
         });
@@ -346,18 +386,46 @@ const EmployeePersonalInfo = () => {
          approved_date: new Date().toISOString()
        };
 
-      console.log('Calling update_employee API with payload:', apiPayload);
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to update employee data",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
 
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/update_employee', {
+      // Transform payload to match backend endpoint format
+      const updatePayload = {
+        user_id: parseInt(userId.toString()),
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        mobile_number: formData.mobile,
+        designation: formData.designation,
+        department: formData.department,
+        work_phone_number: formData.work_phonenumber,
+        address: formData.address,
+        pan: formData.pan_number,
+        aadhar_number: formData.aadhar_number,
+        joining_date: formData.joining_date,
+        employment_status: formData.employment_status.toLowerCase(),
+        emergency_contact: formData.emergency_contact,
+        gender: formData.gender,
+        age: formData.age ? parseInt(formData.age) : null
+      };
+
+      console.log('Calling updateuser API with payload:', updatePayload);
+
+      const response = await fetch(buildApiUrl('admin/updateuser'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
-          'session_id': '211b694f-495c-4b44-b8ad-68559589267d',
-          'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBhZG1pbkBleGFtcGxlLmNvbSIsInBhc3N3b3JkIjoiYWRtaW4xMjMiLCJpYXQiOjE3NTUxNzM4MDB9.hAzLoa_XBoVwJFl5vASaX617UAJLYQLjIc9kaxXwJyA'
+          'session_id': sessionId,
+          'jwt_token': jwtToken,
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
         },
-        body: JSON.stringify(apiPayload)
+        body: JSON.stringify(updatePayload)
       });
 
       if (response.status === 200) {
@@ -447,33 +515,33 @@ const EmployeePersonalInfo = () => {
         jwtToken = session.jwtToken || '';
       }
 
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to update password",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // Call password update API
       console.log('Updating password for user:', userId);
 
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/updatepassword', {
+      // Note: Using updateuser endpoint with password fields
+      // If there's a dedicated password endpoint, it should be used instead
+      const response = await fetch(buildApiUrl('admin/updateuser'), {
         method: 'PATCH',
         headers: {
-          'accept': 'application/json',
-          'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-          'content-type': 'application/json',
-          'origin': 'http://localhost:8080',
-          'priority': 'u=1, i',
-          'referer': 'http://localhost:8080/',
-          'sec-ch-ua': '"Not;A=Brand";v="99", "Google Chrome";v="139", "Chromium";v="139"',
-          'sec-ch-ua-mobile': '?0',
-          'sec-ch-ua-platform': '"Windows"',
-          'sec-fetch-dest': 'empty',
-          'sec-fetch-mode': 'cors',
-          'sec-fetch-site': 'cross-site',
-          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+          'Content-Type': 'application/json',
           'session_id': sessionId,
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-          'authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o`
+          'jwt_token': jwtToken,
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
         },
         body: JSON.stringify({
-          user_id: userId.toString(),
-          password_hash: passwordData.new_password,
-          current_password: passwordData.current_password
+          user_id: parseInt(userId.toString()),
+          current_password: passwordData.current_password,
+          new_password: passwordData.new_password
         })
       });
 

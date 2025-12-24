@@ -181,7 +181,6 @@ export interface DeleteUserResponse {
 export class UserService {
   private static readonly API_URL = 'http://localhost:3000/admin/getusers';
   private static readonly DELETE_API_URL = 'http://localhost:3000/admin/deleteuser';
-  private static readonly API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
 
   static async getUsers(sessionId: string, jwtToken: string, page: number = 1, size: number = 10): Promise<AdminUser[]> {
     try {
@@ -194,11 +193,10 @@ export class UserService {
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
           'accept-profile': 'expc',
-          'apikey': this.API_KEY,
-          'authorization': `Bearer ${this.API_KEY}`,
           'content-type': 'application/json',
-          'jwt_token': jwtToken,
           'session_id': sessionId,
+          'jwt_token': jwtToken,
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` }),
           'Range': '0-100', // Get first 100 users
           'Prefer': 'count=exact'
         }
@@ -336,11 +334,10 @@ export class UserService {
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
           'accept-profile': 'srtms',
-          'apikey': this.API_KEY,
-          'authorization': `Bearer ${this.API_KEY}`,
           'content-type': 'application/json',
+          'session_id': sessionId,
           'jwt_token': jwtToken,
-          'session_id': sessionId
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
         }
       });
 
@@ -383,11 +380,10 @@ export class UserService {
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
           'accept-profile': 'srtms',
-          'apikey': this.API_KEY,
-          'authorization': `Bearer ${this.API_KEY}`,
           'content-type': 'application/json',
-          'jwt_token': jwtToken,
           'session_id': sessionId,
+          'jwt_token': jwtToken,
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` }),
           'Range': '0-100',
           'Prefer': 'count=exact'
         }
@@ -421,22 +417,40 @@ export class UserService {
   }
 }
 
-const API_BASE_URL = 'https://n8n.srv952553.hstgr.cloud/webhook';
-const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
+import { buildApiUrl } from '@/config/api';
 
 export const getUserDetails = async (email: string): Promise<UserDetailsResponse> => {
   try {
     console.log('Fetching user details for email:', email);
     
-    const response = await fetch(`${API_BASE_URL}/getuserdetails?email=${encodeURIComponent(email)}`, {
+    // Get session from localStorage
+    const sessionStr = localStorage.getItem('expertclaims_session');
+    let sessionId = '';
+    let jwtToken = '';
+
+    if (sessionStr) {
+      try {
+        const session = JSON.parse(sessionStr);
+        sessionId = session.sessionId || '';
+        jwtToken = session.jwtToken || '';
+      } catch (error) {
+        console.error('Error parsing session:', error);
+      }
+    }
+
+    if (!sessionId || !jwtToken) {
+      throw new Error('Session not available. Please log in.');
+    }
+    
+    const response = await fetch(`${buildApiUrl('support/getuserdetails')}?email=${encodeURIComponent(email)}`, {
       method: 'GET',
       headers: {
         'Content-Profile': 'expc',
-        'apikey': API_KEY,
         'Accept-Profile': 'expc',
-        'session_id': '17e7ab32-86ad-411e-8ee3-c4a09e6780f7',
-        'Authorization': `Bearer ${API_KEY}`,
+        'session_id': sessionId,
+        'jwt_token': jwtToken,
         'Content-Type': 'application/json',
+        ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
       },
     });
 

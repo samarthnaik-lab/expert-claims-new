@@ -80,10 +80,6 @@ const PartnerNewTask = () => {
         //   jwtToken = session.jwtToken || '';
         // }
   
-        // // Use fallback values if session not available
-        // sessionId = sessionId || 'efd005c8-d9a1-4cfa-adeb-1ca2a7f13775';
-        // jwtToken = jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjM0IiwiaWF0IjoxNzU2NTUwODUwfQ.Kmh5wQS9CXpRK0TmBXlJJhGlfr9ulMx8ou5nCk7th8g';
-  
         // const result = await CaseTypeService.getCaseTypes(sessionId, jwtToken);
         // setCaseTypes(result);
       // Use hardcoded insurance case types
