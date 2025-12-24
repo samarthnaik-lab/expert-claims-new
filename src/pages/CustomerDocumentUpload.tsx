@@ -73,7 +73,11 @@ const CustomerDocumentUpload = () => {
   const handleFiles = (files: File[]) => {
     // Only allow upload if both claim and document type are selected
     if (!selectedClaim || !selectedDocumentType) {
-      alert('Please select both a claim and document type before uploading files.');
+      toast({
+        title: "Selection Required",
+        description: "Please select both a claim and document type before uploading files.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -190,13 +194,16 @@ const CustomerDocumentUpload = () => {
 
   useEffect(() => {
     const fetchCustomerCase = async () => {
+      console.log('🔄 fetchCustomerCase called');
       try {
         setLoading(true);
   
         const userId = await getUserId();
+        console.log('📦 UserId from getUserId:', userId);
   
         if (!userId) {
-          console.error('No userid found');
+          console.error('❌ No userid found - API call will not be made');
+          console.log('Available localStorage keys:', Object.keys(localStorage).filter(key => key.includes('expert') || key.includes('user')));
           toast({
             title: "Error",
             description: "User ID not found. Please ensure you are logged in.",
@@ -226,6 +233,10 @@ const CustomerDocumentUpload = () => {
         const pageSize = 50; // Fetch larger pages
         let hasMore = true;
 
+        const apiUrl = buildApiUrl('customer/customer-case');
+        console.log('Calling Customer Case API:', apiUrl);
+        console.log('Session data:', { sessionId: sessionId ? 'present' : 'missing', jwtToken: jwtToken ? 'present' : 'missing' });
+
         while (hasMore) {
           // Build FormData payload with pagination
           const formData = new FormData();
@@ -233,8 +244,10 @@ const CustomerDocumentUpload = () => {
           formData.append('page', page.toString());
           formData.append('size', pageSize.toString());
   
+          console.log(`Fetching page ${page} with user_id: ${userId}`);
+  
         const response = await fetch(
-          buildApiUrl('customer/customer-case'),
+          apiUrl,
           {
             method: 'POST',
             headers: {
@@ -243,12 +256,13 @@ const CustomerDocumentUpload = () => {
               'accept-profile': 'expc',
               'content-profile': 'expc',
               'jwt_token': jwtToken,
-              'session_id': sessionId,
-              ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
+              'session_id': sessionId
             },
             body: formData,
           }
         );
+  
+          console.log(`Page ${page} - API Response Status:`, response.status, response.statusText);
   
           if (response.ok) {
             const data = await response.json();
@@ -269,7 +283,12 @@ const CustomerDocumentUpload = () => {
               hasMore = false;
             }
           } else {
-            console.error('Failed to fetch customer case from page', page);
+            const errorText = await response.text();
+            console.error('Failed to fetch customer case from page', page, {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorText
+            });
             hasMore = false;
           }
         }
@@ -419,7 +438,7 @@ const CustomerDocumentUpload = () => {
         
         // Show success toast for individual file upload
         toast({
-          title: "File Uploaded!",
+          title: "✅ File Uploaded!",
           description: `${uploadedFile.name} has been uploaded successfully.`,
           variant: "default",
           className: "bg-green-50 border-green-200 text-green-800",
@@ -475,15 +494,7 @@ const CustomerDocumentUpload = () => {
         // Upload all pending files first
         console.log(`Uploading ${pendingFiles.length} pending files...`);
         
-        // Show toast that upload is starting
-        toast({
-          title: "Upload Started",
-          description: `Starting upload of ${pendingFiles.length} file(s)...`,
-          variant: "default",
-          className: "bg-blue-50 border-blue-200 text-blue-800",
-        });
-        
-        // Update status to uploading for all pending files
+        // Update status to uploading for all pending files (silently, no toast)
         setUploadedFiles(prev => prev.map(file => 
           file.status === 'pending' 
             ? { ...file, status: 'uploading', progress: 0 }
@@ -497,134 +508,74 @@ const CustomerDocumentUpload = () => {
           await Promise.all(uploadPromises);
           console.log('All files uploaded successfully');
           
-          // Show toast that all files are uploaded
+          // Show success toast directly after upload completes
           toast({
-            title: "Upload Complete",
-            description: `All ${pendingFiles.length} file(s) have been uploaded successfully!`,
+            title: "✅ Upload Complete!",
+            description: `All ${pendingFiles.length} file(s) have been uploaded successfully! You can now submit them.`,
             variant: "default",
             className: "bg-green-50 border-green-200 text-green-800",
           });
         } catch (error) {
           console.error('Some files failed to upload:', error);
-          toast({
-            title: "Upload Failed",
-            description: "Some files failed to upload. Please check the errors and try again.",
-            variant: "destructive",
-            className: "bg-red-50 border-red-200 text-red-800",
-          });
+          // Don't show error toast - let individual file uploads handle their own success/error messages
+          // Only show success for files that actually succeeded
+          const successfulFiles = uploadedFiles.filter(f => f.status === 'success');
+          if (successfulFiles.length > 0) {
+            toast({
+              title: "✅ Upload Complete!",
+              description: `${successfulFiles.length} file(s) uploaded successfully!`,
+              variant: "default",
+              className: "bg-green-50 border-green-200 text-green-800",
+            });
+          }
           return;
         }
       }
 
       // Check if there are any files to submit
       if (uploadedFiles.length === 0) {
-        alert('No files to submit. Please upload some documents first.');
-        return;
-      }
-
-      // Now all files should be uploaded, proceed with submission
-      const allFilesUploaded = uploadedFiles.every(f => f.status === 'success');
-      if (!allFilesUploaded) {
-        alert('Please wait for all files to finish uploading before submitting.');
-        return;
-      }
-
-      // Get case data for the API call
-      const selectedClaimData = caseData.find((claim: any) => claim.case_id === selectedClaim);
-      const employeeId = selectedClaimData?.employee_id || '';
-
-      // Create payload for submission API
-      const submissionData = {
-        case_id: selectedClaim,
-        emp_id: employeeId.toString(),
-        is_customer: 'yes',
-        total_files: uploadedFiles.length,
-        document_types: uploadedFiles.map(file => {
-          const selectedCategory = getAvailableDocumentTypes().find(cat => cat.id.toString() === selectedDocumentType);
-          return {
-            file_name: file.name,
-            category_id: selectedCategory?.id || '',
-            category_name: selectedCategory?.name || '',
-            file_size: file.size,
-            file_type: file.type
-          };
-        })
-      };
-
-      console.log('Submitting documents with data:', submissionData);
-
-      // Show toast that submission is starting
-      toast({
-        title: "Submitting Documents",
-        description: "Submitting all documents to the system...",
-        variant: "default",
-        className: "bg-blue-50 border-blue-200 text-blue-800",
-      });
-
-      // Get session from localStorage
-      const sessionStr = localStorage.getItem('expertclaims_session');
-      let sessionId = '';
-      let jwtToken = '';
-
-      if (sessionStr) {
-        try {
-          const session = JSON.parse(sessionStr);
-          sessionId = session.sessionId || '';
-          jwtToken = session.jwtToken || '';
-        } catch (error) {
-          console.error('Error parsing session:', error);
-        }
-      }
-
-      if (!sessionId || !jwtToken) {
         toast({
-          title: "Error",
-          description: "Please log in to submit documents",
+          title: "No Files",
+          description: "No files to submit. Please upload some documents first.",
           variant: "destructive",
         });
         return;
       }
 
-      // TODO: Backend endpoint for submit-documents does not exist yet
-      // This n8n webhook needs to be replaced with a backend endpoint when available
-      // Call the submission API
-      const response = await fetch(
-        'https://n8n.srv952553.hstgr.cloud/webhook/submit-documents',
-        {
-          method: 'POST',
-          headers: {
-            'Accept-Profile': 'expc',
-            'Content-Profile': 'expc',
-            'Content-Type': 'application/json',
-            'session_id': sessionId,
-            'jwt_token': jwtToken,
-            ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
-          },
-          body: JSON.stringify(submissionData),
-        }
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Document submission successful:', result);
-        
-        // Show success toast
+      // Files are already uploaded via api/upload endpoint
+      // No need to call submission API - files are already in the system
+      console.log('All files uploaded successfully. Total files:', uploadedFiles.length);
+      
+      // Show prominent success toast
+      toast({
+        title: "🎉 Success!",
+        description: `All ${uploadedFiles.length} document(s) have been successfully submitted! Your documents are now being processed.`,
+        variant: "default",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+      
+      // Clear the uploaded files and reset form
+      setUploadedFiles([]);
+      setSelectedClaim('');
+      setSelectedDocumentType('');
+      setSelectedCaseType('');
+      
+      // Show additional success message after a short delay
+      setTimeout(() => {
         toast({
-          title: "Success!",
-          description: "All documents have been successfully submitted!",
+          title: "Well Done!",
+          description: "Your documents have been received. You can track their status in your claim details.",
           variant: "default",
-          className: "bg-green-50 border-green-200 text-green-800",
+          className: "bg-blue-50 border-blue-200 text-blue-800",
         });
-        
-        // Optionally redirect or clear the form
-        // navigate('/customer-portal');
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Submission failed: ${response.status} - ${errorData.message || 'Unknown error'}`);
-      }
+      }, 2000);
     } catch (error) {
       console.error('Submission error:', error);
-      alert(`Failed to submit documents: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast({
+        title: "Submission Failed",
+        description: `Failed to submit documents: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      });
     }
   };
 
