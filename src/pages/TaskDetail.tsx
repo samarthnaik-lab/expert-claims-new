@@ -388,9 +388,34 @@ const TaskDetail = () => {
     fetchEmployees();
   }, []);
 
-  // Helper function to get user name from ID
-  const getUserName = (userId: string | number | null | undefined): string => {
+  // Helper function to get user name from ID, optionally with history object for additional context
+  const getUserName = (userId: string | number | null | undefined, history?: any): string => {
     if (!userId) return 'Unknown';
+    
+    // First, check if history object has user information directly
+    if (history) {
+      // Check for changed_by_user or changed_by_name fields
+      if (history.changed_by_user?.full_name || history.changed_by_user?.name) {
+        return history.changed_by_user.full_name || history.changed_by_user.name;
+      }
+      if (history.changed_by_name) {
+        return history.changed_by_name;
+      }
+      // Check for employee object in history
+      if (history.employee?.first_name && history.employee?.last_name) {
+        return `${history.employee.first_name} ${history.employee.last_name}`.trim();
+      }
+      if (history.employee?.employee_name) {
+        return history.employee.employee_name;
+      }
+      // Check for user object in history
+      if (history.user?.full_name || history.user?.name) {
+        return history.user.full_name || history.user.name;
+      }
+      if (history.user?.first_name && history.user?.last_name) {
+        return `${history.user.first_name} ${history.user.last_name}`.trim();
+      }
+    }
     
     const userIdStr = String(userId);
     const userIdNum = parseInt(userIdStr);
@@ -408,7 +433,7 @@ const TaskDetail = () => {
       return `${caseDetails.employees.first_name} ${caseDetails.employees.last_name}`.trim();
     }
     
-    // Fallback: check if history object has user info
+    // Fallback: return the userId as string
     return userIdStr;
   };
 
@@ -1340,31 +1365,6 @@ const TaskDetail = () => {
                       {caseDetails.due_date ? formatDateDDMMYYYY(caseDetails.due_date) : 'Not set'}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Claim Amount</p>
-                    <p className="font-medium">
-                      {(() => {
-                        // Check multiple possible field names for claim amount (API uses "claim amount" with space)
-                        const claimAmountRaw = (caseDetails as any)["claim amount"]
-                          ?? caseDetails.claim_amount 
-                          ?? (caseDetails as any).claims_amount 
-                          ?? (caseDetails as any).claimAmount 
-                          ?? (caseDetails as any).claimsAmount
-                          ?? null;
-                        
-                        // Convert to number if it's a string, handle 0 as valid value
-                        if (claimAmountRaw !== null && claimAmountRaw !== undefined && claimAmountRaw !== '') {
-                          const claimAmount = typeof claimAmountRaw === 'string' ? parseFloat(claimAmountRaw) : Number(claimAmountRaw);
-                          if (!isNaN(claimAmount)) {
-                            console.log('Claim amount found:', claimAmount);
-                            return `${claimAmount.toLocaleString()} ${caseDetails.value_currency || 'INR'}`;
-                          }
-                        }
-                        console.log('Claim amount not found. Raw value:', claimAmountRaw, 'Available fields:', Object.keys(caseDetails || {}));
-                        return 'Not set';
-                      })()}
-                    </p>
-                  </div>
                   {/* <div>
                     <p className="text-sm text-gray-600">Assigned To</p>
                     <p className="font-medium">{caseDetails.assigned_to || 'N/A'}</p>
@@ -2153,7 +2153,7 @@ const TaskDetail = () => {
                             <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
                               <div className="flex items-center space-x-1">
                                 <User className="h-3 w-3" />
-                                <span>Changed by: {getUserName(history.changed_by)}</span>
+                                <span>Changed by: {getUserName(history.changed_by, history)}</span>
                               </div>
                               <div className="flex items-center space-x-1">
                                 <span className="text-xs bg-gray-100 px-2 py-1 rounded">
@@ -2173,11 +2173,11 @@ const TaskDetail = () => {
                                 </div>
                                 <div>
                                   <p className="text-gray-600">Changed By</p>
-                                  <p className="font-medium">{getUserName(history.changed_by)}</p>
+                                  <p className="font-medium">{getUserName(history.changed_by, history)}</p>
                                 </div>
                                 <div>
                                   <p className="text-gray-600">Changed To</p>
-                                  <p className="font-medium">{getUserName(history.changed_to)}</p>
+                                  <p className="font-medium">{getUserName(history.changed_to, history)}</p>
                                 </div>
                               </div>
                             </div>

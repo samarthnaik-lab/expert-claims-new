@@ -51,6 +51,7 @@ import {
 import mammoth from "mammoth";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { buildApiUrl } from "@/config/api";
 
 // Password hashing function (same as Login.tsx)
 const hashPassword = (password: string): string => {
@@ -2787,13 +2788,20 @@ const NewTask = () => {
                               <div>
                                 <Label>Mobile Number *</Label>
                                 <Input
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
                                   value={newCustomer.mobile}
-                                  onChange={(e) =>
-                                    setNewCustomer({
-                                      ...newCustomer,
-                                      mobile: e.target.value,
-                                    })
-                                  }
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    // Only allow digits
+                                    if (/^\d*$/.test(value) && value.length <= 10) {
+                                      setNewCustomer({
+                                        ...newCustomer,
+                                        mobile: value,
+                                      });
+                                    }
+                                  }}
                                   placeholder="Enter mobile number"
                                   maxLength={10}
                                   minLength={10}
@@ -2802,13 +2810,20 @@ const NewTask = () => {
                               <div>
                                 <Label>Emergency Contact</Label>
                                 <Input
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
                                   value={newCustomer.emergency_contact}
-                                  onChange={(e) =>
-                                    setNewCustomer({
-                                      ...newCustomer,
-                                      emergency_contact: e.target.value,
-                                    })
-                                  }
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    // Only allow digits
+                                    if (/^\d*$/.test(value) && value.length <= 10) {
+                                      setNewCustomer({
+                                        ...newCustomer,
+                                        emergency_contact: value,
+                                      });
+                                    }
+                                  }}
                                   placeholder="Enter emergency contact"
                                   maxLength={10}
                                   minLength={10}
