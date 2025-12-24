@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserService, AdminUser } from '@/services/userService';
 import SortableTableHeader from '@/components/ui/SortableTableHeader';
 import { useTableSort } from '@/hooks/useTableSort';
+import { formatDateDDMMYYYY } from '@/lib/utils';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -367,15 +368,32 @@ const AdminDashboard = () => {
         };
 
       default:
-        // Overview - use dashboard stats
+        // Overview - calculate from all data sources to show aggregated counts from all tabs
+        const overviewTotalTasks = allTasks.length;
+        const overviewActiveUsers = allUsers.filter(u => u.status?.toLowerCase() === 'active').length;
+        // Pending tasks: tasks that are under review or new (not completed, not in progress)
+        const overviewPendingTasks = allTasks.filter(task => {
+          const status = task.current_status?.toLowerCase() || '';
+          const isCompleted = statusMapping['approved']?.some(s => s.toLowerCase() === status) || false;
+          const isInProgress = statusMapping['in progress']?.some(s => s.toLowerCase() === status) || false;
+          const isUnderReview = statusMapping['under review']?.some(s => s.toLowerCase() === status) || false;
+          // Count as pending if: under review, or new status, or not completed/in progress
+          return isUnderReview || (!isCompleted && !isInProgress && status !== '' && status !== 'cancelled');
+        }).length;
+        // Completed tasks: tasks with approved/completed statuses
+        const overviewCompletedTasks = allTasks.filter(task => {
+          const status = task.current_status?.toLowerCase() || '';
+          return statusMapping['approved']?.some(s => s.toLowerCase() === status) || false;
+        }).length;
+        
         return {
           cards: [
-            { label: 'Total Tasks', value: stats.totalTasks, color: 'blue' },
-            { label: 'Active Users', value: stats.activeUsers, color: 'green' },
-            { label: 'Pending Tasks', value: stats.pendingApprovals, color: 'orange' },
-            { label: 'Completed Tasks', value: stats.completedCounts, color: 'green' },
+            { label: 'Total Tasks', value: overviewTotalTasks, color: 'blue' },
+            { label: 'Active Users', value: overviewActiveUsers, color: 'green' },
+            { label: 'Pending Tasks', value: overviewPendingTasks, color: 'orange' },
+            { label: 'Completed Tasks', value: overviewCompletedTasks, color: 'green' },
           ],
-          loading: dashboardLoading
+          loading: loadingAllTasks || loadingAllUsers || dashboardLoading
         };
     }
   }, [activeTab, allTasks, loadingAllTasks, allUsers, loadingAllUsers, allLeaveRequests, loadingAllLeaves, allCasesData, loadingAllCases, reports, reportsLoading, stats, dashboardLoading, statusMapping]);
@@ -482,7 +500,7 @@ const AdminDashboard = () => {
   // Determine which user set to filter from
   // When filtering/searching, we need all users; otherwise use paginated users
   // If filtering but allUsersForSearch is empty, use users as fallback (will be limited to current page)
-  const usersToFilter = isSearchingOrFiltering 
+  const usersToFilter = isSearchingOrFiltering
     ? (allUsersForSearch.length > 0 ? allUsersForSearch : users) // Use allUsersForSearch if available when filtering
     : users; // Use paginated users when not filtering
   
@@ -504,18 +522,18 @@ const AdminDashboard = () => {
   const allFilteredUsers = (isSearchingOrFiltering && allUsersForSearch.length === 0 && loadingAllUsers)
     ? [] // Show empty while loading all users for filtering
     : usersToFilter.filter(user => {
-        const searchLower = userSearchTerm.toLowerCase();
-        const matchesSearch = !userSearchTerm || (
-          (user.id && user.id.toLowerCase().includes(searchLower)) ||
-          (user.name && user.name.toLowerCase().includes(searchLower)) ||
-          (user.role && user.role.toLowerCase().includes(searchLower)) ||
-          (user.status && user.status.toLowerCase().includes(searchLower)) ||
-          (user.email && user.email.toLowerCase().includes(searchLower))
-        );
+    const searchLower = userSearchTerm.toLowerCase();
+    const matchesSearch = !userSearchTerm || (
+      (user.id && user.id.toLowerCase().includes(searchLower)) ||
+      (user.name && user.name.toLowerCase().includes(searchLower)) ||
+      (user.role && user.role.toLowerCase().includes(searchLower)) ||
+      (user.status && user.status.toLowerCase().includes(searchLower)) ||
+      (user.email && user.email.toLowerCase().includes(searchLower))
+    );
         const matchesRole = userRoleFilter === 'all' || (user.role && user.role === userRoleFilter);
-        const matchesPartnerType = userPartnerTypeFilter === 'all' || ((user as any).partner_type && (user as any).partner_type === userPartnerTypeFilter);
+    const matchesPartnerType = userPartnerTypeFilter === 'all' || ((user as any).partner_type && (user as any).partner_type === userPartnerTypeFilter);
         return matchesSearch && matchesRole && matchesPartnerType;
-      });
+  });
 
   // Paginate filtered users
   // When searching/filtering: use client-side pagination on filtered results
@@ -882,8 +900,8 @@ const AdminDashboard = () => {
             }));
 
             // Store paginated users
-            setUsers(transformedUsers);
-            setHasMoreUsers(transformedUsers.length >= parseInt(userPageLimit));
+              setUsers(transformedUsers);
+              setHasMoreUsers(transformedUsers.length >= parseInt(userPageLimit));
             console.log('Transformed users:', transformedUsers);
           } else if (firstResult.status === 'error' || firstResult.status === 'failure') {
             console.error('API returned error:', firstResult);
@@ -2405,12 +2423,12 @@ Created Time: ${report.created_time}
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-primary-500 shadow-sm border-b border-primary-600">
-        <div className="max-w-[80%] mx-auto px-2 sm:px-3 lg:px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
               <p className="text-white/80 mt-1">
-                Welcome, {adminName} • Manage Tasks, Users, Leave Management And Gap Analysis  
+                Welcome, {adminName} • Manage Tasks, Users, Leave Requests And Gap Analysis  
               </p>
             </div>
             <div className="flex items-center space-x-3">
@@ -2431,7 +2449,7 @@ Created Time: ${report.created_time}
         </div>
       </header>
 
-      <div className="max-w-[80%] mx-auto px-2 sm:px-3 lg:px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Overview Stats */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-900">Dashboard Overview</h2>
@@ -2480,7 +2498,7 @@ Created Time: ${report.created_time}
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="tasks">Task Management</TabsTrigger>
             <TabsTrigger value="users">User Management</TabsTrigger>
-            <TabsTrigger value="leave">Leave Management</TabsTrigger>
+            <TabsTrigger value="leave">Leave Requests</TabsTrigger>
             <TabsTrigger value="cases">Gap Analysis</TabsTrigger>
             {/* <TabsTrigger value="reports">Reports</TabsTrigger> */}
             {/* <TabsTrigger value="settings">Settings</TabsTrigger> */}
@@ -2541,7 +2559,7 @@ Created Time: ${report.created_time}
                 >
                   <CardContent className="p-6 text-center">
                     <Calendar className="h-8 w-8 mx-auto mb-3 text-gray-600" />
-                    <h3 className="font-semibold text-gray-900">Leave Management</h3>
+                    <h3 className="font-semibold text-gray-900">Leave Requests</h3>
                   </CardContent>
                 </Card>
               </div>
@@ -2632,65 +2650,65 @@ Created Time: ${report.created_time}
                           sortColumn={taskSortConfig?.column || ''}
                           sortDirection={taskSortConfig?.direction || 'asc'}
                           onSort={handleTaskSort}
-                          className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                          className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                         />
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>Task Name</th>
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[100px]">Assignee</th>
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[120px]">Customer</th>
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider break-words max-w-[120px]">Status</th>
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Assign Date</th>
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[160px]">Actions</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>Task Name</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[100px]">Assignee</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[120px]">Customer</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Due Date</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[160px]">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {sortedTasks.map((task: any) => (
                         <tr key={task.id} className="hover:bg-gray-50">
                           <td
-                            className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-xs sm:text-sm font-medium text-blue-600 cursor-pointer hover:underline"
+                            className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm font-medium text-blue-600 cursor-pointer hover:underline"
                             onClick={() => navigate(`/task/${task.task_id}`)}
                             title={task.task_id}
                           >
                             {task.task_id}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-900 break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.title}>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-900 break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.title}>
                             {task.title}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.assigned_employee_name || 'Unassigned'}>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.assigned_employee_name || 'Unassigned'}>
                             {task.assigned_employee_name || 'Unassigned'}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.customer_profile?.full_name || 'N/A'}>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.customer_profile?.full_name || 'N/A'}>
                             {task.customer_profile?.full_name || 'N/A'}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 text-center break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.current_status}>
+                          <td className="px-2 sm:px-3 py-3 break-words max-w-[120px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={task.current_status}>
                             <Badge className={getStatusColor(task.current_status)}>
                               <span className="text-xs break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{task.current_status}</span>
                             </Badge>
                           </td>
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
-                            {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
+                            {formatDateDDMMYYYY(task.due_date)}
                           </td>
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-xs sm:text-sm text-gray-500 min-w-[160px]">
-                            <div className="flex items-center justify-center gap-1 sm:gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => navigate(`/task/${task.task_id}`)}
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 min-w-[160px]">
+                            <div className="flex items-center gap-1 sm:gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/task/${task.task_id}`)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3 text-xs"
                                 title="View"
-                              >
+                            >
                                 <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">View</span>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditTask(task)}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditTask(task)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3 text-xs"
                                 title="Edit"
-                              >
+                            >
                                 <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">Edit</span>
-                              </Button>
+                            </Button>
                             </div>
                           </td>
                         </tr>
@@ -2848,65 +2866,65 @@ Created Time: ${report.created_time}
                           sortColumn={userSortConfig?.column || ''}
                           sortDirection={userSortConfig?.direction || 'asc'}
                           onSort={handleUserSort}
-                          className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                          className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                         />
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Role</th>
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Department</th>
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">Email</th>
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Entity</th>
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Partner Type</th>
-                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Actions</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Role</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Department</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">Email</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Entity</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Partner Type</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {sortedUsers.map(user => (
                         <tr key={user.id} className="hover:bg-gray-50">
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-xs sm:text-sm text-gray-600">{user.id}</td>
-                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm font-medium text-gray-900 break-words max-w-[120px] sm:max-w-none" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={user.name}>{user.name}</td>
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-xs sm:text-sm text-gray-600">{user.role}</td>
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center">
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">{user.id}</td>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm font-medium text-gray-900 break-words max-w-[120px] sm:max-w-none" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={user.name}>{user.name}</td>
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">{user.role}</td>
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap">
                             <Badge className={getStatusColor(user.status)}>
                               <span className="text-xs">{user.status}</span>
                             </Badge>
                           </td>
-                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={user.department || 'N/A'}>{user.department || 'N/A'}</td>
-                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-all hidden xl:table-cell max-w-[180px]" style={{ wordBreak: 'break-all' }} title={user.email || 'N/A'}>{user.email || 'N/A'}</td>
-                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={(user as any).entity || 'N/A'}>{(user as any).entity || 'N/A'}</td>
-                          <td className="px-2 sm:px-3 py-3 text-center text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={formatPartnerType((user as any).partner_type)}>{formatPartnerType((user as any).partner_type)}</td>
-                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-xs sm:text-sm text-gray-500">
-                            <div className="flex items-center justify-center gap-1 sm:gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewUser(user)}
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={user.department || 'N/A'}>{user.department || 'N/A'}</td>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-all hidden xl:table-cell max-w-[180px]" style={{ wordBreak: 'break-all' }} title={user.email || 'N/A'}>{user.email || 'N/A'}</td>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={(user as any).entity || 'N/A'}>{(user as any).entity || 'N/A'}</td>
+                          <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={formatPartnerType((user as any).partner_type)}>{formatPartnerType((user as any).partner_type)}</td>
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                            <div className="flex items-center gap-1 sm:gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewUser(user)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
                                 title="View"
-                              >
+                            >
                                 <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">View</span>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditUser(user)}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditUser(user)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
                                 title="Edit"
-                              >
+                            >
                                 <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">Edit</span>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteUser(user)}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteUser(user)}
                                 className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
                                 title="Delete"
-                              >
+                            >
                                 <Trash className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">Delete</span>
-                              </Button>
+                            </Button>
                             </div>
                           </td>
                         </tr>
@@ -2953,7 +2971,7 @@ Created Time: ${report.created_time}
                     if (isSearchingOrFiltering) {
                       // Client-side pagination - check if there are more filtered results
                       if (endIndex < allFilteredUsers.length) {
-                        setUserCurrentPage(prev => prev + 1);
+                      setUserCurrentPage(prev => prev + 1);
                       }
                     } else {
                       // API pagination - move to next page
@@ -2975,7 +2993,7 @@ Created Time: ${report.created_time}
 
           <TabsContent value="leave" className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">Leave Management</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Leave Requests</h2>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-700">Show:</span>
                 <Select
@@ -3013,38 +3031,38 @@ Created Time: ${report.created_time}
                             sortColumn={leaveSortConfig?.column || ''}
                             sortDirection={leaveSortConfig?.direction || 'asc'}
                             onSort={handleLeaveSort}
-                            className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                           />
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Applied Date</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {sortedLeaveRequests.map((request: any) => (
                           <tr key={request.application_id} className="hover:bg-gray-50">
-                            <td className="px-4 py-4 text-center min-w-0 break-words text-sm font-medium text-blue-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.application_id}</td>
-                            <td className="px-4 py-4 text-center min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.employees.first_name} {request.employees.last_name}</td>
-                            <td className="px-4 py-4 text-center min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.leave_types?.type_name || 'N/A'}</td>
-                            <td className="px-4 py-4 text-center whitespace-nowrap text-sm text-gray-600">{request.start_date}</td>
-                            <td className="px-4 py-4 text-center whitespace-nowrap text-sm text-gray-600">{request.end_date}</td>
-                            <td className="px-4 py-4 text-center whitespace-nowrap text-sm text-gray-600">{request.total_days}</td>
-                            <td className="px-4 py-4 text-center min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={request.reason}>{request.reason}</td>
-                            <td className="px-4 py-4 text-center whitespace-nowrap">
+                            <td className="px-4 py-4 min-w-0 break-words text-sm font-medium text-blue-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.application_id}</td>
+                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.employees.first_name} {request.employees.last_name}</td>
+                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.leave_types?.type_name || 'N/A'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatDateDDMMYYYY(request.start_date)}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatDateDDMMYYYY(request.end_date)}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.total_days}</td>
+                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={request.reason}>{request.reason}</td>
+                            <td className="px-4 py-4 whitespace-nowrap">
                               <Badge className={getStatusColor(request.status)}>
                                 <span className="capitalize">{request.status}</span>
                               </Badge>
                             </td>
-                            <td className="px-4 py-4 text-center whitespace-nowrap text-sm text-gray-600">
-                              {new Date(request.applied_date).toLocaleDateString()}
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
+                              {formatDateDDMMYYYY(request.applied_date)}
                             </td>
-                            <td className="px-4 py-4 text-center whitespace-nowrap text-sm text-gray-500 space-x-2">
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
                               {(() => {
                                 // Get current user role from session or userDetails
                                 const currentUserRole = session?.userRole || userDetails?.role || userDetails?.designation || '';
@@ -3245,30 +3263,30 @@ Created Time: ${report.created_time}
                             sortColumn={caseSortConfig?.column || ''}
                             sortDirection={caseSortConfig?.direction || 'asc'}
                             onSort={handleCaseSort}
-                            className="text-center p-4 font-semibold text-gray-700"
+                            className="text-left p-4 font-semibold text-gray-700"
                           />
-                          <th className="text-center p-4 font-semibold text-gray-700">
+                          <th className="text-left p-4 font-semibold text-gray-700">
                             Case Summary
                           </th>
-                          <th className="text-center p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden md:table-cell">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden md:table-cell">
                             Case Description
                           </th>
-                          {/* <th className="text-center p-4 font-semibold text-gray-700">
+                          {/* <th className="text-left p-4 font-semibold text-gray-700">
                             Type of Policysss
                           </th> */}
-                          <th className="text-center p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">
                             Referral Date
                           </th>
-                          <th className="text-center p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Status
                           </th>
-                          <th className="text-center p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Assigned Expert
                           </th>
-                          <th className="text-center p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">
                             Entity
                           </th>
-                          <th className="text-center p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
+                          <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 text-xs sm:text-sm">
                             Actions
                           </th>
                         </tr>
@@ -3278,14 +3296,14 @@ Created Time: ${report.created_time}
                           .filter((item) => {
                             // Search filter
                             const matchesSearch = !casesSearchTerm || (() => {
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                            const searchLower = casesSearchTerm.toLowerCase();
+                            return (
+                              item.case_summary?.toLowerCase().includes(searchLower) ||
+                              item.case_description?.toLowerCase().includes(searchLower) ||
+                              item.backlog_id?.toString().includes(searchLower) ||
+                              item.case_type_id?.toString().includes(searchLower) ||
+                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                            );
                             })();
                             
                             // Assigned Expert filter
@@ -3314,39 +3332,39 @@ Created Time: ${report.created_time}
                                 key={item.backlog_id || index}
                                 className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors duration-200"
                               >
-                                <td className="p-3 sm:p-4 text-center">
+                                <td className="p-3 sm:p-4">
                                   <span className="font-mono text-xs sm:text-sm text-blue-600">
                                     {item.backlog_id}
                                   </span>
                                 </td>
-                                <td className="p-3 sm:p-4 text-center">
+                                <td className="p-3 sm:p-4">
                                   <div className="font-medium text-xs sm:text-sm text-gray-900 break-words max-w-xs">
                                     {item.case_summary || "No Summary"}
                                   </div>
                                 </td>
-                                <td className="p-3 sm:p-4 text-center text-xs sm:text-sm text-gray-700 hidden md:table-cell break-words max-w-md">
+                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-700 hidden md:table-cell break-words max-w-md">
                                   {item.case_description || "No Description"}
                                 </td>
-                                {/* <td className="p-4 text-center text-gray-700">
+                                {/* <td className="p-4 text-gray-700">
                                   {item.case_types?.case_type_name || `Type ${item.case_type_id}` || "N/A"}
                                 </td> */}
-                                <td className="p-3 sm:p-4 text-center text-xs sm:text-sm text-gray-600 hidden lg:table-cell">
-                                  {item.backlog_referral_date || "N/A"}
+                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-600 hidden lg:table-cell">
+                                  {formatDateDDMMYYYY(item.backlog_referral_date)}
                                 </td>
-                                <td className="p-3 sm:p-4 text-center">
+                                <td className="p-3 sm:p-4">
                                   <Badge className={statusBadgeClass}>
                                     {item.status || "N/A"}
                                   </Badge>
                                 </td>
-                                <td className="p-3 sm:p-4 text-center text-xs sm:text-sm text-gray-700 break-words max-w-xs">
+                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-700 break-words max-w-xs">
                                   {item.assigned_consultant_name ? item.assigned_consultant_name : 'Not Assigned'}
                                 </td>
-                                <td className="p-3 sm:p-4 text-center text-xs sm:text-sm text-gray-700 hidden lg:table-cell break-words max-w-xs">
+                                <td className="p-3 sm:p-4 text-xs sm:text-sm text-gray-700 hidden lg:table-cell break-words max-w-xs">
                                   {item.partners ? (item.partners["name of entity"] || item.partners.entity_name || 'N/A') :
                                    item.entity_name || item["name of entity"] || 'N/A'}
                                 </td>
-                                <td className="p-3 sm:p-4 text-center">
-                                  <div className="flex flex-col sm:flex-row justify-center gap-2">
+                                <td className="p-3 sm:p-4">
+                                  <div className="flex flex-col sm:flex-row gap-2">
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -3402,14 +3420,14 @@ Created Time: ${report.created_time}
                           Showing {((currentPageCases - 1) * pageSizeCases) + 1} to {Math.min(currentPageCases * pageSizeCases, casesData.filter((item) => {
                             // Search filter
                             const matchesSearch = !casesSearchTerm || (() => {
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                            const searchLower = casesSearchTerm.toLowerCase();
+                            return (
+                              item.case_summary?.toLowerCase().includes(searchLower) ||
+                              item.case_description?.toLowerCase().includes(searchLower) ||
+                              item.backlog_id?.toString().includes(searchLower) ||
+                              item.case_type_id?.toString().includes(searchLower) ||
+                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                            );
                             })();
                             
                             // Assigned Expert filter
@@ -3422,14 +3440,14 @@ Created Time: ${report.created_time}
                           }).length)} of {casesData.filter((item) => {
                             // Search filter
                             const matchesSearch = !casesSearchTerm || (() => {
-                              const searchLower = casesSearchTerm.toLowerCase();
-                              return (
-                                item.case_summary?.toLowerCase().includes(searchLower) ||
-                                item.case_description?.toLowerCase().includes(searchLower) ||
-                                item.backlog_id?.toString().includes(searchLower) ||
-                                item.case_type_id?.toString().includes(searchLower) ||
-                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                              );
+                            const searchLower = casesSearchTerm.toLowerCase();
+                            return (
+                              item.case_summary?.toLowerCase().includes(searchLower) ||
+                              item.case_description?.toLowerCase().includes(searchLower) ||
+                              item.backlog_id?.toString().includes(searchLower) ||
+                              item.case_type_id?.toString().includes(searchLower) ||
+                              item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                            );
                             })();
                             
                             // Assigned Expert filter
@@ -3455,14 +3473,14 @@ Created Time: ${report.created_time}
                             Page {currentPageCases} of {Math.ceil(casesData.filter((item) => {
                               // Search filter
                               const matchesSearch = !casesSearchTerm || (() => {
-                                const searchLower = casesSearchTerm.toLowerCase();
-                                return (
-                                  item.case_summary?.toLowerCase().includes(searchLower) ||
-                                  item.case_description?.toLowerCase().includes(searchLower) ||
-                                  item.backlog_id?.toString().includes(searchLower) ||
-                                  item.case_type_id?.toString().includes(searchLower) ||
-                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                                );
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
                               })();
                               
                               // Assigned Expert filter
@@ -3478,14 +3496,14 @@ Created Time: ${report.created_time}
                             onClick={() => setCurrentPageCases(prev => Math.min(Math.ceil(casesData.filter((item) => {
                               // Search filter
                               const matchesSearch = !casesSearchTerm || (() => {
-                                const searchLower = casesSearchTerm.toLowerCase();
-                                return (
-                                  item.case_summary?.toLowerCase().includes(searchLower) ||
-                                  item.case_description?.toLowerCase().includes(searchLower) ||
-                                  item.backlog_id?.toString().includes(searchLower) ||
-                                  item.case_type_id?.toString().includes(searchLower) ||
-                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                                );
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
                               })();
                               
                               // Assigned Expert filter
@@ -3497,14 +3515,14 @@ Created Time: ${report.created_time}
                             disabled={currentPageCases >= Math.ceil(casesData.filter((item) => {
                               // Search filter
                               const matchesSearch = !casesSearchTerm || (() => {
-                                const searchLower = casesSearchTerm.toLowerCase();
-                                return (
-                                  item.case_summary?.toLowerCase().includes(searchLower) ||
-                                  item.case_description?.toLowerCase().includes(searchLower) ||
-                                  item.backlog_id?.toString().includes(searchLower) ||
-                                  item.case_type_id?.toString().includes(searchLower) ||
-                                  item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
-                                );
+                              const searchLower = casesSearchTerm.toLowerCase();
+                              return (
+                                item.case_summary?.toLowerCase().includes(searchLower) ||
+                                item.case_description?.toLowerCase().includes(searchLower) ||
+                                item.backlog_id?.toString().includes(searchLower) ||
+                                item.case_type_id?.toString().includes(searchLower) ||
+                                item.case_types?.case_type_name?.toLowerCase().includes(searchLower)
+                              );
                               })();
                               
                               // Assigned Expert filter
@@ -3716,7 +3734,7 @@ Created Time: ${report.created_time}
                             </Badge>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
+                            {formatDateDDMMYYYY(task.due_date)}
                           </td>
                         </tr>
                       ))}
@@ -4003,19 +4021,19 @@ Created Time: ${report.created_time}
                       <div>
                         <label className="text-sm font-medium text-gray-500">Referral Date</label>
                         <p className="text-gray-900 font-medium">
-                          {selectedBacklogItem.backlog_referral_date || "N/A"}
+                          {formatDateDDMMYYYY(selectedBacklogItem.backlog_referral_date)}
                         </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Created Time</label>
+                        <label className="text-sm font-medium text-gray-500">Created Date</label>
                         <p className="text-gray-900 font-medium">
-                          {selectedBacklogItem.created_time ? new Date(selectedBacklogItem.created_time).toLocaleString() : "N/A"}
+                          {formatDateDDMMYYYY(selectedBacklogItem.created_time)}
                         </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Updated Time</label>
+                        <label className="text-sm font-medium text-gray-500">Last Updated Date</label>
                         <p className="text-gray-900 font-medium">
-                          {selectedBacklogItem.updated_time ? new Date(selectedBacklogItem.updated_time).toLocaleString() : "N/A"}
+                          {formatDateDDMMYYYY(selectedBacklogItem.updated_time)}
                         </p>
                       </div>
                     </CardContent>
