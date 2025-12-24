@@ -252,11 +252,6 @@ const CustomerDocumentUpload = () => {
               'accept': '*/*',
               'accept-language': 'en-US,en;q=0.9',
               'accept-profile': 'expc',
-<<<<<<< HEAD
-              'apikey': apiKey,
-              'authorization': `Bearer ${apiKey}`,
-=======
->>>>>>> 06778fa6b749cc9b7af4a63b09122d69a4b370da
               'content-profile': 'expc',
               'jwt_token': jwtToken,
               'session_id': sessionId,

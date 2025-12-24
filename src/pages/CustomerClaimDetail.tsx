@@ -301,11 +301,6 @@ const CustomerClaimDetail = () => {
               'accept': '*/*',
               'accept-language': 'en-US,en;q=0.9',
               'accept-profile': 'expc',
-<<<<<<< HEAD
-              'apikey': apiKey,
-              'authorization': `Bearer ${apiKey}`,
-=======
->>>>>>> 06778fa6b749cc9b7af4a63b09122d69a4b370da
               'content-profile': 'expc',
               'jwt_token': jwtToken,
               'session_id': sessionId
@@ -512,21 +507,12 @@ const CustomerClaimDetail = () => {
       const response = await fetch(buildApiUrl('support/view'), {
         method: 'POST',
         headers: {
-<<<<<<< HEAD
-          'apikey': apiKey,
-          'Authorization': `Bearer ${apiKey}`,
-=======
->>>>>>> 06778fa6b749cc9b7af4a63b09122d69a4b370da
           'Content-Profile': 'expc',
           'Accept-Profile': 'expc',
           'session_id': sessionId,
           'jwt_token': jwtToken,
-<<<<<<< HEAD
-          'Content-Type': 'application/json'
-=======
           'Content-Type': 'application/json',
           ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
->>>>>>> 06778fa6b749cc9b7af4a63b09122d69a4b370da
         },
         body: JSON.stringify(requestBody)
       });
