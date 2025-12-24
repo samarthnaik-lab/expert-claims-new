@@ -2327,11 +2327,23 @@ const TaskDetail = () => {
                        <h4 className="font-semibold text-gray-900 mb-3">Payment Summary</h4>
                        <div className="grid grid-cols-2 gap-4">
                          <div className="text-center">
-                           <p className="text-sm text-gray-600">Total Claim Amount</p>
+                           <p className="text-sm text-gray-600">Total Service Amount</p>
                            <p className="text-2xl font-bold text-gray-900">
                              ₹{(() => {
-                               const serviceAmount = parseFloat((caseDetails as any)['service amount'] || (caseDetails as any).service_amount || '0') || 0;
-                               return serviceAmount > 0 ? serviceAmount.toLocaleString('en-IN') : caseDetails.case_payment_phases.reduce((sum: number, phase: any) => sum + (phase.phase_amount || 0), 0).toLocaleString('en-IN');
+                               // Get service amount from caseDetails (check multiple possible field names)
+                               const serviceAmountRaw = (caseDetails as any)["service amount"]
+                                 ?? (caseDetails as any).service_amount
+                                 ?? (caseDetails as any).serviceAmount
+                                 ?? null;
+                               
+                               if (serviceAmountRaw !== null && serviceAmountRaw !== undefined && serviceAmountRaw !== '') {
+                                 const serviceAmount = typeof serviceAmountRaw === 'number' 
+                                   ? serviceAmountRaw 
+                                   : parseFloat(String(serviceAmountRaw));
+                                 return isNaN(serviceAmount) ? '0' : serviceAmount.toLocaleString('en-IN');
+                               }
+                               
+                               return '0';
                              })()}
                            </p>
                          </div>
@@ -2339,20 +2351,32 @@ const TaskDetail = () => {
                            <p className="text-sm text-gray-600">Pending Amount</p>
                            <p className="text-2xl font-bold text-red-600">
                              ₹{(() => {
-                               const serviceAmount = parseFloat((caseDetails as any)['service amount'] || (caseDetails as any).service_amount || '0') || 0;
+                               // Get service amount
+                               const serviceAmountRaw = (caseDetails as any)["service amount"]
+                                 ?? (caseDetails as any).service_amount
+                                 ?? (caseDetails as any).serviceAmount
+                                 ?? null;
+                               
+                               const serviceAmount = serviceAmountRaw !== null && serviceAmountRaw !== undefined && serviceAmountRaw !== ''
+                                 ? (typeof serviceAmountRaw === 'number' ? serviceAmountRaw : parseFloat(String(serviceAmountRaw)))
+                                 : 0;
+                               
+                               // Calculate total from all payment phases (sum of all stages)
                                const calculateTotal = (phases: any[]) => {
                                  return phases.reduce((sum: number, phase: any) => {
                                    if (!phase) return sum;
+                                   // Try multiple ways to get the amount
                                    const amount = phase.phase_amount ?? phase.paid_amount ?? 0;
                                    if (amount === null || amount === undefined) return sum;
                                    const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount));
                                    return sum + (isNaN(numAmount) ? 0 : numAmount);
                                  }, 0);
                                };
+                               
                                const totalPaymentPhases = calculateTotal(caseDetails.case_payment_phases);
-                               const pendingAmount = serviceAmount > 0 ? Math.max(0, serviceAmount - totalPaymentPhases) : caseDetails.case_payment_phases
-                                 .filter((phase: any) => phase.status === 'pending')
-                                 .reduce((sum: number, phase: any) => sum + (phase.phase_amount || 0), 0);
+                               
+                               // Calculate pending amount: Service Amount - Total of all payment stages
+                               const pendingAmount = Math.max(0, (isNaN(serviceAmount) ? 0 : serviceAmount) - totalPaymentPhases);
                                return pendingAmount.toLocaleString('en-IN');
                              })()}
                            </p>
@@ -2361,16 +2385,20 @@ const TaskDetail = () => {
                        <div className="mt-3 text-center">
                          <p className="text-sm text-gray-600">
                            Paid Amount: ₹{(() => {
+                             // Calculate total from all payment phases (sum of all stages, not filtered by status)
                              const calculateTotal = (phases: any[]) => {
                                return phases.reduce((sum: number, phase: any) => {
                                  if (!phase) return sum;
+                                 // Try multiple ways to get the amount
                                  const amount = phase.phase_amount ?? phase.paid_amount ?? 0;
                                  if (amount === null || amount === undefined) return sum;
                                  const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount));
                                  return sum + (isNaN(numAmount) ? 0 : numAmount);
                                }, 0);
                              };
-                             return calculateTotal(caseDetails.case_payment_phases).toLocaleString('en-IN');
+                             
+                             const paidAmount = calculateTotal(caseDetails.case_payment_phases);
+                             return paidAmount.toLocaleString('en-IN');
                            })()}
                          </p>
                        </div>
