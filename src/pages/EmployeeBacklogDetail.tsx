@@ -106,9 +106,15 @@ const EmployeeBacklogDetail = () => {
         jwtToken = session.jwtToken || '';
       }
 
-      // Use fallback values if session not available
-      sessionId = sessionId || 'efd005c8-d9a1-4cfa-adeb-1ca2a7f13775';
-      jwtToken = jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjM0IiwiaWF0IjoxNzU2NTUwODUwfQ.Kmh5wQS9CXpRK0TmBXlJJhGlfr9ulMx8ou5nCk7th8g';
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Warning",
+          description: "Please log in to load employees",
+          variant: "destructive",
+        });
+        setIsLoadingUsers(false);
+        return;
+      }
 
       console.log('Fetching users for assignment...');
       
@@ -152,44 +158,71 @@ const EmployeeBacklogDetail = () => {
         return;
       }
 
+      // Get session details for assignment
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (e) {
+          console.error('Error parsing session:', e);
+        }
+      }
+
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to assign tasks",
+          variant: "destructive",
+        });
+        setIsAssigning(false);
+        return;
+      }
+
       // Get the selected user's name
       const selectedUser = users.find(user => user.id === assignedTo);
       const assignedUserName = selectedUser ? selectedUser.full_name : 'Unknown User';
 
-      // Prepare the payload
+      // Get current user details for updated_by
+      const userDetailsStr = localStorage.getItem('expertclaims_user_details');
+      let updatedBy = 'Employee';
+      let userId = 0;
+
+      if (userDetailsStr) {
+        try {
+          const userDetails = JSON.parse(userDetailsStr);
+          const userData = Array.isArray(userDetails) ? userDetails[0] : userDetails;
+          updatedBy = userData?.name || userData?.full_name || 'Employee';
+          userId = userData?.employee_id || userData?.id || 0;
+        } catch (e) {
+          console.error('Error parsing user details:', e);
+        }
+      }
+
+      // Prepare the payload for backend endpoint
       const payload = {
         backlog_id: backlogId,
         assigned_to: parseInt(assignedTo),
-        assigned_user_name: assignedUserName,
-        case_summary: backlogDetail.case_summary,
-        case_description: backlogDetail.case_description,
-        case_type_name: backlogDetail.case_types?.case_type_name || `Type ${backlogDetail.case_type_id}` || "N/A",
-        backlog_referring_partner_id: backlogDetail.backlog_referring_partner_id,
-        backlog_referral_date: backlogDetail.backlog_referral_date,
-        assigned_date: new Date().toISOString(),
-        status: 'assigned',
-        created_by: backlogDetail.created_by,
-        updated_by: backlogDetail.updated_by,
-        comment_text: backlogDetail.comment_text,
-        // Add document data if available - same format as PartnerNewTask
-        documents: backlogDetail.documents || [],
-        document_count: backlogDetail.documents?.length || 0,
-        selected_document_type: backlogDetail.selected_document_type || "",
-        selected_document_type_name: backlogDetail.selected_document_type_name || ""
+        assigned_consultant_name: assignedUserName,
+        updated_by: updatedBy,
+        user_id: userId
       };
 
       console.log('Sending assignment payload:', payload);
 
       // Call the assignment API
-      const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/evaluatortaskassigned', {
-        method: 'POST',
+      const response = await fetch(buildApiUrl('support/updatecunsultantpolicy'), {
+        method: 'PATCH',
         headers: {
           'accept': 'application/json',
-          'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
           'content-type': 'application/json',
-          'session_id': '0276776c-99fa-4b79-a5a2-70f3a428a0c7',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-          'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o'
+          'session_id': sessionId,
+          'jwt_token': jwtToken,
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
         },
         body: JSON.stringify(payload)
       });
@@ -199,7 +232,10 @@ const EmployeeBacklogDetail = () => {
         console.log('Assignment API response:', result);
         
         // Extract success message from API response
-        const successMessage = result[0]?.message || `Backlog item #${backlogId} assigned to ${assignedUserName}`;
+        // Backend returns array format: [{ status: 'success', message: '...', ... }]
+        const successMessage = Array.isArray(result) 
+          ? (result[0]?.message || result[0]?.data?.message || `Backlog item #${backlogId} assigned to ${assignedUserName}`)
+          : (result?.message || result?.data?.message || `Backlog item #${backlogId} assigned to ${assignedUserName}`);
         
         toast({
           title: "Success",
@@ -210,10 +246,24 @@ const EmployeeBacklogDetail = () => {
         navigate('/employee-dashboard?tab=Backlog');
       } else {
         const errorText = await response.text();
-        console.error('Failed to assign backlog item:', response.status, errorText);
+        let errorMessage = `Failed to assign the backlog item: ${response.status}`;
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = Array.isArray(errorJson) 
+            ? (errorJson[0]?.message || errorMessage)
+            : (errorJson?.message || errorMessage);
+        } catch {
+          // If not JSON, use the text as is
+          if (errorText) {
+            errorMessage = errorText;
+          }
+        }
+        
+        console.error('Failed to assign backlog item:', response.status, errorMessage);
         toast({
           title: "Error",
-          description: `Failed to assign the backlog item: ${response.status} - ${errorText}`,
+          description: errorMessage,
           variant: "destructive",
         });
       }

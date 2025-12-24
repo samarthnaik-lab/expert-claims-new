@@ -463,12 +463,34 @@ const NewTask = () => {
   const fetchUsers = async () => {
     setIsLoadingUsers(true);
     try {
-      // Use effective session data or fallback to mock data
-      const sessionId =
-        effectiveSession?.sessionId || "fddc661a-dfb4-4896-b7b1-448e1adf7bc2";
-      const jwtToken =
-        effectiveSession?.jwtToken ||
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k";
+      // Get session from localStorage
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
+
+      // Use effectiveSession as fallback if localStorage doesn't have session
+      if (!sessionId && effectiveSession?.sessionId) {
+        sessionId = effectiveSession.sessionId;
+      }
+      if (!jwtToken && effectiveSession?.jwtToken) {
+        jwtToken = effectiveSession.jwtToken;
+      }
+
+      if (!sessionId || !jwtToken) {
+        console.error('Session not available for fetching users');
+        setIsLoadingUsers(false);
+        return;
+      }
 
       const employeesData = await EmployeeService.getEmployees(
         sessionId,
@@ -521,12 +543,34 @@ const NewTask = () => {
     try {
       console.log("Starting to fetch customers...");
 
-      // Use effective session data or fallback to mock data
-      const sessionId =
-        effectiveSession?.sessionId || "fddc661a-dfb4-4896-b7b1-448e1adf7bc2";
-      const jwtToken =
-        effectiveSession?.jwtToken ||
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBhYmFzZSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k";
+      // Get session from localStorage
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
+
+      // Use effectiveSession as fallback if localStorage doesn't have session
+      if (!sessionId && effectiveSession?.sessionId) {
+        sessionId = effectiveSession.sessionId;
+      }
+      if (!jwtToken && effectiveSession?.jwtToken) {
+        jwtToken = effectiveSession.jwtToken;
+      }
+
+      if (!sessionId || !jwtToken) {
+        console.error('Session not available for fetching customers');
+        setIsLoadingCustomers(false);
+        return;
+      }
 
       console.log("Using session ID:", sessionId);
       console.log("Using JWT token:", jwtToken);
@@ -591,12 +635,34 @@ const NewTask = () => {
   const fetchCaseTypes = async () => {
     setIsLoadingCaseTypes(true);
     try {
-      // Use effective session data or fallback to mock data
-      const sessionId =
-        effectiveSession?.sessionId || "fddc661a-dfb4-4896-b7b1-448e1adf7bc2";
-      const jwtToken =
-        effectiveSession?.jwtToken ||
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k";
+      // Get session from localStorage
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
+
+      // Use effectiveSession as fallback if localStorage doesn't have session
+      if (!sessionId && effectiveSession?.sessionId) {
+        sessionId = effectiveSession.sessionId;
+      }
+      if (!jwtToken && effectiveSession?.jwtToken) {
+        jwtToken = effectiveSession.jwtToken;
+      }
+
+      if (!sessionId || !jwtToken) {
+        console.error('Session not available for fetching case types');
+        setIsLoadingCaseTypes(false);
+        return;
+      }
 
       const caseTypesData = await CaseTypeService.getCaseTypes(
         sessionId,
@@ -655,12 +721,34 @@ const NewTask = () => {
   const fetchDocuments = async (caseTypeId: number) => {
     setIsLoadingDocuments(true);
     try {
-      // Use effective session data or fallback to mock data
-      const sessionId =
-        effectiveSession?.sessionId || "fddc661a-dfb4-4896-b7b1-448e1adf7bc2";
-      const jwtToken =
-        effectiveSession?.jwtToken ||
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBhYmFzZSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k";
+      // Get session from localStorage
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
+
+      // Use effectiveSession as fallback if localStorage doesn't have session
+      if (!sessionId && effectiveSession?.sessionId) {
+        sessionId = effectiveSession.sessionId;
+      }
+      if (!jwtToken && effectiveSession?.jwtToken) {
+        jwtToken = effectiveSession.jwtToken;
+      }
+
+      if (!sessionId || !jwtToken) {
+        console.error('Session not available for fetching documents');
+        setIsLoadingDocuments(false);
+        return;
+      }
 
       const documentsData = await DocumentService.getDocumentsByCaseType(
         caseTypeId,
@@ -1539,18 +1627,45 @@ const NewTask = () => {
     }
 
     try {
-      // Get session data
-      const sessionId =
-        effectiveSession?.sessionId || "fddc661a-dfb4-4896-b7b1-448e1adf7bc2";
-      const jwtToken =
-        effectiveSession?.jwtToken ||
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k";
+      // Get session from localStorage
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
+
+      // Use effectiveSession as fallback if localStorage doesn't have session
+      if (!sessionId && effectiveSession?.sessionId) {
+        sessionId = effectiveSession.sessionId;
+      }
+      if (!jwtToken && effectiveSession?.jwtToken) {
+        jwtToken = effectiveSession.jwtToken;
+      }
+
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to create document category",
+          variant: "destructive",
+        });
+        return;
+      }
 
       console.log("Creating document category with:", {
         case_type_id: selectedCaseType.case_type_id.toString(),
         document_name: documentName.trim(),
       });
 
+      // TODO: Backend endpoint for document category creation does not exist yet
+      // This n8n webhook needs to be replaced with a backend endpoint when available
       const response = await fetch(
         "https://n8n.srv952553.hstgr.cloud/webhook/documentcatagorycreation",
         {
@@ -1558,16 +1673,13 @@ const NewTask = () => {
           headers: {
             accept: "*/*",
             "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-            authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
             "cache-control": "no-cache",
             "content-type": "application/json",
             jwt_token: jwtToken,
             origin: "http://localhost:8080",
             pragma: "no-cache",
             session_id: sessionId,
+            ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
           },
           body: JSON.stringify({
             case_type_id: selectedCaseType.case_type_id.toString(),
@@ -1827,7 +1939,36 @@ const NewTask = () => {
             }
 
             try {
-              // Call the API to create the category
+              // Get session from localStorage
+              const sessionStr = localStorage.getItem('expertclaims_session');
+              let sessionId = '';
+              let jwtToken = '';
+
+              if (sessionStr) {
+                try {
+                  const session = JSON.parse(sessionStr);
+                  sessionId = session.sessionId || '';
+                  jwtToken = session.jwtToken || '';
+                } catch (error) {
+                  console.error('Error parsing session:', error);
+                }
+              }
+
+              // Use effectiveSession as fallback if localStorage doesn't have session
+              if (!sessionId && effectiveSession?.sessionId) {
+                sessionId = effectiveSession.sessionId;
+              }
+              if (!jwtToken && effectiveSession?.jwtToken) {
+                jwtToken = effectiveSession.jwtToken;
+              }
+
+              if (!sessionId || !jwtToken) {
+                console.error('Session not available for category creation');
+                continue;
+              }
+
+              // TODO: Backend endpoint for inserting document category does not exist yet
+              // This n8n webhook needs to be replaced with a backend endpoint when available
               const createCategoryResponse = await fetch(
                 'https://n8n.srv952553.hstgr.cloud/webhook/insertcatagory',
                 {
@@ -1835,9 +1976,10 @@ const NewTask = () => {
                   headers: {
                     'accept': '*/*',
                     'accept-language': 'en-US,en;q=0.9',
-                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-                    'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
                     'content-type': 'application/json',
+                    'session_id': sessionId,
+                    'jwt_token': jwtToken,
+                    ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
                   },
                   body: JSON.stringify({
                     case_type_id: selectedCaseType.case_type_id,
@@ -1935,8 +2077,6 @@ const NewTask = () => {
               headers: {
                 'Accept': '*/*',
                 'Accept-Language': 'en-US,en;q=0.9',
-                'apikey': "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
-                'Authorization': "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws",
                 // Don't set Content-Type for FormData - browser will set it automatically with boundary
               },
               body: formDataToSend,
@@ -2084,11 +2224,33 @@ const NewTask = () => {
       );
 
       // Get session data
-      const sessionId =
-        effectiveSession?.sessionId || "fddc661a-dfb4-4896-b7b1-448e1adf7bc2";
-      const jwtToken =
-        effectiveSession?.jwtToken ||
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k";
+      // Get session from localStorage
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
+
+      // Use effectiveSession as fallback if localStorage doesn't have session
+      if (!sessionId && effectiveSession?.sessionId) {
+        sessionId = effectiveSession.sessionId;
+      }
+      if (!jwtToken && effectiveSession?.jwtToken) {
+        jwtToken = effectiveSession.jwtToken;
+      }
+
+      if (!sessionId || !jwtToken) {
+        console.error('Session not available');
+        return;
+      }
 
       // Call the task creation API
       const result = await TaskService.createTask(

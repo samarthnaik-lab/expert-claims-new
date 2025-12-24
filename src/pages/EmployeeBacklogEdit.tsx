@@ -265,18 +265,33 @@ const EmployeeBacklogEdit = () => {
       // Get session details
       const sessionStr = localStorage.getItem('expertclaims_session');
       let sessionId = '';
+      let jwtToken = '';
       if (sessionStr) {
-        const session = JSON.parse(sessionStr);
-        sessionId = session.sessionId || '';
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (e) {
+          console.error('Error parsing session:', e);
+        }
       }
       
+      if (!sessionId) {
+        toast({
+          title: "Error",
+          description: "Please log in to view technical consultants",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const response = await fetch(buildApiUrl('support/gettechnicalconsultant'), {
         method: 'GET',
         headers: {
           'accept': 'application/json',
-          'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
-          'authorization': authHeaders['Authorization'] || 'Bearer YOUR_TOKEN',
-          'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+          'session_id': sessionId,
+          'jwt_token': jwtToken,
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` }),
           'Content-Type': 'application/json'
         }
       });
@@ -334,6 +349,16 @@ const EmployeeBacklogEdit = () => {
         jwtToken = session.jwtToken || '';
       }
 
+      if (!sessionId) {
+        toast({
+          title: "Error",
+          description: "Please log in to view backlog details",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // Call the support API endpoint to get single backlog detail by ID
       const response = await fetch(
         `${buildApiUrl('support/backlog_id')}?backlog_id=${id}`,
@@ -341,9 +366,9 @@ const EmployeeBacklogEdit = () => {
           method: "GET",
           headers: {
             'accept': 'application/json',
-            'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
-            'authorization': authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN'),
-            'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+            'session_id': sessionId,
+            'jwt_token': jwtToken,
+            ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` }),
             'Content-Type': 'application/json'
           },
         }
@@ -446,16 +471,12 @@ const EmployeeBacklogEdit = () => {
       };
       console.log('Request body:', requestBody);
       
-      // Supabase service role key
-      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
-      
       const response = await fetch(buildApiUrl('support/partnerdocumentview'), {
         method: 'POST',
         headers: {
           'session_id': sessionId,
           'jwt_token': jwtToken,
-          'apikey': supabaseServiceRoleKey,
-          'authorization': `Bearer ${supabaseServiceRoleKey}`,
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` }),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestBody)
@@ -598,9 +619,6 @@ const EmployeeBacklogEdit = () => {
         return;
       }
 
-      // Supabase service role key
-      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
-
       const response = await fetch(
         `${buildApiUrl('support/removedocument')}?document_id=${documentId}`,
         {
@@ -608,8 +626,7 @@ const EmployeeBacklogEdit = () => {
           headers: {
             'session_id': sessionId,
             'jwt_token': jwtToken,
-            'apikey': supabaseServiceRoleKey,
-            'authorization': `Bearer ${supabaseServiceRoleKey}`,
+            ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` }),
             'Content-Type': 'application/json'
           }
         }
@@ -687,15 +704,25 @@ const EmployeeBacklogEdit = () => {
         jwtToken = session.jwtToken || '';
       }
 
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to add comments",
+          variant: "destructive",
+        });
+        setIsAddingComment(false);
+        return;
+      }
+
       const response = await fetch(
         buildApiUrl("support/comments_insert"),
         {
           method: "POST",
           headers: {
             'accept': 'application/json',
-            'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
-            'authorization': authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN'),
-            'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+            'session_id': sessionId,
+            'jwt_token': jwtToken,
+            ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` }),
             'content-type': 'application/json'
           },
           body: JSON.stringify({
@@ -781,12 +808,37 @@ const EmployeeBacklogEdit = () => {
         formData.append('backlog_id', backlogDetail!.backlog_id.toString());
         formData.append('document_type', selectedDocumentType || 'Insurance Policy');
 
-        const response = await fetch('https://n8n.srv952553.hstgr.cloud/webhook/partnerbacklogentrydoc', {
+        // Get session details for document upload
+        const sessionStr = localStorage.getItem('expertclaims_session');
+        let sessionId = '';
+        let jwtToken = '';
+
+        if (sessionStr) {
+          try {
+            const session = JSON.parse(sessionStr);
+            sessionId = session.sessionId || '';
+            jwtToken = session.jwtToken || '';
+          } catch (e) {
+            console.error('Error parsing session:', e);
+          }
+        }
+
+        if (!sessionId) {
+          toast({
+            title: "Error",
+            description: "Please log in to upload documents",
+            variant: "destructive",
+          });
+          setIsUploading(false);
+          return;
+        }
+
+        const response = await fetch(buildApiUrl('public/partnerbacklogentrydoc'), {
           method: 'POST',
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-            'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
-            'session_id': '0276776c-99fa-4b79-a5a2-70f3a428a0c7'
+            'session_id': sessionId,
+            ...(jwtToken && { 'jwt_token': jwtToken }),
+            ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
           },
           body: formData
         });
@@ -854,14 +906,23 @@ const EmployeeBacklogEdit = () => {
         userName = userDetails.employee_name || userDetails.name || "";
       }
 
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to add expert summary",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Call the new API to update status with expert_description
       const response = await fetch(buildApiUrl("support/updatestatustechnicalconsultant"), {
         method: "PATCH",
         headers: {
           'accept': 'application/json',
-          'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
-          'authorization': authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN'),
-          'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+          'session_id': sessionId,
+          'jwt_token': jwtToken,
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` }),
           'content-type': 'application/json'
         },
         body: JSON.stringify({
@@ -1148,13 +1209,18 @@ const EmployeeBacklogEdit = () => {
           user_id: currentUser.employee_id
         };
 
+        if (!sessionId || !jwtToken) {
+          console.error('Missing session credentials for status update');
+          return;
+        }
+
         const response = await fetch(buildApiUrl('support/updatestatustechnicalconsultant'), {
           method: 'PATCH',
           headers: {
             'accept': 'application/json',
-            'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
-            'authorization': authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN'),
-            'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+            'session_id': sessionId,
+            'jwt_token': jwtToken,
+            ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` }),
             'content-type': 'application/json'
           },
           body: JSON.stringify(requestBody)
@@ -1252,14 +1318,23 @@ const EmployeeBacklogEdit = () => {
           jwtToken = session.jwtToken || '';
         }
 
+        if (!sessionId || !jwtToken) {
+          toast({
+            title: "Error",
+            description: "Please log in to assign consultant",
+            variant: "destructive",
+          });
+          return;
+        }
+
         // Call the support API to update consultant assignment
         const response = await fetch(buildApiUrl('support/updatecunsultantpolicy'), {
           method: 'PATCH',
           headers: {
             'accept': 'application/json',
-            'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
-            'authorization': authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN'),
-            'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+            'session_id': sessionId,
+            'jwt_token': jwtToken,
+            ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` }),
             'content-type': 'application/json'
           },
           body: JSON.stringify(requestBody)
@@ -1327,13 +1402,18 @@ const EmployeeBacklogEdit = () => {
         console.log('Updating case status:', requestBody);
 
         // Call the new API to update status
+        if (!sessionId || !jwtToken) {
+          console.error('Missing session credentials for status update');
+          return;
+        }
+
         const response = await fetch(buildApiUrl('support/updatestatustechnicalconsultant'), {
           method: 'PATCH',
           headers: {
             'accept': 'application/json',
-            'apikey': 'YOUR_API_KEY', // Update with your actual API key if needed
-            'authorization': authHeaders['Authorization'] || (jwtToken ? `Bearer ${jwtToken}` : 'Bearer YOUR_TOKEN'),
-            'session_id': authHeaders['X-Session-ID'] || sessionId || 'YOUR_SESSION_ID',
+            'session_id': sessionId,
+            'jwt_token': jwtToken,
+            ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` }),
             'content-type': 'application/json'
           },
           body: JSON.stringify(requestBody)

@@ -10,20 +10,26 @@ export interface CaseStageApiResponse {
   statusMessage: string;
 }
 
+import { buildApiUrl } from '@/config/api';
+
 export class CaseStageService {
+  // TODO: Backend endpoint for case_stage does not exist yet
+  // This n8n webhook needs to be replaced with a backend endpoint when available
   private static readonly API_URL = 'https://n8n.srv952553.hstgr.cloud/webhook/case_stage';
-  private static readonly API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
 
   static async getCaseStages(sessionId: string, jwtToken: string): Promise<CaseStage[]> {
     try {
+      if (!sessionId || !jwtToken) {
+        throw new Error('Session not available. Please log in.');
+      }
+
       const response = await fetch(this.API_URL, {
         method: 'GET',
         headers: {
-          'apikey': this.API_KEY,
-          'Authorization': `Bearer ${this.API_KEY}`,
           'session_id': sessionId,
           'jwt_token': jwtToken,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
         }
       });
 

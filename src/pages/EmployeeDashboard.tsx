@@ -320,24 +320,23 @@ const EmployeeDashboard = () => {
         'content-type': 'application/json'
       };
 
-      // Supabase service role key
-      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
-
       if (department.toLowerCase() === 'technical_consultant') {
         // Use new Node.js API for technical consultants
         apiUrl = `${buildApiUrl('support/get_all_backlog_data')}?employee_id=${userId}`;
-        headers['apikey'] = supabaseServiceRoleKey;
-        headers['authorization'] = `Bearer ${supabaseServiceRoleKey}`;
         headers['session_id'] = sessionId || '';
         headers['jwt_token'] = jwtToken || '';
+        if (jwtToken) {
+          headers['Authorization'] = `Bearer ${jwtToken}`;
+        }
         console.log('Calling technical consultant API:', apiUrl, 'with employee_id:', userId);
       } else if (department.toLowerCase() === 'gap_analysis') {
         // Use new Node.js API for gap_analysis - gets all data with employee_id=0
         apiUrl = `${buildApiUrl('support/get_all_backlog_data')}?employee_id=0`;
-        headers['apikey'] = supabaseServiceRoleKey;
-        headers['authorization'] = `Bearer ${supabaseServiceRoleKey}`;
         headers['session_id'] = sessionId || '';
         headers['jwt_token'] = jwtToken || '';
+        if (jwtToken) {
+          headers['Authorization'] = `Bearer ${jwtToken}`;
+        }
         console.log('Calling gap_analysis API:', apiUrl);
       } else {
         // Use Node.js support API for other departments
@@ -426,9 +425,6 @@ const EmployeeDashboard = () => {
       console.log('User ID:', userId);
       console.log('Session ID:', sessionId);
       
-      // Supabase anon key
-      const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o";
-      
       // Build URL with query parameters
       const employeeTaskUrl = new URL(buildApiUrl('support/employee_all_task'));
       employeeTaskUrl.searchParams.append('user_id', userId.toString());
@@ -445,9 +441,9 @@ const EmployeeDashboard = () => {
           'content-type': 'application/json',
           'Content-Profile': 'expc',
           'Accept-Profile': 'expc',
-          'apikey': supabaseAnonKey,
-          'authorization': `Bearer ${supabaseAnonKey}`,
-          'session_id': sessionId
+          'session_id': sessionId,
+          'jwt_token': jwtToken,
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
         }
       });
 
@@ -795,20 +791,17 @@ const EmployeeDashboard = () => {
       };
       console.log('Request body:', requestBody);
       
-      // Supabase service role key
-      const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
-      
       const response = await fetch(buildApiUrl('support/partnerdocumentview'), {
         method: 'POST',
         headers: {
           'Accept': '*/*',
           'Accept-Language': 'en-US,en;q=0.9',
           'Accept-Profile': 'expc',
-          'Authorization': `Bearer ${supabaseServiceRoleKey}`,
           'Content-Profile': 'expc',
           'Content-Type': 'application/json',
+          'session_id': sessionId,
           'jwt_token': jwtToken,
-          'session_id': sessionId
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
         },
         body: JSON.stringify(requestBody)
       });

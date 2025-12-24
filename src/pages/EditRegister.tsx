@@ -129,11 +129,14 @@ const EditRegister = () => {
         }
       }
       
-      // Use fallback values if session not available
-      sessionId = sessionId || 'c6c38c28-12e6-4b1b-bab6-40ae19b875f3';
-      jwtToken = jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiAiLCJwYXNzd29yZCI6IiIsImlhdCI6MTc2MjQwODE3Nn0.vig73fEH3VtORKHtBPy0yLVp6dZdf9TglaXWhfpWnIU';
-      
-      const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to fetch user data",
+          variant: "destructive",
+        });
+        return;
+      }
       
       // Build URL with query parameters
       const params = new URLSearchParams({
@@ -153,13 +156,12 @@ const EditRegister = () => {
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
           'accept-profile': 'srtms',
-          'apikey': API_KEY,
-          'authorization': `Bearer ${API_KEY}`,
           'content-type': 'application/json',
           'jwt_token': jwtToken,
           'prefer': 'count=exact',
           'range': '0-100',
-          'session_id': sessionId
+          'session_id': sessionId,
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
         }
       });
       
@@ -227,9 +229,14 @@ const EditRegister = () => {
         jwtToken = session.jwtToken || '';
       }
 
-      // Use fallback values if session not available
-      sessionId = sessionId || 'efd005c8-d9a1-4cfa-adeb-1ca2a7f13775';
-      jwtToken = jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k';
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to fetch user data",
+          variant: "destructive",
+        });
+        return;
+      }
 
       console.log('Fetching user data for ID:', id);
       const fetchedUserData = await UserService.getUserById(id.toString(), sessionId, jwtToken);
@@ -519,9 +526,14 @@ const EditRegister = () => {
         jwtToken = session.jwtToken || '';
       }
 
-      // Use fallback values if session not available
-      sessionId = sessionId || 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2';
-      jwtToken = jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k';
+      if (!sessionId || !jwtToken) {
+        toast({
+          title: "Error",
+          description: "Please log in to update user",
+          variant: "destructive",
+        });
+        return;
+      }
 
       let response;
 
@@ -570,8 +582,6 @@ const EditRegister = () => {
         response = await fetch(buildApiUrl('admin/updateuser'), {
           method: 'PATCH',
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
             'session_id': sessionId,
             'jwt_token': jwtToken,
             'Content-Type': 'application/json'
@@ -629,8 +639,6 @@ const EditRegister = () => {
         response = await fetch(buildApiUrl('admin/updateuser'), {
           method: 'PATCH',
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
             'session_id': sessionId,
             'jwt_token': jwtToken,
             'Content-Type': 'application/json'
@@ -696,8 +704,6 @@ const EditRegister = () => {
         response = await fetch(buildApiUrl('admin/updateuser'), {
           method: 'PATCH',
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
             'session_id': sessionId,
             'jwt_token': jwtToken,
             'Content-Type': 'application/json'
@@ -770,8 +776,6 @@ const EditRegister = () => {
         response = await fetch(buildApiUrl('admin/updateuser'), {
           method: 'PATCH',
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
             'session_id': sessionId,
             'jwt_token': jwtToken,
             'Content-Type': 'application/json'
