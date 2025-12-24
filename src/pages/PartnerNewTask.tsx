@@ -648,6 +648,7 @@ const PartnerNewTask = () => {
                     ) : caseTypes.length > 0 ? (
                       caseTypes
                         .filter((type) => type && type.case_type_name && type.case_type_name.trim() !== "")
+                        .sort((a, b) => a.case_type_name.localeCompare(b.case_type_name))
                         .map((type) => (
                           <SelectItem key={type.case_type_id} value={type.case_type_name}>
                             {type.case_type_name}

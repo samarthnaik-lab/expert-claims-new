@@ -218,7 +218,7 @@ const LeaveManagement = () => {
     }
   };
 
-  const fetchLeaves = async (limit: number = 10, page: number = 1) => {
+  const fetchLeaves = async (limit: number = 10, page: number = 1, statusFilter: string = "all") => {
     setIsLoading(true);
     try {
       const userDetailsStr = localStorage.getItem("expertclaims_user_details");
@@ -231,15 +231,18 @@ const LeaveManagement = () => {
       // Use backend API endpoints
       // Vite uses import.meta.env, but fallback to process.env for compatibility
       const baseUrl = buildApiUrl('');
+      // Add status filter parameter (always include it, backend handles 'all')
+      const statusParam = `&status=${statusFilter || "all"}`;
       const url =
         role === "employee" && employeeId
-          ? `${baseUrl}support/getempleaves?employee_id=${employeeId}&page=${page}&size=${limit}`
-          : `${baseUrl}admin/getleaves?page=${page}&size=${limit}`;
+          ? `${baseUrl}support/getempleaves?employee_id=${employeeId}&page=${page}&size=${limit}${statusParam}`
+          : `${baseUrl}admin/getleaves?page=${page}&size=${limit}${statusParam}`;
 
       console.log("=== Leave Fetch Debug ===");
       console.log("Role:", role);
       console.log("Employee ID:", employeeId);
       console.log("Base URL:", baseUrl);
+      console.log("Status Filter:", statusFilter);
       console.log("Full URL:", url);
       console.log("JWT Token present:", !!jwtToken);
 
@@ -384,11 +387,18 @@ const LeaveManagement = () => {
     }
   };
 
+  // Reset to page 1 when filter changes (safety net - also handled in onClick handlers)
   useEffect(() => {
-    fetchLeaves(pageSize, currentPage);
+    if (filterStatus && currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [filterStatus]);
+
+  useEffect(() => {
+    fetchLeaves(pageSize, currentPage, filterStatus);
     fetchLeaveTypes();
     fetchAllLeavesForSummary(); // Fetch all leaves for summary counts
-  }, [pageSize, currentPage]);
+  }, [pageSize, currentPage, filterStatus]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -491,7 +501,7 @@ const LeaveManagement = () => {
         setSelectedLeave(null);
 
         // Refresh the leaves list to show updated status
-        fetchLeaves(pageSize, currentPage);
+        fetchLeaves(pageSize, currentPage, filterStatus);
         fetchAllLeavesForSummary(); // Refresh summary counts
       } else {
         throw new Error(
@@ -583,7 +593,7 @@ const LeaveManagement = () => {
         setSelectedLeave(null);
 
         // Refresh the leaves list to show updated status
-        fetchLeaves(pageSize, currentPage);
+        fetchLeaves(pageSize, currentPage, filterStatus);
         fetchAllLeavesForSummary(); // Refresh summary counts
       } else {
         throw new Error(
@@ -771,7 +781,7 @@ const LeaveManagement = () => {
         setShowApplyLeaveForm(false);
 
         // Refresh the leaves list
-        fetchLeaves(pageSize, currentPage);
+        fetchLeaves(pageSize, currentPage, filterStatus);
         fetchAllLeavesForSummary(); // Refresh summary counts
       } else {
         throw new Error(result.message || "Failed to submit leave application");
@@ -791,10 +801,8 @@ const LeaveManagement = () => {
     }
   };
 
-  // Client-side filtering
+  // Client-side filtering (only for search term, status filtering is done on backend)
   const filteredLeaves = leaves.filter((leave) => {
-    const matchesStatus =
-      filterStatus === "all" || leave.status === filterStatus;
     const matchesSearch =
       (leave.employeeName || "")
         .toLowerCase()
@@ -804,7 +812,7 @@ const LeaveManagement = () => {
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       (leave.type || "").toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
+    return matchesSearch;
   });
 
   // Use backend pagination data
@@ -885,7 +893,7 @@ const LeaveManagement = () => {
                 variant="outline"
                 onClick={() => {
                   setIsLoading(true);
-                  fetchLeaves(pageSize, currentPage);
+                  fetchLeaves(pageSize, currentPage, filterStatus);
                   fetchLeaveTypes();
                 }}
                 disabled={isLoading}
@@ -1001,7 +1009,10 @@ const LeaveManagement = () => {
           <div className="flex flex-wrap gap-2">
             <Button
               variant={filterStatus === "all" ? "default" : "outline"}
-              onClick={() => setFilterStatus("all")}
+              onClick={() => {
+                setFilterStatus("all");
+                setCurrentPage(1);
+              }}
               size="sm"
               className="flex-1 sm:flex-none"
             >
@@ -1009,7 +1020,10 @@ const LeaveManagement = () => {
             </Button>
             <Button
               variant={filterStatus === "pending" ? "default" : "outline"}
-              onClick={() => setFilterStatus("pending")}
+              onClick={() => {
+                setFilterStatus("pending");
+                setCurrentPage(1);
+              }}
               size="sm"
               className="flex-1 sm:flex-none"
             >
@@ -1017,7 +1031,10 @@ const LeaveManagement = () => {
             </Button>
             <Button
               variant={filterStatus === "approved" ? "default" : "outline"}
-              onClick={() => setFilterStatus("approved")}
+              onClick={() => {
+                setFilterStatus("approved");
+                setCurrentPage(1);
+              }}
               size="sm"
               className="flex-1 sm:flex-none"
             >
@@ -1025,7 +1042,10 @@ const LeaveManagement = () => {
             </Button>
             <Button
               variant={filterStatus === "rejected" ? "default" : "outline"}
-              onClick={() => setFilterStatus("rejected")}
+              onClick={() => {
+                setFilterStatus("rejected");
+                setCurrentPage(1);
+              }}
               size="sm"
               className="flex-1 sm:flex-none"
             >
