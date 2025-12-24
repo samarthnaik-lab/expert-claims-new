@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield, Upload, FileText, X, CheckCircle, AlertCircle, Trash2, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { buildApiUrl } from '@/config/api';
+import { buildApiUrl, getApiKey } from '@/config/api';
 
 interface UploadedFile {
   id: string;
@@ -190,13 +190,16 @@ const CustomerDocumentUpload = () => {
 
   useEffect(() => {
     const fetchCustomerCase = async () => {
+      console.log('🔄 fetchCustomerCase called');
       try {
         setLoading(true);
   
         const userId = await getUserId();
+        console.log('📦 UserId from getUserId:', userId);
   
         if (!userId) {
-          console.error('No userid found');
+          console.error('❌ No userid found - API call will not be made');
+          console.log('Available localStorage keys:', Object.keys(localStorage).filter(key => key.includes('expert') || key.includes('user')));
           toast({
             title: "Error",
             description: "User ID not found. Please ensure you are logged in.",
@@ -226,6 +229,12 @@ const CustomerDocumentUpload = () => {
         const pageSize = 50; // Fetch larger pages
         let hasMore = true;
 
+        // Get API key dynamically
+        const apiKey = getApiKey();
+        const apiUrl = buildApiUrl('customer/customer-case');
+        console.log('Calling Customer Case API:', apiUrl);
+        console.log('Session data:', { sessionId: sessionId ? 'present' : 'missing', jwtToken: jwtToken ? 'present' : 'missing' });
+
         while (hasMore) {
           // Build FormData payload with pagination
           const formData = new FormData();
@@ -233,16 +242,18 @@ const CustomerDocumentUpload = () => {
           formData.append('page', page.toString());
           formData.append('size', pageSize.toString());
   
+          console.log(`Fetching page ${page} with user_id: ${userId}`);
+  
         const response = await fetch(
-          buildApiUrl('customer/customer-case'),
+          apiUrl,
           {
             method: 'POST',
             headers: {
               'accept': '*/*',
               'accept-language': 'en-US,en;q=0.9',
               'accept-profile': 'expc',
-              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-              'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
+              'apikey': apiKey,
+              'authorization': `Bearer ${apiKey}`,
               'content-profile': 'expc',
               'jwt_token': jwtToken,
               'session_id': sessionId
@@ -250,6 +261,8 @@ const CustomerDocumentUpload = () => {
             body: formData,
           }
         );
+  
+          console.log(`Page ${page} - API Response Status:`, response.status, response.statusText);
   
           if (response.ok) {
             const data = await response.json();
@@ -270,7 +283,12 @@ const CustomerDocumentUpload = () => {
               hasMore = false;
             }
           } else {
-            console.error('Failed to fetch customer case from page', page);
+            const errorText = await response.text();
+            console.error('Failed to fetch customer case from page', page, {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorText
+            });
             hasMore = false;
           }
         }

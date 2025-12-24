@@ -11,7 +11,7 @@ import { MessageCircle, Upload, FileText, LogOut, Phone, Shield, TrendingUp, Clo
 import { AuthService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
 import { SessionExpiry } from '@/components/SessionExpiry';
-import { buildApiUrl } from '@/config/api';
+import { buildApiUrl, getApiKey } from '@/config/api';
 
 const CustomerPortal = () => {
   const navigate = useNavigate();
@@ -455,63 +455,21 @@ const CustomerPortal = () => {
 
   useEffect(() => {
     const fetchCustomerCase = async (limit: number = 10, page: number = 1) => {
+      console.log('🔄 fetchCustomerCase called with:', { limit, page });
       try {
         setLoading(true);
   
-        // Get userid from customer session details (same as customer-dashboard)
-        const customerSessionRaw = localStorage.getItem('expertclaims_customer_session_details');
-        let mobileNumber = '';
-        let userId = null;
-        
-        if (customerSessionRaw) {
-          try {
-            const customerSessionData = JSON.parse(customerSessionRaw);
-            const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
-            mobileNumber = customerSession?.mobile_number || '';
-            userId = customerSession?.userid || null;
-          } catch (e) {
-            console.error('Error parsing customer session data:', e);
-          }
-        }
-        
-        // If we don't have userid yet, fetch from getcustomersessiondetails API
-        if (!userId && mobileNumber) {
-          try {
-            const sessionStr = localStorage.getItem('expertclaims_session');
-            let sessionId = '';
-            if (sessionStr) {
-              try {
-                const session = JSON.parse(sessionStr);
-                sessionId = session.sessionId || '';
-              } catch (error) {
-                console.error('Error parsing session:', error);
-              }
-            }
-            
-            const sessionResponse = await fetch(`${buildApiUrl('customer/getcustomersessiondetails')}?mobile_number=${encodeURIComponent(mobileNumber)}`, {
-              method: 'GET',
-              headers: {
-                'accept': 'application/json',
-                'content-type': 'application/json',
-                'session_id': sessionId
-              }
-            });
-            
-            if (sessionResponse.ok) {
-              const sessionData = await sessionResponse.json();
-              const sessionDetails = Array.isArray(sessionData) ? sessionData[0] : sessionData;
-              userId = sessionDetails?.userid || null;
-            }
-          } catch (error) {
-            console.error('Error fetching customer session details:', error);
-          }
-        }
+        // Use the getUserId helper function which checks all possible sources
+        const userId = await getUserId();
   
         if (!userId) {
-          console.error('No userid found after all attempts');
+          console.error('❌ No userid found after all attempts - API call will not be made');
+          console.log('Available localStorage keys:', Object.keys(localStorage).filter(key => key.includes('expert') || key.includes('user')));
           setLoading(false);
           return;
         }
+        
+        console.log('✅ UserId found:', userId);
   
         // Get session_id and jwt_token from localStorage
         const sessionStr = localStorage.getItem('expertclaims_session');
@@ -534,17 +492,23 @@ const CustomerPortal = () => {
         formData.append('size', limit.toString());
   
         console.log('Customer Case API Body:', { user_id: userId, page: page, size: limit });
+        console.log('Session data:', { sessionId: sessionId ? 'present' : 'missing', jwtToken: jwtToken ? 'present' : 'missing' });
+  
+        // Get API key dynamically
+        const apiKey = getApiKey();
+        const apiUrl = buildApiUrl('customer/customer-case');
+        console.log('Calling Customer Case API:', apiUrl);
   
         const response = await fetch(
-          buildApiUrl('customer/customer-case'),
+          apiUrl,
           {
             method: 'POST',
             headers: {
               'accept': '*/*',
               'accept-language': 'en-US,en;q=0.9',
               'accept-profile': 'expc',
-              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-              'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
+              'apikey': apiKey,
+              'authorization': `Bearer ${apiKey}`,
               'content-profile': 'expc',
               'jwt_token': jwtToken,
               'session_id': sessionId
@@ -552,6 +516,8 @@ const CustomerPortal = () => {
             body: formData,
           }
         );
+  
+        console.log('Customer Case API Response Status:', response.status, response.statusText);
   
         if (response.ok) {
           const data = await response.json();
@@ -586,11 +552,19 @@ const CustomerPortal = () => {
           console.log('Has more pages:', hasMore);
           console.log('Total count:', totalCount);
         } else {
-          console.error('Failed to fetch customer case');
+          const errorText = await response.text();
+          console.error('Failed to fetch customer case:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorText
+          });
           setHasMorePages(false);
         }
       } catch (error) {
         console.error('Error fetching customer case:', error);
+        if (error instanceof Error) {
+          console.error('Error details:', error.message, error.stack);
+        }
       } finally {
         setLoading(false);
       }

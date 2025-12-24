@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Shield, FileText, User, Calendar, Phone, Mail, MapPin, DollarSign, Clock, CheckCircle, AlertCircle, XCircle, MessageCircle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { formatDateDDMMYYYY } from '@/lib/utils';
-import { buildApiUrl } from '@/config/api';
+import { buildApiUrl, getApiKey } from '@/config/api';
 
 
 
@@ -231,18 +231,22 @@ const CustomerClaimDetail = () => {
 
   useEffect(() => {
     const fetchClaimDetails = async () => {
+      console.log('🔄 fetchClaimDetails called with case_id:', case_id);
       try {
         setLoading(true);
         
         if (!case_id) {
+          console.error('❌ No case_id provided - API call will not be made');
           setLoading(false);
           return;
         }
 
         const userId = await getUserId();
+        console.log('📦 UserId from getUserId:', userId);
         
         if (!userId) {
-          console.error('No userid found');
+          console.error('❌ No userid found - API call will not be made');
+          console.log('Available localStorage keys:', Object.keys(localStorage).filter(key => key.includes('expert') || key.includes('user')));
           toast({
             title: "Error",
             description: "User ID not found. Please ensure you are logged in.",
@@ -273,24 +277,32 @@ const CustomerClaimDetail = () => {
         let hasMore = true;
 
         console.log('Looking for case_id:', case_id);
-
+  
+        // Get API key dynamically
+        const apiKey = getApiKey();
+        const apiUrl = buildApiUrl('customer/customer-case');
+        console.log('Calling Customer Case API:', apiUrl);
+        console.log('Session data:', { sessionId: sessionId ? 'present' : 'missing', jwtToken: jwtToken ? 'present' : 'missing' });
+  
         while (hasMore && !foundClaim) {
           // Build FormData payload with pagination
           const formData = new FormData();
           formData.append('user_id', userId.toString());
           formData.append('page', page.toString());
           formData.append('size', pageSize.toString());
-
+  
+          console.log(`Fetching page ${page} with user_id: ${userId} to find case_id: ${case_id}`);
+  
         const response = await fetch(
-          buildApiUrl('customer/customer-case'),
+          apiUrl,
           {
             method: 'POST',
             headers: {
               'accept': '*/*',
               'accept-language': 'en-US,en;q=0.9',
               'accept-profile': 'expc',
-              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-              'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
+              'apikey': apiKey,
+              'authorization': `Bearer ${apiKey}`,
               'content-profile': 'expc',
               'jwt_token': jwtToken,
               'session_id': sessionId
@@ -298,7 +310,9 @@ const CustomerClaimDetail = () => {
             body: formData,
           }
         );
-
+  
+          console.log(`Page ${page} - API Response Status:`, response.status, response.statusText);
+  
           if (response.ok) {
             const data = await response.json();
             const caseArray = Array.isArray(data) ? data : (data?.data || data?.cases || []);
@@ -319,7 +333,12 @@ const CustomerClaimDetail = () => {
               hasMore = false;
             }
           } else {
-            console.error('Failed to fetch claim details from page', page);
+            const errorText = await response.text();
+            console.error('Failed to fetch claim details from page', page, {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorText
+            });
             hasMore = false;
           }
         }
@@ -477,34 +496,34 @@ const CustomerClaimDetail = () => {
         return;
       }
 
-      // Call the n8n webhook API to get document view URL
-      console.log('Calling n8n webhook for document view...');
-      console.log('Document ID:', documentId);
+      // Call the support/view API to get document
+      console.log('Calling support/view API for document ID:', documentId);
+      
+      // Get API key dynamically
+      const apiKey = getApiKey();
       
       const requestBody = {
         document_id: documentId
       };
-      console.log('Request body:', requestBody);
       
       const response = await fetch(buildApiUrl('support/view'), {
         method: 'POST',
         headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
+          'apikey': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Profile': 'expc',
           'Accept-Profile': 'expc',
-          'session_id': 'a9bfe0a4-1e6c-4c69-860f-ec50846a7da6',
-          'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc',
+          'session_id': sessionId,
+          'jwt_token': jwtToken,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestBody)
       });
 
       console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
       
       if (!response.ok) {
-        console.error('Failed to call view webhook:', response.status, response.statusText);
+        console.error('Failed to fetch document:', response.status, response.statusText);
         
         // Try to get error details for logging
         let userFriendlyMessage = "Unable to view document. Please try again.";
@@ -538,10 +557,11 @@ const CustomerClaimDetail = () => {
           description: userFriendlyMessage,
           variant: "destructive",
         });
+        setViewingDocumentId(null);
         return;
       }
 
-      // Since the API returns binary image data (as shown in Postman), handle it directly
+      // Process the binary document data
       console.log('Response received, processing binary data...');
       
       try {
@@ -588,6 +608,11 @@ const CustomerClaimDetail = () => {
             setDocumentUrl(textResponse);
             setDocumentType('url');
             setShowDocumentModal(true);
+            
+            toast({
+              title: "Success",
+              description: "Document opened successfully",
+            });
           } else {
             throw new Error('Response is not a URL');
           }
@@ -598,6 +623,7 @@ const CustomerClaimDetail = () => {
             description: "Failed to process document response",
             variant: "destructive",
           });
+          setViewingDocumentId(null);
         }
       }
     } catch (error) {
@@ -607,7 +633,6 @@ const CustomerClaimDetail = () => {
         description: "Failed to view document",
         variant: "destructive",
       });
-    } finally {
       setViewingDocumentId(null);
     }
   };
