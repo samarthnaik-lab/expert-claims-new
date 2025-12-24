@@ -301,11 +301,8 @@ const CustomerClaimDetail = () => {
               'accept': '*/*',
               'accept-language': 'en-US,en;q=0.9',
               'accept-profile': 'expc',
-<<<<<<< HEAD
               'apikey': apiKey,
               'authorization': `Bearer ${apiKey}`,
-=======
->>>>>>> 06778fa6b749cc9b7af4a63b09122d69a4b370da
               'content-profile': 'expc',
               'jwt_token': jwtToken,
               'session_id': sessionId
@@ -512,21 +509,13 @@ const CustomerClaimDetail = () => {
       const response = await fetch(buildApiUrl('support/view'), {
         method: 'POST',
         headers: {
-<<<<<<< HEAD
           'apikey': apiKey,
           'Authorization': `Bearer ${apiKey}`,
-=======
->>>>>>> 06778fa6b749cc9b7af4a63b09122d69a4b370da
           'Content-Profile': 'expc',
           'Accept-Profile': 'expc',
           'session_id': sessionId,
           'jwt_token': jwtToken,
-<<<<<<< HEAD
           'Content-Type': 'application/json'
-=======
-          'Content-Type': 'application/json',
-          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
->>>>>>> 06778fa6b749cc9b7af4a63b09122d69a4b370da
         },
         body: JSON.stringify(requestBody)
       });
@@ -823,11 +812,7 @@ const CustomerClaimDetail = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Start Date</label>
-                    <p className="text-lg font-semibold text-gray-900">{claim.start_date ? formatDateDDMMYYYY(claim.start_date) : 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Assign Date</label>
-                    <p className="text-lg font-semibold text-gray-900">{claim.due_date ? new Date(claim.due_date).toLocaleDateString() : 'N/A'}</p>
+                    <p className="text-lg font-semibold text-gray-900">{claim.created_time ? formatDateDDMMYYYY(claim.created_time) : (claim.start_date ? formatDateDDMMYYYY(claim.start_date) : 'N/A')}</p>
                   </div>
                 </div>
                 <Separator />
@@ -1031,7 +1016,7 @@ const CustomerClaimDetail = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Start Date</label>
-                  <p className="text-lg font-semibold text-gray-900">{claim.start_date ? formatDateDDMMYYYY(claim.start_date) : 'N/A'}</p>
+                  <p className="text-lg font-semibold text-gray-900">{claim.created_time ? formatDateDDMMYYYY(claim.created_time) : (claim.start_date ? formatDateDDMMYYYY(claim.start_date) : 'N/A')}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Last Updated</label>
