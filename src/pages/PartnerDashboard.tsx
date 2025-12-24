@@ -483,35 +483,65 @@ const PartnerDashboard = () => {
     setLoadingAllBacklog(true);
     try {
       let partnerId = "";
-      const sessionStr = localStorage.getItem("expertclaims_session");
-      if (sessionStr) {
-        try {
-          const session = JSON.parse(sessionStr);
-          if (session.userId) {
-            partnerId = session.userId.toString();
-          }
-        } catch (error) {
-          console.error("Error parsing session:", error);
-        }
-      }
-      if (!partnerId) {
-        const possibleKeys = ["expertclaims_user_details", "user_details"];
-        for (const key of possibleKeys) {
-          const dataStr = localStorage.getItem(key);
-          if (dataStr) {
-            try {
-              const data = JSON.parse(dataStr);
-              const userData = Array.isArray(data) ? data[0] : data;
-              if (userData && userData.partner_id) {
-                partnerId = userData.partner_id.toString();
-                break;
-              }
-            } catch (error) {
-              console.error(`Error parsing ${key}:`, error);
+      
+      // First, try to get partner_id from user details (prioritize partner_id from partners table)
+      const possibleKeys = ["expertclaims_user_details", "user_details"];
+      for (const key of possibleKeys) {
+        const dataStr = localStorage.getItem(key);
+        if (dataStr) {
+          try {
+            const data = JSON.parse(dataStr);
+            const userData = Array.isArray(data) ? data[0] : data;
+            // Prioritize partner_id from partners table
+            if (userData && userData.partner_id) {
+              partnerId = userData.partner_id.toString();
+              console.log(`Got partnerId from ${key}.partner_id:`, partnerId);
+              break;
             }
+          } catch (error) {
+            console.error(`Error parsing ${key}:`, error);
           }
         }
       }
+      
+      // If still not found, try partner_details
+      if (!partnerId) {
+        const partnerDetails = localStorage.getItem('partner_details');
+        if (partnerDetails) {
+          try {
+            const partnerDetailsData = JSON.parse(partnerDetails);
+            if (partnerDetailsData.partner_id) {
+              partnerId = partnerDetailsData.partner_id.toString();
+              console.log("Got partnerId from partner_details.partner_id:", partnerId);
+            } else if (partnerDetailsData.data && partnerDetailsData.data.partner_info && partnerDetailsData.data.partner_info.partner_id) {
+              partnerId = partnerDetailsData.data.partner_info.partner_id.toString();
+              console.log("Got partnerId from partner_details.data.partner_info.partner_id:", partnerId);
+            } else if (Array.isArray(partnerDetailsData) && partnerDetailsData.length > 0 && partnerDetailsData[0].partner_id) {
+              partnerId = partnerDetailsData[0].partner_id.toString();
+              console.log("Got partnerId from partner_details array:", partnerId);
+            }
+          } catch (error) {
+            console.error("Error parsing partner_details:", error);
+          }
+        }
+      }
+      
+      // Last resort: try session userId (but this is user_id, not partner_id)
+      if (!partnerId) {
+        const sessionStr = localStorage.getItem("expertclaims_session");
+        if (sessionStr) {
+          try {
+            const session = JSON.parse(sessionStr);
+            if (session.userId) {
+              partnerId = session.userId.toString();
+              console.log("Warning: Using session.userId as fallback (this may be user_id, not partner_id):", partnerId);
+            }
+          } catch (error) {
+            console.error("Error parsing session:", error);
+          }
+        }
+      }
+      
       if (!partnerId) return;
       
       // Get JWT token from session
@@ -790,29 +820,13 @@ const PartnerDashboard = () => {
   const fetchBacklogData = async () => {
     setIsLoadingBacklog(true);
     try {
-      // Get partner ID from localStorage
+      // Get partner ID from localStorage - prioritize partner_id from partners table
       let partnerId = "";
       
-      // First, try to get from session (most reliable after login)
-      const sessionStr = localStorage.getItem("expertclaims_session");
-      if (sessionStr) {
-        try {
-          const session = JSON.parse(sessionStr);
-          // Try userId from session first (commonly used for partner_id)
-          if (session.userId) {
-            partnerId = session.userId.toString();
-            console.log("Got partnerId from session.userId:", partnerId);
-          }
-        } catch (error) {
-          console.error("Error parsing session:", error);
-        }
-      }
-      
-      // If not found in session, try user details
-      if (!partnerId) {
+      // First, try to get partner_id from user details (most reliable)
       const possibleKeys = [
         "expertclaims_user_details",
-          "user_details"
+        "user_details"
       ];
       
       for (const key of possibleKeys) {
@@ -822,20 +836,14 @@ const PartnerDashboard = () => {
             const data = JSON.parse(dataStr);
             const userData = Array.isArray(data) ? data[0] : data;
             
+            // Prioritize partner_id from partners table
             if (userData && userData.partner_id) {
-                partnerId = userData.partner_id.toString();
-                console.log(`Got partnerId from ${key}:`, partnerId);
-                break;
-              }
-              // Also check userId in user details
-              if (userData && userData.userId) {
-                partnerId = userData.userId.toString();
-                console.log(`Got partnerId from ${key}.userId:`, partnerId);
+              partnerId = userData.partner_id.toString();
+              console.log(`Got partnerId from ${key}.partner_id:`, partnerId);
               break;
             }
           } catch (error) {
             console.error(`Error parsing ${key}:`, error);
-            }
           }
         }
       }
@@ -845,7 +853,7 @@ const PartnerDashboard = () => {
         const partnerDetails = localStorage.getItem('partner_details');
         if (partnerDetails) {
           try {
-          const partnerDetailsData = JSON.parse(partnerDetails);
+            const partnerDetailsData = JSON.parse(partnerDetails);
             // Check different possible structures
             if (partnerDetailsData.partner_id) {
               partnerId = partnerDetailsData.partner_id.toString();
@@ -861,6 +869,22 @@ const PartnerDashboard = () => {
             console.error("Error parsing partner_details:", error);
           }
         } 
+      }
+      
+      // Last resort: try session userId (but this is user_id, not partner_id)
+      if (!partnerId) {
+        const sessionStr = localStorage.getItem("expertclaims_session");
+        if (sessionStr) {
+          try {
+            const session = JSON.parse(sessionStr);
+            if (session.userId) {
+              partnerId = session.userId.toString();
+              console.log("Warning: Using session.userId as fallback (this may be user_id, not partner_id):", partnerId);
+            }
+          } catch (error) {
+            console.error("Error parsing session:", error);
+          }
+        }
       }
 
       if (!partnerId) {
