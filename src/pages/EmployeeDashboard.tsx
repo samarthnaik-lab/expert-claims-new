@@ -427,9 +427,22 @@ const EmployeeDashboard = () => {
         return;
       }
 
+      // Get jwtToken from session
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let jwtToken = '';
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
+
       console.log('=== Calling employee_all_task API from EmployeeDashboard ===');
       console.log('User ID:', userId);
       console.log('Session ID:', sessionId);
+      console.log('JWT Token:', jwtToken ? 'Present' : 'Missing');
       
       // Build URL with query parameters
       const employeeTaskUrl = new URL(buildApiUrl('support/employee_all_task'));
@@ -443,7 +456,7 @@ const EmployeeDashboard = () => {
       const response = await fetch(finalUrl, {
         method: 'GET',
         headers: {
-          'accept': '/',
+          'accept': '*/*',
           'content-type': 'application/json',
           'Content-Profile': 'expc',
           'Accept-Profile': 'expc',
@@ -473,27 +486,45 @@ const EmployeeDashboard = () => {
         }
         
         setAssignedTasks(tasksArray);
-        toast({
-          title: "Success",
-          description: `Successfully loaded ${tasksArray.length} assigned tasks`,
-        });
+        console.log(`✅ Successfully loaded ${tasksArray.length} assigned tasks`);
+        // Only show success toast if tasks were found
+        if (tasksArray.length === 0) {
+          console.log('No assigned tasks found for this user');
+        }
       } else {
         const errorText = await response.text();
         console.error('❌ Failed to fetch employee all tasks:', response.status);
         console.error('Error response:', errorText);
         setAssignedTasks([]);
+        
+        let errorMessage = "Failed to fetch assigned tasks";
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // If errorText is not JSON, use the text as is
+          if (errorText && errorText.length < 100) {
+            errorMessage = errorText;
+          }
+        }
+        
         toast({
           title: "Error",
-          description: "Failed to fetch assigned tasks",
+          description: errorMessage,
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error calling employee_all_task API:', error);
       setAssignedTasks([]);
+      const errorMessage = error?.message || "An error occurred while fetching assigned tasks";
       toast({
         title: "Error",
-        description: "An error occurred while fetching assigned tasks",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -509,6 +540,14 @@ const EmployeeDashboard = () => {
     fetchBacklogData();
     fetchEmployeeAllTasks(); // Call employee_all_task API when dashboard loads
   }, []);
+
+  // Refetch assigned tasks when switching to assigned-task tab
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'assigned-task') {
+      fetchEmployeeAllTasks();
+    }
+  }, [searchParams]);
 
   // Update status filter when URL parameters change
   useEffect(() => {

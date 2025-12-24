@@ -581,6 +581,16 @@ const AdminDashboard = () => {
     getAdminName();
     fetchDashboardData();
     fetchUsers(); // Fetch users on component mount
+    
+    // Fetch data for overview tab (needed for overview cards)
+    if (activeTab === 'overview') {
+      // Fetch all tasks and all users for overview cards
+      fetchAllTasks();
+      fetchAllUsers();
+      fetchAllLeaveRequests();
+      fetchAllCasesData();
+    }
+    
     if (activeTab === 'tasks') {
       fetchAllTasks(); // Fetch all tasks for cards
       fetchTasks(); // Fetch paginated tasks for table
