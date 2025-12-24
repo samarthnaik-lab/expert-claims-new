@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Upload, FileText, LogOut, Phone, Shield, TrendingUp, Clock, CheckCircle, Mail, X, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageCircle, Upload, FileText, LogOut, Phone, Shield, TrendingUp, Clock, CheckCircle, Mail, X, Search, Filter, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { AuthService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
 import { SessionExpiry } from '@/components/SessionExpiry';
@@ -26,6 +26,7 @@ const CustomerPortal = () => {
   const [loading, setLoading] = useState(true);
   const [customerClaims, setCustomerClaims] = useState<any[]>([]);
   const [caseData, setCaseData] = useState([]);
+  const [allCasesForCounts, setAllCasesForCounts] = useState<any[]>([]); // All cases for accurate card counts
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -409,11 +410,11 @@ const CustomerPortal = () => {
                      summary?.approvedCounts ||
                      summary?.approved_counts ||
                      0,
-            rejected: summary?.rejected || 
-                     summary?.rejectedCounts || 
-                     summary?.rejected_counts ||
-                     summary?.cancelledCounts ||
-                     summary?.cancelled_counts ||
+            pending: summary?.pending || 
+                     summary?.pendingCounts || 
+                     summary?.pending_counts ||
+                     summary?.waitingCounts ||
+                     summary?.waiting_counts ||
                      0
           };
           
@@ -451,6 +452,69 @@ const CustomerPortal = () => {
     fetchDashboardData();
   }, []);
 
+  // Fetch all cases for accurate card counts (not paginated)
+  useEffect(() => {
+    const fetchAllCasesForCounts = async () => {
+      try {
+        const userId = await getUserId();
+        
+        if (!userId) {
+          return;
+        }
+
+        // Get session_id and jwt_token from localStorage
+        const sessionStr = localStorage.getItem('expertclaims_session');
+        let sessionId = '';
+        let jwtToken = '';
+        if (sessionStr) {
+          try {
+            const session = JSON.parse(sessionStr);
+            sessionId = session.sessionId || '';
+            jwtToken = session.jwtToken || '';
+          } catch (error) {
+            console.error('Error parsing session:', error);
+          }
+        }
+
+        // Fetch all cases with a large page size to get accurate counts
+        const formData = new FormData();
+        formData.append('user_id', userId.toString());
+        formData.append('page', '1');
+        formData.append('size', '1000'); // Large size to get all cases
+
+        const apiUrl = buildApiUrl('customer/customer-case');
+        const response = await fetch(
+          apiUrl,
+          {
+            method: 'POST',
+            headers: {
+              'accept': '*/*',
+              'accept-language': 'en-US,en;q=0.9',
+              'accept-profile': 'expc',
+              'content-profile': 'expc',
+              'session_id': sessionId,
+              'jwt_token': jwtToken,
+              ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
+            },
+            body: formData,
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const allCases = Array.isArray(data) ? data : (data?.data || data?.cases || []);
+          setAllCasesForCounts(allCases);
+          console.log('✅ Fetched all cases for card counts:', allCases.length);
+        } else {
+          console.error('❌ Failed to fetch all cases for counts:', response.status);
+        }
+      } catch (error) {
+        console.error('Error fetching all cases for counts:', error);
+      }
+    };
+
+    fetchAllCasesForCounts();
+  }, []);
 
   useEffect(() => {
     const fetchCustomerCase = async (limit: number = 10, page: number = 1) => {
@@ -571,13 +635,91 @@ const CustomerPortal = () => {
 
   
 
-  // Get customer stats from API data or fallback to default values
-  const customerStats = dashboardData?.summary || {
-    totalClaims: 0,
-    underReview: 0,
-    approved: 0,
-    rejected: 0
-  };
+  // Calculate customer stats from actual table data (allCasesForCounts)
+  const customerStats = React.useMemo(() => {
+    const allCases = Array.isArray(allCasesForCounts) ? allCasesForCounts : [];
+    
+    // Helper function to normalize status
+    const normalizeStatus = (status: string): string => {
+      if (!status) return '';
+      return status.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[_-]/g, ' ');
+    };
+
+    // Count cases by status category
+    let inProgress = 0;
+    let approved = 0;
+    let pending = 0;
+    const totalClaims = allCases.length;
+
+    allCases.forEach(claim => {
+      const status = normalizeStatus(claim.ticket_stage || '');
+      
+      // Pending: includes "under process", "payment pending", "partner payment pending", etc.
+      if (
+        status.includes('under process') ||
+        status.includes('payment pending') ||
+        status.includes('partner payment pending') ||
+        status.includes('agreement pending') ||
+        status === 'pending'
+      ) {
+        pending++;
+      }
+      // In Progress: includes other active/processing statuses (not pending)
+      else if (
+        status.includes('in progress') ||
+        status.includes('under review') ||
+        status.includes('processing') ||
+        status.includes('review') ||
+        status.includes('evaluation') ||
+        status.includes('evaluated') ||
+        status.includes('litigation') ||
+        status.includes('arbitration') ||
+        status.includes('analysis') ||
+        status === 'open' ||
+        status === 'new' ||
+        (status.includes('under') && !status.includes('process') && !status.includes('done'))
+      ) {
+        inProgress++;
+      }
+      // Approved/Completed: includes all completed/resolved statuses
+      else if (
+        status.includes('completed') ||
+        status.includes('resolved') ||
+        status.includes('closed') ||
+        status.includes('approved') ||
+        status.includes('paid') ||
+        status.includes('done') ||
+        status.includes('partner payment done') ||
+        status.includes('payment done') ||
+        status.includes('1st instalment paid') ||
+        status.includes('instalment paid')
+      ) {
+        approved++;
+      }
+      // Default: if status doesn't match any category, count as in progress
+      else if (status) {
+        inProgress++;
+      }
+    });
+
+    console.log('📊 Calculated customer stats from table data:', {
+      totalClaims,
+      inProgress,
+      approved,
+      pending,
+      allCasesCount: allCases.length
+    });
+
+    // Merge with API data if available, but prioritize calculated values
+    const apiStats = dashboardData?.summary || {};
+    
+    return {
+      totalClaims: totalClaims > 0 ? totalClaims : (apiStats.totalClaims || 0),
+      underReview: inProgress > 0 ? inProgress : (apiStats.underReview || 0),
+      approved: approved > 0 ? approved : (apiStats.approved || 0),
+      pending: pending > 0 ? pending : (apiStats.pending || 0)
+    };
+  }, [allCasesForCounts, dashboardData]);
 
   // Get claims from API data or fallback to mock data
   const customerClaimsData = dashboardData?.claims || [];
@@ -753,15 +895,15 @@ const CustomerPortal = () => {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-none shadow-xl card-hover bg-gradient-to-br from-white to-red-50/50 backdrop-blur-sm">
+          <Card className="border-none shadow-xl card-hover bg-gradient-to-br from-white to-orange-50/50 backdrop-blur-sm">
             <CardContent className="p-6 text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-red-400/10 to-red-600/10 rounded-full -translate-y-8 translate-x-8"></div>
+              <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-orange-400/10 to-orange-600/10 rounded-full -translate-y-8 translate-x-8"></div>
               <div className="relative z-10">
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-red-400 to-red-600 rounded-xl mb-3 shadow-lg">
-                  <FileText className="h-6 w-6 text-white" />
+                <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl mb-3 shadow-lg">
+                  <AlertCircle className="h-6 w-6 text-white" />
                 </div>
-                <div className="text-2xl font-bold text-red-600">{customerStats.rejected}</div>
-                <div className="text-sm text-gray-600 font-medium">Rejected</div>
+                <div className="text-2xl font-bold text-orange-600">{customerStats.pending}</div>
+                <div className="text-sm text-gray-600 font-medium">Pending</div>
               </div>
             </CardContent>
           </Card>

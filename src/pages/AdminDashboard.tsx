@@ -684,10 +684,8 @@ const AdminDashboard = () => {
         method: 'GET',
         headers: {
           'Content-Profile': 'expc',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o',
           'Accept-Profile': 'expc',
           'session_id': sessionId || '17e7ab32-86ad-411e-8ee3-c4a09e6780f7',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o`,
           'Content-Type': 'application/json'
         }
       });
@@ -765,8 +763,6 @@ const AdminDashboard = () => {
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
           'accept-profile': 'expc',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
           'content-type': 'application/json',
           'jwt_token': jwtToken,
           'session_id': sessionId,
@@ -869,8 +865,6 @@ const AdminDashboard = () => {
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
           'accept-profile': 'expc',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
           'content-type': 'application/json',
           'jwt_token': jwtToken,
           'session_id': sessionId,
@@ -1073,8 +1067,6 @@ const AdminDashboard = () => {
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
           'accept-profile': 'expc',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
           'content-type': 'application/json',
           'jwt_token': jwtToken || 'token_1765952455523_ukhols79v',
           'session_id': sessionId || 'sess_1765952455523_cceyku19o',
@@ -1164,8 +1156,6 @@ const AdminDashboard = () => {
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
           'accept-profile': 'expc',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
           'content-type': 'application/json',
           'jwt_token': jwtToken || 'token_1765952455523_ukhols79v',
           'session_id': sessionId || 'sess_1765952455523_cceyku19o',
@@ -1671,7 +1661,6 @@ Created Time: ${report.created_time}
       sessionId = sessionId || 'c6c38c28-12e6-4b1b-bab6-40ae19b875f3';
       jwtToken = jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiAiLCJwYXNzd29yZCI6IiIsImlhdCI6MTc2MjQwODE3Nn0.vig73fEH3VtORKHtBPy0yLVp6dZdf9TglaXWhfpWnIU';
       
-      const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
       
       // Build URL with query parameters
       const params = new URLSearchParams({
@@ -1692,8 +1681,6 @@ Created Time: ${report.created_time}
             'accept': '*/*',
             'accept-language': 'en-US,en;q=0.9',
             'accept-profile': 'srtms',
-            'apikey': API_KEY,
-            'authorization': `Bearer ${API_KEY}`,
             'content-type': 'application/json',
             'jwt_token': jwtToken,
             'prefer': 'count=exact',
@@ -1997,7 +1984,6 @@ Created Time: ${report.created_time}
         headers: {
           'accept': 'application/json',
           'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-          'apikey': API_KEY,
           'authorization': `Bearer ${API_KEY}`,
           'content-type': 'application/json',
           'session_id': sessionId,
@@ -2047,7 +2033,6 @@ Created Time: ${report.created_time}
         headers: {
           'accept': 'application/json',
           'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-          'apikey': API_KEY,
           'authorization': `Bearer ${API_KEY}`,
           'content-type': 'application/json',
           'session_id': sessionId,

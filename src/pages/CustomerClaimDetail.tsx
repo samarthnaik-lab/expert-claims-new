@@ -1012,7 +1012,7 @@ const CustomerClaimDetail = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Last Updated</label>
-                  <p className="text-lg font-semibold text-gray-900">{claim.last_updated ? formatDateDDMMYYYY(claim.last_updated) : 'N/A'}</p>
+                  <p className="text-lg font-semibold text-gray-900">{claim.updated_time ? formatDateDDMMYYYY(claim.updated_time) : (claim.last_updated ? formatDateDDMMYYYY(claim.last_updated) : 'N/A')}</p>
                 </div>
               </CardContent>
             </Card>

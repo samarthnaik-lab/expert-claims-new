@@ -645,19 +645,19 @@ const PartnerDashboard = () => {
         }
       }
       
+      // Get session string for both partnerId fallback and JWT token
+      const sessionStr = localStorage.getItem("expertclaims_session");
+      
       // Last resort: try session userId (but this is user_id, not partner_id)
-      if (!partnerId) {
-        const sessionStr = localStorage.getItem("expertclaims_session");
-        if (sessionStr) {
-          try {
-            const session = JSON.parse(sessionStr);
-            if (session.userId) {
-              partnerId = session.userId.toString();
-              console.log("Warning: Using session.userId as fallback (this may be user_id, not partner_id):", partnerId);
-            }
-          } catch (error) {
-            console.error("Error parsing session:", error);
+      if (!partnerId && sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          if (session.userId) {
+            partnerId = session.userId.toString();
+            console.log("Warning: Using session.userId as fallback (this may be user_id, not partner_id):", partnerId);
           }
+        } catch (error) {
+          console.error("Error parsing session:", error);
         }
       }
       
@@ -1775,21 +1775,6 @@ const PartnerDashboard = () => {
                       </thead>
                       <tbody>
                         {displayReferrals.map((referral) => {
-                          // Get partnerId from session for navigation
-                          const getPartnerIdForNav = () => {
-                            const sessionStr = localStorage.getItem("expertclaims_session");
-                            if (sessionStr) {
-                              try {
-                                const session = JSON.parse(sessionStr);
-                                return session.userId || "";
-                              } catch (error) {
-                                console.error("Error parsing session:", error);
-                              }
-                            }
-                            return "";
-                          };
-                          const navPartnerId = getPartnerIdForNav();
-                          
                           return (
                           <tr
                             key={referral.case_id}
@@ -1798,9 +1783,7 @@ const PartnerDashboard = () => {
                             <td className="p-4">
                               <button
                                 onClick={() =>
-                                  navigate(
-                                      `/partner-claim/${referral.case_id}${navPartnerId ? `/${navPartnerId}` : ''}`
-                                  )
+                                  navigate(`/partner-claim/${referral.case_id}`)
                                 }
                                 className="font-mono text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors duration-200"
                               >
