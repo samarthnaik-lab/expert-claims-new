@@ -247,7 +247,7 @@ export class AuthService {
         };
 
         console.log('Calling final_login with OTP (skipping credential_validation)...');
-        const finalLoginResponse = await fetch('http://localhost:3000/api/login', {
+        const finalLoginResponse = await fetch(buildApiUrl('api/login'), {
           method: 'POST',
           headers: {
             'accept': 'application/json',
@@ -328,7 +328,7 @@ export class AuthService {
         // Call customer session details API only for customer role
         if (role === 'customer') {
           console.log('Fetching customer session details...');
-          const customerSessionResponse = await fetch(`http://localhost:3000/customer/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobile || '')}`, {
+          const customerSessionResponse = await fetch(`${buildApiUrl('customer/getcustomersessiondetails')}?mobile_number=${encodeURIComponent(mobile || '')}`, {
             method: 'GET',
             headers: {
               'accept': 'application/json',
@@ -396,7 +396,7 @@ export class AuthService {
       };
 
       console.log('Step 1: Calling credential_validation...');
-      const validationResponse = await fetch('http://localhost:3000/api/login', {
+      const validationResponse = await fetch(buildApiUrl('api/login'), {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -497,7 +497,7 @@ export class AuthService {
       };
 
       console.log('Step 1: Calling credential_validation...');
-      const validationResponse = await fetch('http://localhost:3000/api/login', {
+      const validationResponse = await fetch(buildApiUrl('api/login'), {
         method: 'POST',
         headers: {
           'accept': 'application/json',

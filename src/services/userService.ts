@@ -179,12 +179,9 @@ export interface DeleteUserResponse {
 }
 
 export class UserService {
-  private static readonly API_URL = 'http://localhost:3000/admin/getusers';
-  private static readonly DELETE_API_URL = 'http://localhost:3000/admin/deleteuser';
-
   static async getUsers(sessionId: string, jwtToken: string, page: number = 1, size: number = 10): Promise<AdminUser[]> {
     try {
-      const url = `${this.API_URL}?page=${page}&size=${size}`;
+      const url = `${buildApiUrl('admin/getusers')}?page=${page}&size=${size}`;
       console.log('Fetching users with URL:', url);
       
       const response = await fetch(url, {
@@ -325,7 +322,7 @@ export class UserService {
 
   static async deleteUser(userId: string, sessionId: string, jwtToken: string): Promise<DeleteUserResponse> {
     try {
-      const url = `${this.DELETE_API_URL}?user_id=${userId}`;
+      const url = `${buildApiUrl('admin/deleteuser')}?user_id=${userId}`;
       console.log('Deleting user with URL:', url);
       
       const response = await fetch(url, {
@@ -374,7 +371,7 @@ export class UserService {
   // Get a specific user by ID for editing
   static async getUserById(userId: string, sessionId: string, jwtToken: string): Promise<NewUserData | null> {
     try {
-      const response = await fetch(this.API_URL, {
+      const response = await fetch(buildApiUrl('admin/getusers'), {
         method: 'GET',
         headers: {
           'accept': '*/*',
