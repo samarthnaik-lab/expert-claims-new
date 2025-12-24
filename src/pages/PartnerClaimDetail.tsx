@@ -28,14 +28,28 @@ const PartnerClaimDetail = () => {
     
     setLoading(true);
     try {
-      // Use mock session data for now - replace with real auth when available
-      const sessionId = 'a9bfe0a4-1e6c-4c69-860f-ec50846a7da6';
-      const jwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsInBhc3N3b3JkIjoiIiwiaWF0IjoxNzU2NTQ3MjAzfQ.rW9zIfo1-B_Wu2bfJ8cPai0DGZLfaapRE7kLt2dkCBc';
-            const sessionStr = localStorage.getItem("expertclaims_session");
+      // Get session from localStorage
+      const sessionStr = localStorage.getItem("expertclaims_session");
+      let sessionId = '';
+      let jwtToken = '';
 
-  const session = JSON.parse(sessionStr);
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
 
-  let partnerId = session.userId || "1";
+      if (!sessionId || !jwtToken) {
+        console.error('Session not available');
+        setLoading(false);
+        return;
+      }
+
+      let partnerId = sessionStr ? JSON.parse(sessionStr).userId || "1" : "1";
       const claimData = await ClaimService.getClaimDetails(case_id, sessionId, jwtToken, partnerId);
       if (claimData) {
         setClaim(claimData);

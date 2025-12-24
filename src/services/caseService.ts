@@ -103,10 +103,13 @@ import { buildApiUrl } from '@/config/api';
 
 export class CaseService {
   private static readonly API_URL = buildApiUrl('support/everything-cases');
-  private static readonly API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
 
   static async getCaseDetails(caseId: string, sessionId: string, jwtToken: string): Promise<CaseDetails> {
     try {
+      if (!sessionId || !jwtToken) {
+        throw new Error('Session not available. Please log in.');
+      }
+
       console.log('Fetching case details for case ID:', caseId);
       
       const response = await fetch(this.API_URL, {
@@ -115,10 +118,9 @@ export class CaseService {
           'accept': '*/*',
           'accept-language': 'en-US,en;q=0.9',
           'accept-profile': 'srtms',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
-          'authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws`,
           'content-type': 'application/json',
-          'jwt_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjMiLCJpYXQiOjE3NTY0NTExODR9.Ijk3qvShuzbNxKJLfwK_zt-lZdT6Uwe1jI5sruMac0k',
+          'session_id': sessionId,
+          'jwt_token': jwtToken,
           'origin': 'http://localhost:8080',
           'priority': 'u=1, i',
           'referer': 'http://localhost:8080/',
@@ -128,11 +130,11 @@ export class CaseService {
           'sec-fetch-dest': 'empty',
           'sec-fetch-mode': 'cors',
           'sec-fetch-site': 'cross-site',
-          'session_id': 'fddc661a-dfb4-4896-b7b1-448e1adf7bc2',
           'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
           'Range': '0-100',
-          'Prefer': 'count=exact'
-      },
+          'Prefer': 'count=exact',
+          ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
+        },
         body: JSON.stringify({
           case_id: caseId
         })
