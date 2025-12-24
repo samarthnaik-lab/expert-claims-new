@@ -17,3 +17,19 @@ export const buildApiUrl = (endpoint: string): string => {
   return `${API_BASE_URL}/${cleanEndpoint}`;
 };
 
+/**
+ * Get API key from environment variables or use fallback
+ * Priority: VITE_SUPABASE_SERVICE_ROLE_KEY > VITE_API_KEY > fallback
+ */
+export const getApiKey = (): string => {
+  // Try to get from environment variables first
+  const envApiKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || import.meta.env.VITE_API_KEY;
+  
+  if (envApiKey) {
+    return envApiKey;
+  }
+  
+  // Fallback to default service role key (should be moved to environment variables in production)
+  return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
+};
+

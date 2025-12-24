@@ -231,18 +231,22 @@ const CustomerClaimDetail = () => {
 
   useEffect(() => {
     const fetchClaimDetails = async () => {
+      console.log('🔄 fetchClaimDetails called with case_id:', case_id);
       try {
         setLoading(true);
         
         if (!case_id) {
+          console.error('❌ No case_id provided - API call will not be made');
           setLoading(false);
           return;
         }
 
         const userId = await getUserId();
+        console.log('📦 UserId from getUserId:', userId);
         
         if (!userId) {
-          console.error('No userid found');
+          console.error('❌ No userid found - API call will not be made');
+          console.log('Available localStorage keys:', Object.keys(localStorage).filter(key => key.includes('expert') || key.includes('user')));
           toast({
             title: "Error",
             description: "User ID not found. Please ensure you are logged in.",
@@ -273,16 +277,22 @@ const CustomerClaimDetail = () => {
         let hasMore = true;
 
         console.log('Looking for case_id:', case_id);
-
+  
+        const apiUrl = buildApiUrl('customer/customer-case');
+        console.log('Calling Customer Case API:', apiUrl);
+        console.log('Session data:', { sessionId: sessionId ? 'present' : 'missing', jwtToken: jwtToken ? 'present' : 'missing' });
+  
         while (hasMore && !foundClaim) {
           // Build FormData payload with pagination
           const formData = new FormData();
           formData.append('user_id', userId.toString());
           formData.append('page', page.toString());
           formData.append('size', pageSize.toString());
-
+  
+          console.log(`Fetching page ${page} with user_id: ${userId} to find case_id: ${case_id}`);
+  
         const response = await fetch(
-          buildApiUrl('customer/customer-case'),
+          apiUrl,
           {
             method: 'POST',
             headers: {
@@ -296,7 +306,9 @@ const CustomerClaimDetail = () => {
             body: formData,
           }
         );
-
+  
+          console.log(`Page ${page} - API Response Status:`, response.status, response.statusText);
+  
           if (response.ok) {
             const data = await response.json();
             const caseArray = Array.isArray(data) ? data : (data?.data || data?.cases || []);
@@ -317,7 +329,12 @@ const CustomerClaimDetail = () => {
               hasMore = false;
             }
           } else {
-            console.error('Failed to fetch claim details from page', page);
+            const errorText = await response.text();
+            console.error('Failed to fetch claim details from page', page, {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorText
+            });
             hasMore = false;
           }
         }
@@ -475,14 +492,12 @@ const CustomerClaimDetail = () => {
         return;
       }
 
-      // Call the n8n webhook API to get document view URL
-      console.log('Calling n8n webhook for document view...');
-      console.log('Document ID:', documentId);
+      // Call the support/view API to get document
+      console.log('Calling support/view API for document ID:', documentId);
       
       const requestBody = {
         document_id: documentId
       };
-      console.log('Request body:', requestBody);
       
       const response = await fetch(buildApiUrl('support/view'), {
         method: 'POST',
@@ -498,10 +513,9 @@ const CustomerClaimDetail = () => {
       });
 
       console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
       
       if (!response.ok) {
-        console.error('Failed to call view webhook:', response.status, response.statusText);
+        console.error('Failed to fetch document:', response.status, response.statusText);
         
         // Try to get error details for logging
         let userFriendlyMessage = "Unable to view document. Please try again.";
@@ -535,10 +549,11 @@ const CustomerClaimDetail = () => {
           description: userFriendlyMessage,
           variant: "destructive",
         });
+        setViewingDocumentId(null);
         return;
       }
 
-      // Since the API returns binary image data (as shown in Postman), handle it directly
+      // Process the binary document data
       console.log('Response received, processing binary data...');
       
       try {
@@ -585,6 +600,11 @@ const CustomerClaimDetail = () => {
             setDocumentUrl(textResponse);
             setDocumentType('url');
             setShowDocumentModal(true);
+            
+            toast({
+              title: "Success",
+              description: "Document opened successfully",
+            });
           } else {
             throw new Error('Response is not a URL');
           }
@@ -595,6 +615,7 @@ const CustomerClaimDetail = () => {
             description: "Failed to process document response",
             variant: "destructive",
           });
+          setViewingDocumentId(null);
         }
       }
     } catch (error) {
@@ -604,7 +625,6 @@ const CustomerClaimDetail = () => {
         description: "Failed to view document",
         variant: "destructive",
       });
-    } finally {
       setViewingDocumentId(null);
     }
   };
@@ -784,11 +804,7 @@ const CustomerClaimDetail = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Start Date</label>
-                    <p className="text-lg font-semibold text-gray-900">{claim.start_date ? formatDateDDMMYYYY(claim.start_date) : 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Assign Date</label>
-                    <p className="text-lg font-semibold text-gray-900">{claim.due_date ? new Date(claim.due_date).toLocaleDateString() : 'N/A'}</p>
+                    <p className="text-lg font-semibold text-gray-900">{claim.created_time ? formatDateDDMMYYYY(claim.created_time) : (claim.start_date ? formatDateDDMMYYYY(claim.start_date) : 'N/A')}</p>
                   </div>
                 </div>
                 <Separator />
@@ -992,7 +1008,7 @@ const CustomerClaimDetail = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Start Date</label>
-                  <p className="text-lg font-semibold text-gray-900">{claim.start_date ? formatDateDDMMYYYY(claim.start_date) : 'N/A'}</p>
+                  <p className="text-lg font-semibold text-gray-900">{claim.created_time ? formatDateDDMMYYYY(claim.created_time) : (claim.start_date ? formatDateDDMMYYYY(claim.start_date) : 'N/A')}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Last Updated</label>

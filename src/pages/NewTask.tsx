@@ -2365,6 +2365,21 @@ const NewTask = () => {
           description: "Customer selection is required",
           variant: "destructive",
         });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Validate age if creating a new customer
+      const selectedCustomer = customers.find(
+        (customer) => customer.customer_id.toString() === formData.customer_id
+      );
+      if (!selectedCustomer && (!newCustomer.age || !newCustomer.age.trim())) {
+        toast({
+          title: "Error",
+          description: "Age is required for new customer",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
         return;
       }
 
@@ -2374,6 +2389,7 @@ const NewTask = () => {
           description: "User not authenticated",
           variant: "destructive",
         });
+        setIsSubmitting(false);
         return;
       }
 
@@ -2664,8 +2680,8 @@ const NewTask = () => {
     <div className="min-h-screen bg-primary-500 py-6 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <Card className="shadow-lg rounded-lg bg-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
-            <CardTitle className="text-2xl font-bold">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 pt-6">
+            <CardTitle className="text-xl sm:text-2xl font-bold">
               Create New Task
             </CardTitle>
             <Button
@@ -2680,33 +2696,32 @@ const NewTask = () => {
                   navigate("/employee-dashboard");
                 }
               }}
-              className="bg-white border-2 border-gray-300 hover:border-primary-500 hover:bg-gray-50 text-black"
+              className="bg-white border-2 border-gray-300 hover:border-primary-500 hover:bg-gray-50 text-black w-full sm:w-auto"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Dashboard
             </Button>
           </CardHeader>
-          <CardDescription className="px-6 pb-4 text-gray-500">
+          <CardDescription className="px-4 sm:px-6 pb-4 text-gray-500">
             Fill in the details below to create a new task.
           </CardDescription>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 px-4 sm:px-6">
             {/* Basic Information Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold border-b pb-2">
                 Basic Information
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="summary">Task Summary *</Label>
-                  <Input
-                    type="text"
-                    id="task_summary"
-                    name="task_summary"
-                    value={formData.task_summary}
-                    onChange={handleInputChange}
-                    placeholder="Enter a brief summary of the task"
-                  />
-                </div>
+              <div>
+                <Label htmlFor="summary">Task Summary *</Label>
+                <Input
+                  type="text"
+                  id="task_summary"
+                  name="task_summary"
+                  value={formData.task_summary}
+                  onChange={handleInputChange}
+                  placeholder="Enter a brief summary of the task"
+                  className="w-full"
+                />
               </div>
               <div>
                 <Label htmlFor="description">Description</Label>
@@ -3383,7 +3398,7 @@ const NewTask = () => {
                 </div>
                 <div>
                   <Label>Customer</Label>
-                  <div className="flex items-center space-x-3">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     {!hideCustomerDropdown ? (
                       <Popover open={customerComboboxOpen} onOpenChange={setCustomerComboboxOpen}>
                         <PopoverTrigger asChild>
@@ -3391,7 +3406,7 @@ const NewTask = () => {
                             variant="outline"
                             role="combobox"
                             aria-expanded={customerComboboxOpen}
-                            className="w-full justify-between"
+                            className="w-full sm:flex-1 justify-between"
                             disabled={isLoadingCustomers}
                           >
                             {formData.customer_id
@@ -3471,7 +3486,7 @@ const NewTask = () => {
                         <Button
                           type="button"
                           variant="outline"
-                          className="bg-white border-2 border-gray-300 hover:border-primary-500 hover:bg-gray-50 text-black"
+                          className="bg-white border-2 border-gray-300 hover:border-primary-500 hover:bg-gray-50 text-black w-full sm:w-auto whitespace-nowrap"
                         >
                           Create New Customer
                         </Button>
@@ -3596,8 +3611,11 @@ const NewTask = () => {
                                 </Select>
                               </div>
                               <div>
-                                <Label>Age</Label>
+                                <Label>Age *</Label>
                                 <Input
+                                  type="number"
+                                  min="0"
+                                  max="100"
                                   value={newCustomer.age}
                                   onChange={(e) =>
                                     setNewCustomer({
@@ -3606,6 +3624,7 @@ const NewTask = () => {
                                     })
                                   }
                                   placeholder="Enter age"
+                                  required
                                 />
                               </div>
                               <div>
@@ -4072,7 +4091,7 @@ const NewTask = () => {
                       handleSelectChange("priority", value)
                     }
                   >
-                    <SelectTrigger className="w-full min-w-[300px]">
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select priority" />
                     </SelectTrigger>
                     <SelectContent>
@@ -4091,7 +4110,7 @@ const NewTask = () => {
                       handleSelectChange("ticket_stage", value)
                     }
                   >
-                    <SelectTrigger className="w-full min-w-[300px]">
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select stage" />
                     </SelectTrigger>
                     <SelectContent>
@@ -4135,80 +4154,80 @@ const NewTask = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Assign Date</Label>
-                  <Popover open={assignDateCalendarOpen} onOpenChange={setAssignDateCalendarOpen}>
-                    <PopoverTrigger asChild>
-                      <div className="relative w-full">
-                        <Input
-                          type="text"
-                          readOnly
-                          value={formData.due_date ? (() => {
-                            try {
-                              const dateStr = formData.due_date;
-                              if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                                const [year, month, day] = dateStr.split('-').map(Number);
-                                const date = new Date(year, month - 1, day);
-                                if (!isNaN(date.getTime())) {
-                                  const dayStr = String(date.getDate()).padStart(2, '0');
-                                  const monthStr = String(date.getMonth() + 1).padStart(2, '0');
-                                  const yearStr = date.getFullYear();
-                                  return `${dayStr}/${monthStr}/${yearStr}`;
-                                }
-                              }
-                              return '';
-                            } catch {
-                              return '';
-                            }
-                          })() : ''}
-                          placeholder="DD/MM/YYYY"
-                          onClick={() => setAssignDateCalendarOpen(true)}
-                          className="w-full cursor-pointer pr-10 h-10 text-sm"
-                        />
-                        <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                      </div>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.due_date ? (() => {
+              </div>
+              <div>
+                <Label>Assign Date *</Label>
+                <Popover open={assignDateCalendarOpen} onOpenChange={setAssignDateCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <div className="relative w-full">
+                      <Input
+                        type="text"
+                        readOnly
+                        value={formData.due_date ? (() => {
                           try {
                             const dateStr = formData.due_date;
                             if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
                               const [year, month, day] = dateStr.split('-').map(Number);
                               const date = new Date(year, month - 1, day);
                               if (!isNaN(date.getTime())) {
-                                return date;
+                                const dayStr = String(date.getDate()).padStart(2, '0');
+                                const monthStr = String(date.getMonth() + 1).padStart(2, '0');
+                                const yearStr = date.getFullYear();
+                                return `${dayStr}/${monthStr}/${yearStr}`;
                               }
                             }
-                            return undefined;
+                            return '';
                           } catch {
-                            return undefined;
+                            return '';
                           }
-                        })() : undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            const year = date.getFullYear();
-                            const month = String(date.getMonth() + 1).padStart(2, '0');
-                            const day = String(date.getDate()).padStart(2, '0');
-                            const formattedDate = `${year}-${month}-${day}`;
-                            setFormData((prev) => ({
-                              ...prev,
-                              due_date: formattedDate,
-                            }));
-                            setAssignDateCalendarOpen(false);
-                          }
-                        }}
-                        disabled={(date) => {
-                          const twoMonthsAgo = new Date();
-                          twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-                          return date < twoMonthsAgo;
-                        }}
-                        initialFocus
+                        })() : ''}
+                        placeholder="DD/MM/YYYY"
+                        onClick={() => setAssignDateCalendarOpen(true)}
+                        className="w-full cursor-pointer pr-10 h-10 text-sm"
                       />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                      <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.due_date ? (() => {
+                        try {
+                          const dateStr = formData.due_date;
+                          if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                            const [year, month, day] = dateStr.split('-').map(Number);
+                            const date = new Date(year, month - 1, day);
+                            if (!isNaN(date.getTime())) {
+                              return date;
+                            }
+                          }
+                          return undefined;
+                        } catch {
+                          return undefined;
+                        }
+                      })() : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const year = date.getFullYear();
+                          const month = String(date.getMonth() + 1).padStart(2, '0');
+                          const day = String(date.getDate()).padStart(2, '0');
+                          const formattedDate = `${year}-${month}-${day}`;
+                          setFormData((prev) => ({
+                            ...prev,
+                            due_date: formattedDate,
+                          }));
+                          setAssignDateCalendarOpen(false);
+                        }
+                      }}
+                      disabled={(date) => {
+                        const twoMonthsAgo = new Date();
+                        twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+                        return date < twoMonthsAgo;
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
@@ -4372,7 +4391,7 @@ const NewTask = () => {
                     <div className="space-y-3 p-4 border rounded-lg bg-white">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <Label>Name *</Label>
+                          <Label>Name </Label>
                           <Input
                             placeholder="John Stakeholder"
                             value={newStakeholder.name}
@@ -4385,7 +4404,7 @@ const NewTask = () => {
                           />
                         </div>
                         <div>
-                          <Label>Contact Email *</Label>
+                          <Label>Contact Email </Label>
                           <Input
                             type="email"
                             placeholder="john@example.com"
@@ -4401,7 +4420,7 @@ const NewTask = () => {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <Label>Role *</Label>
+                          <Label>Role </Label>
                           <Input
                             type="text"
                             value={newStakeholder.role}
@@ -4539,7 +4558,38 @@ const NewTask = () => {
                                 {payment.phase_name}
                               </p>
                               <p className="text-sm text-gray-600">
-                                Due: {payment.due_date}
+                                Payment Date: {(() => {
+                                  const dateStr = payment.payment_date || payment.due_date;
+                                  if (!dateStr) return 'Not set';
+                                  try {
+                                    // Handle YYYY-MM-DD format
+                                    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                      const [year, month, day] = dateStr.split('-');
+                                      return `${day}-${month}-${year}`;
+                                    }
+                                    // Handle date with time
+                                    if (dateStr.includes('T')) {
+                                      const date = new Date(dateStr);
+                                      if (!isNaN(date.getTime())) {
+                                        const day = String(date.getDate()).padStart(2, '0');
+                                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                                        const year = String(date.getFullYear());
+                                        return `${day}-${month}-${year}`;
+                                      }
+                                    }
+                                    // Try parsing as date
+                                    const date = new Date(dateStr);
+                                    if (!isNaN(date.getTime())) {
+                                      const day = String(date.getDate()).padStart(2, '0');
+                                      const month = String(date.getMonth() + 1).padStart(2, '0');
+                                      const year = String(date.getFullYear());
+                                      return `${day}-${month}-${year}`;
+                                    }
+                                    return dateStr;
+                                  } catch {
+                                    return dateStr;
+                                  }
+                                })()}
                               </p>
                             </div>
                             <div>
