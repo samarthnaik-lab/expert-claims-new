@@ -59,9 +59,10 @@ const EmployeeDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { logout, getAuthHeaders } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
+  const isUpdatingFromSelect = React.useRef(false);
   const [taskPageLimit, setTaskPageLimit] = useState('10');
   const [taskCurrentPage, setTaskCurrentPage] = useState(1);
   const [dashboardStats, setDashboardStats] = useState({
@@ -549,20 +550,17 @@ const EmployeeDashboard = () => {
     }
   }, [searchParams]);
 
-  // Update status filter when URL parameters change
+  // Sync status filter from URL on mount or when URL changes externally (not from user selection)
   useEffect(() => {
-    const newStatusFilter = searchParams.get('status') || 'all';
-    setStatusFilter(newStatusFilter);
+    if (!isUpdatingFromSelect.current) {
+      const urlStatus = searchParams.get('status') || 'all';
+      setStatusFilter(urlStatus);
+    }
+    isUpdatingFromSelect.current = false;
   }, [searchParams]);
 
-  // Auto-switch to tasks tab when URL contains ?tab=tasks
-  useEffect(() => {
-    const tabParam = searchParams.get('tab');
-    if (tabParam === 'tasks') {
-      // Force the tasks tab to be active by updating the URL
-      navigate('/employee-dashboard?tab=tasks', { replace: true });
-    }
-  }, [searchParams, navigate]);
+  // Note: Removed auto-navigation useEffect that was interfering with status filter
+  // The tab switching is now handled by the Tabs component directly
 
   // Refetch tasks when pagination parameters change
   useEffect(() => {
@@ -1628,8 +1626,18 @@ const EmployeeDashboard = () => {
                     <Select 
                       value={statusFilter} 
                       onValueChange={(value) => {
+                        // Mark that we're updating from user selection
+                        isUpdatingFromSelect.current = true;
+                        // Update state first
                         setStatusFilter(value);
-                        navigate(`/employee-dashboard?tab=tasks&status=${value}`);
+                        // Then update URL to reflect the change (for bookmarking/sharing)
+                        const newParams = new URLSearchParams(searchParams);
+                        if (value === 'all') {
+                          newParams.delete('status');
+                        } else {
+                          newParams.set('status', value);
+                        }
+                        setSearchParams(newParams, { replace: true });
                       }}
                     >
                       <SelectTrigger className="w-40 border-2 border-gray-200 rounded-xl focus:border-primary-500">
@@ -1674,8 +1682,12 @@ const EmployeeDashboard = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => {
+                          // Mark that we're updating from user selection
+                          isUpdatingFromSelect.current = true;
                           setStatusFilter('all');
-                          navigate('/employee-dashboard?tab=tasks');
+                          const newParams = new URLSearchParams(searchParams);
+                          newParams.delete('status');
+                          setSearchParams(newParams, { replace: true });
                         }}
                         className="border-2 border-gray-300 hover:border-primary-500 rounded-lg transition-all duration-300"
                       >

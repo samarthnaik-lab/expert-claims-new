@@ -11,7 +11,8 @@ import { MessageCircle, Upload, FileText, LogOut, Phone, Shield, TrendingUp, Clo
 import { AuthService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
 import { SessionExpiry } from '@/components/SessionExpiry';
-import { buildApiUrl, getApiKey } from '@/config/api';
+import { buildApiUrl } from '@/config/api';
+import { formatDateDDMMYYYY } from '@/lib/utils';
 
 const CustomerPortal = () => {
   const navigate = useNavigate();
@@ -492,8 +493,6 @@ const CustomerPortal = () => {
         console.log('Customer Case API Body:', { user_id: userId, page: page, size: limit });
         console.log('Session data:', { sessionId: sessionId ? 'present' : 'missing', jwtToken: jwtToken ? 'present' : 'missing' });
   
-        // Get API key dynamically
-        const apiKey = getApiKey();
         const apiUrl = buildApiUrl('customer/customer-case');
         console.log('Calling Customer Case API:', apiUrl);
   
@@ -597,15 +596,66 @@ const CustomerPortal = () => {
     }
   };
 
+  // Helper function to normalize status names for comparison
+  const normalizeStatus = (status: string): string => {
+    if (!status) return '';
+    return status.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[_-]/g, ' ');
+  };
+
+  // Helper function to check if status matches filter (handles variations)
+  const statusMatches = (claimStatus: string, filterValue: string): boolean => {
+    if (filterValue === 'all') return true;
+    if (!claimStatus) return false;
+    
+    const normalizedClaimStatus = normalizeStatus(claimStatus);
+    const normalizedFilter = normalizeStatus(filterValue);
+    
+    // Direct match
+    if (normalizedClaimStatus === normalizedFilter) return true;
+    
+    // Handle common variations and synonyms
+    const statusMappings: { [key: string]: string[] } = {
+      'in progress': ['in progress', 'under process', 'processing', 'inprocess', 'in-process', 'underprocess'],
+      'under review': ['under review', 'review', 'reviewing', 'underreview', 'under-review'],
+      'open': ['open', 'new', 'pending'],
+      'resolved': ['resolved', 'completed', 'done', 'finished'],
+      'closed': ['closed', 'completed', 'done'],
+      'agreement pending': ['agreement pending', 'agreement-pending', 'pending agreement', 'agreement']
+    };
+    
+    // Check if claim status matches any variation of the filter
+    if (statusMappings[normalizedFilter]) {
+      return statusMappings[normalizedFilter].some(variation => 
+        normalizedClaimStatus === variation || 
+        normalizedClaimStatus.includes(variation) || 
+        variation.includes(normalizedClaimStatus)
+      );
+    }
+    
+    // Fallback: check if normalized strings are similar (contains match)
+    return normalizedClaimStatus.includes(normalizedFilter) || normalizedFilter.includes(normalizedClaimStatus);
+  };
+
   // Filter claims based on search term and status filter
   const filteredClaims = (Array.isArray(caseData) ? caseData : []).filter(claim => {
     const matchesSearch = claim.case_id?.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
                          claim.case_summary?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          claim.case_types?.case_type_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          claim.assigned_agent?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || claim.ticket_stage?.toLowerCase() === statusFilter.toLowerCase();
+    const matchesStatus = statusMatches(claim.ticket_stage || '', statusFilter);
     return matchesSearch && matchesStatus;
   });
+
+  // Get unique statuses from the data for dynamic filter options
+  const uniqueStatuses = React.useMemo(() => {
+    const statusSet = new Set<string>();
+    (Array.isArray(caseData) ? caseData : []).forEach(claim => {
+      if (claim.ticket_stage) {
+        statusSet.add(claim.ticket_stage);
+      }
+    });
+    return Array.from(statusSet).sort();
+  }, [caseData]);
 
   // Pagination logic - use server-side pagination
   const displayClaims = filteredClaims;
@@ -778,9 +828,23 @@ const CustomerPortal = () => {
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="open">Open</SelectItem>
                     <SelectItem value="in progress">In Progress</SelectItem>
+                    <SelectItem value="under process">Under Process</SelectItem>
                     <SelectItem value="under review">Under Review</SelectItem>
+                    <SelectItem value="agreement pending">Agreement Pending</SelectItem>
                     <SelectItem value="resolved">Resolved</SelectItem>
                     <SelectItem value="closed">Closed</SelectItem>
+                    {/* Add unique statuses from data that aren't already in the list */}
+                    {uniqueStatuses
+                      .filter(status => {
+                        const normalized = normalizeStatus(status);
+                        const commonStatuses = ['all', 'open', 'in progress', 'under process', 'under review', 'agreement pending', 'resolved', 'closed'];
+                        return !commonStatuses.some(common => normalizeStatus(common) === normalized);
+                      })
+                      .map(status => (
+                        <SelectItem key={status} value={status.toLowerCase()}>
+                          {status}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 {(searchTerm || statusFilter !== 'all') && (
@@ -859,7 +923,7 @@ const CustomerPortal = () => {
                           {claim.ticket_stage || 'Unknown'}
                         </Badge>
                       </td>
-                      <td className="p-4 text-sm text-gray-600">{claim.created_time ? new Date(claim.created_time).toLocaleDateString() : 'N/A'}</td>
+                      <td className="p-4 text-sm text-gray-600">{formatDateDDMMYYYY(claim.created_time)}</td>
                       <td className="p-4">
                         <Button 
                           size="sm" 

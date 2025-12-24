@@ -3611,7 +3611,7 @@ const NewTask = () => {
                                 </Select>
                               </div>
                               <div>
-                                <Label>Age <span className="text-red-500">*</span></Label>
+                                <Label>Age *</Label>
                                 <Input
                                   type="number"
                                   min="0"
@@ -4391,7 +4391,7 @@ const NewTask = () => {
                     <div className="space-y-3 p-4 border rounded-lg bg-white">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <Label>Name *</Label>
+                          <Label>Name </Label>
                           <Input
                             placeholder="John Stakeholder"
                             value={newStakeholder.name}
@@ -4404,7 +4404,7 @@ const NewTask = () => {
                           />
                         </div>
                         <div>
-                          <Label>Contact Email *</Label>
+                          <Label>Contact Email </Label>
                           <Input
                             type="email"
                             placeholder="john@example.com"
@@ -4420,7 +4420,7 @@ const NewTask = () => {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <Label>Role *</Label>
+                          <Label>Role </Label>
                           <Input
                             type="text"
                             value={newStakeholder.role}
@@ -4558,7 +4558,38 @@ const NewTask = () => {
                                 {payment.phase_name}
                               </p>
                               <p className="text-sm text-gray-600">
-                                Due: {payment.due_date}
+                                Payment Date: {(() => {
+                                  const dateStr = payment.payment_date || payment.due_date;
+                                  if (!dateStr) return 'Not set';
+                                  try {
+                                    // Handle YYYY-MM-DD format
+                                    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                      const [year, month, day] = dateStr.split('-');
+                                      return `${day}-${month}-${year}`;
+                                    }
+                                    // Handle date with time
+                                    if (dateStr.includes('T')) {
+                                      const date = new Date(dateStr);
+                                      if (!isNaN(date.getTime())) {
+                                        const day = String(date.getDate()).padStart(2, '0');
+                                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                                        const year = String(date.getFullYear());
+                                        return `${day}-${month}-${year}`;
+                                      }
+                                    }
+                                    // Try parsing as date
+                                    const date = new Date(dateStr);
+                                    if (!isNaN(date.getTime())) {
+                                      const day = String(date.getDate()).padStart(2, '0');
+                                      const month = String(date.getMonth() + 1).padStart(2, '0');
+                                      const year = String(date.getFullYear());
+                                      return `${day}-${month}-${year}`;
+                                    }
+                                    return dateStr;
+                                  } catch {
+                                    return dateStr;
+                                  }
+                                })()}
                               </p>
                             </div>
                             <div>
