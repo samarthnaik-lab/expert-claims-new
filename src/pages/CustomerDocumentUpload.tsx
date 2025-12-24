@@ -98,62 +98,110 @@ const CustomerDocumentUpload = () => {
     setUploadedFiles([]);
   }, [selectedClaim, selectedDocumentType]);
 
+  // Helper function to get userId with proper fallback chain
+  const getUserId = async (): Promise<string | null> => {
+    // 1. First, try to get from expertclaims_session (stored during login)
+    const sessionStr = localStorage.getItem('expertclaims_session');
+    if (sessionStr) {
+      try {
+        const session = JSON.parse(sessionStr);
+        if (session.userId) {
+          console.log('Got userId from expertclaims_session:', session.userId);
+          return session.userId.toString();
+        }
+      } catch (error) {
+        console.error('Error parsing expertclaims_session:', error);
+      }
+    }
+    
+    // 2. Try individual userId key (backward compatibility)
+    const userIdFromKey = localStorage.getItem('userId');
+    if (userIdFromKey) {
+      console.log('Got userId from localStorage userId key:', userIdFromKey);
+      return userIdFromKey;
+    }
+    
+    // 3. Try from customer session details
+    const customerSessionRaw = localStorage.getItem('expertclaims_customer_session_details');
+    if (customerSessionRaw) {
+      try {
+        const customerSessionData = JSON.parse(customerSessionRaw);
+        const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
+        if (customerSession?.userid) {
+          console.log('Got userId from customer_session_details:', customerSession.userid);
+          return customerSession.userid.toString();
+        }
+      } catch (e) {
+        console.error('Error parsing customer session data:', e);
+      }
+    }
+    
+    // 4. Try /customer/getuserid API (extracts from JWT token or session_id)
+    try {
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
+      
+      if (jwtToken || sessionId) {
+        const userIdResponse = await fetch(`${buildApiUrl('customer/getuserid')}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(jwtToken && { 'jwt_token': jwtToken }),
+            ...(sessionId && { 'session_id': sessionId })
+          }
+        });
+        
+        if (userIdResponse.ok) {
+          const userIdData = await userIdResponse.json();
+          const userId = userIdData?.user_id || userIdData?.userId || null;
+          if (userId) {
+            console.log('Got userId from getuserid API:', userId);
+            // Store it for future use
+            if (sessionStr) {
+              try {
+                const session = JSON.parse(sessionStr);
+                session.userId = userId.toString();
+                localStorage.setItem('expertclaims_session', JSON.stringify(session));
+                localStorage.setItem('userId', userId.toString());
+              } catch (e) {
+                console.error('Error updating session:', e);
+              }
+            }
+            return userId.toString();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching userId from getuserid API:', error);
+    }
+    
+    return null;
+  };
+
   useEffect(() => {
     const fetchCustomerCase = async () => {
       try {
         setLoading(true);
   
-        // Get userid from customer session details
-        const customerSessionRaw = localStorage.getItem('expertclaims_customer_session_details');
-        let mobileNumber = '';
-        let userId = null;
-        
-        if (customerSessionRaw) {
-          try {
-            const customerSessionData = JSON.parse(customerSessionRaw);
-            const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
-            mobileNumber = customerSession?.mobile_number || '';
-            userId = customerSession?.userid || null;
-          } catch (e) {
-            console.error('Error parsing customer session data:', e);
-          }
-        }
-        
-        // If we don't have userid yet, fetch from getcustomersessiondetails API
-        if (!userId && mobileNumber) {
-          try {
-            const sessionStr = localStorage.getItem('expertclaims_session');
-            let sessionId = '';
-            if (sessionStr) {
-              try {
-                const session = JSON.parse(sessionStr);
-                sessionId = session.sessionId || '';
-              } catch (error) {
-                console.error('Error parsing session:', error);
-              }
-            }
-            
-            const sessionResponse = await fetch(`${buildApiUrl('customer/getcustomersessiondetails')}?mobile_number=${encodeURIComponent(mobileNumber)}`, {
-              method: 'GET',
-              headers: {
-                'accept': 'application/json',
-                'content-type': 'application/json',
-                'session_id': sessionId
-              }
-            });
-            
-            if (sessionResponse.ok) {
-              const sessionData = await sessionResponse.json();
-              const sessionDetails = Array.isArray(sessionData) ? sessionData[0] : sessionData;
-              userId = sessionDetails?.userid || null;
-            }
-          } catch (error) {
-            console.error('Error fetching customer session details:', error);
-          }
-        }
+        const userId = await getUserId();
   
         if (!userId) {
           console.error('No userid found');
+          toast({
+            title: "Error",
+            description: "User ID not found. Please ensure you are logged in.",
+            variant: "destructive",
+          });
           setLoading(false);
           return;
         }
@@ -172,9 +220,18 @@ const CustomerDocumentUpload = () => {
           }
         }
   
-        // Build FormData payload
-        const formData = new FormData();
-        formData.append('user_id', userId.toString());
+        // Fetch all cases by fetching multiple pages
+        let allCases: any[] = [];
+        let page = 1;
+        const pageSize = 50; // Fetch larger pages
+        let hasMore = true;
+
+        while (hasMore) {
+          // Build FormData payload with pagination
+          const formData = new FormData();
+          formData.append('user_id', userId.toString());
+          formData.append('page', page.toString());
+          formData.append('size', pageSize.toString());
   
         const response = await fetch(
           buildApiUrl('customer/customer-case'),
@@ -194,16 +251,53 @@ const CustomerDocumentUpload = () => {
           }
         );
   
-        if (response.ok) {
-          const data = await response.json();
-          setCaseData(data); 
-          console.log('Customer case data:', data);
-          console.log('Data structure:', JSON.stringify(data, null, 2));
+          if (response.ok) {
+            const data = await response.json();
+            const caseArray = Array.isArray(data) ? data : (data?.data || data?.cases || []);
+            
+            if (caseArray.length > 0) {
+              allCases = [...allCases, ...caseArray];
+              // Check if there are more pages
+              hasMore = caseArray.length === pageSize;
+              page++;
+              
+              // Limit to 10 pages to prevent infinite loops
+              if (page > 10) {
+                console.warn('Reached maximum page limit (10) while fetching cases');
+                hasMore = false;
+              }
+            } else {
+              hasMore = false;
+            }
+          } else {
+            console.error('Failed to fetch customer case from page', page);
+            hasMore = false;
+          }
+        }
+  
+        if (allCases.length > 0) {
+          setCaseData(allCases); 
+          console.log('Customer case data loaded:', allCases.length, 'cases');
+          toast({
+            title: "Success",
+            description: `Loaded ${allCases.length} cases.`,
+          });
         } else {
-          console.error('Failed to fetch customer case');
+          console.log('No cases found');
+          setCaseData([]);
+          toast({
+            title: "No Cases Found",
+            description: "No claims found. Please contact support if you believe this is an error.",
+            variant: "destructive",
+          });
         }
       } catch (error) {
         console.error('Error fetching customer case:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch cases. Please try again.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }

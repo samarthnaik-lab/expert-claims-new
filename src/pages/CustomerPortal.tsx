@@ -29,16 +29,143 @@ const CustomerPortal = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [hasMorePages, setHasMorePages] = useState(false);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
 
-  // Extract customer name from localStorage
-  const getCustomerName = () => {
+  // Extract customer name from localStorage or API
+  const getCustomerName = async () => {
     try {
+      // First, try to get from localStorage (but we'll still refresh from API)
       const customerSessionRaw = localStorage.getItem('expertclaims_customer_session_details');
+      let cachedName = null;
       if (customerSessionRaw) {
-        const customerSessionData = JSON.parse(customerSessionRaw);
-        const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
-        const name = customerSession?.name || 'Customer';
-        setCustomerName(name);
+        try {
+          const customerSessionData = JSON.parse(customerSessionRaw);
+          const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
+          
+          // Try multiple name fields - prioritize customer_name from API
+          cachedName = customerSession?.customer_name ||
+                      customerSession?.name || 
+                      customerSession?.full_name ||
+                      (customerSession?.first_name && customerSession?.last_name 
+                        ? `${customerSession.first_name} ${customerSession.last_name}`.trim()
+                        : customerSession?.first_name || customerSession?.last_name || null);
+          
+          if (cachedName && cachedName !== 'Customer') {
+            console.log('Got customer name from localStorage:', cachedName);
+            setCustomerName(cachedName);
+          }
+        } catch (e) {
+          console.error('Error parsing customer session data:', e);
+        }
+      }
+      
+      // Always fetch from API to get the latest customer_name
+      let mobileNumber = '';
+      const customerSessionRaw2 = localStorage.getItem('expertclaims_customer_session_details');
+      if (customerSessionRaw2) {
+        try {
+          const customerSessionData = JSON.parse(customerSessionRaw2);
+          const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
+          mobileNumber = customerSession?.mobile_number || '';
+        } catch (e) {
+          console.error('Error parsing customer session data:', e);
+        }
+      }
+      
+      // Get session details
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
+      
+      // Call the API if we have mobileNumber
+      if (mobileNumber) {
+        try {
+          console.log('Calling getcustomersessiondetails API with mobile_number:', mobileNumber);
+          const sessionResponse = await fetch(`http://localhost:3000/customer/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobileNumber)}`, {
+            method: 'GET',
+            headers: {
+              'accept': 'application/json',
+              'content-type': 'application/json',
+              'session_id': sessionId
+            }
+          });
+          
+          console.log('getcustomersessiondetails API response status:', sessionResponse.status);
+          
+          if (sessionResponse.ok) {
+            const sessionData = await sessionResponse.json();
+            console.log('getcustomersessiondetails API response data:', sessionData);
+            const sessionDetails = Array.isArray(sessionData) ? sessionData[0] : sessionData;
+            
+            // Try multiple name fields from API response - prioritize customer_name
+            let name = sessionDetails?.customer_name ||
+                      sessionDetails?.name || 
+                      sessionDetails?.full_name ||
+                      (sessionDetails?.first_name && sessionDetails?.last_name 
+                        ? `${sessionDetails.first_name} ${sessionDetails.last_name}`.trim()
+                        : sessionDetails?.first_name || sessionDetails?.last_name || null);
+            
+            console.log('API response customer_name:', sessionDetails?.customer_name);
+            console.log('Extracted name from API:', name);
+            
+            if (name && name !== 'Customer') {
+              console.log('Got customer name from API:', name);
+              setCustomerName(name);
+              
+              // Update localStorage with the customer_name from API
+              if (customerSessionRaw2) {
+                try {
+                  const customerSessionData = JSON.parse(customerSessionRaw2);
+                  const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
+                  // Update with customer_name from API response
+                  if (sessionDetails?.customer_name) {
+                    customerSession.customer_name = sessionDetails.customer_name;
+                    customerSession.name = sessionDetails.customer_name; // Also update name for backward compatibility
+                    // Also update other fields from API response
+                    Object.assign(customerSession, sessionDetails);
+                    localStorage.setItem('expertclaims_customer_session_details', JSON.stringify(customerSession));
+                    console.log('Updated localStorage with customer_name:', sessionDetails.customer_name);
+                  } else if (!customerSession.name && !customerSession.full_name && !customerSession.customer_name) {
+                    customerSession.name = name;
+                    localStorage.setItem('expertclaims_customer_session_details', JSON.stringify(customerSession));
+                  }
+                } catch (e) {
+                  console.error('Error updating customer session:', e);
+                }
+              } else {
+                // If no existing session details, create new one with customer_name
+                try {
+                  localStorage.setItem('expertclaims_customer_session_details', JSON.stringify(sessionDetails));
+                  console.log('Stored new customer session details with customer_name:', sessionDetails?.customer_name);
+                } catch (e) {
+                  console.error('Error storing customer session details:', e);
+                }
+              }
+              return;
+            } else {
+              console.warn('No valid customer name found in API response');
+            }
+          } else {
+            console.error('Failed to fetch customer session details:', sessionResponse.status, sessionResponse.statusText);
+          }
+        } catch (error) {
+          console.error('Error fetching customer name from API:', error);
+        }
+      } else {
+        console.warn('No mobile_number found, cannot call getcustomersessiondetails API');
+      }
+      
+      // Fallback to cached name or 'Customer' if nothing found
+      if (!cachedName || cachedName === 'Customer') {
+        setCustomerName('Customer');
       }
     } catch (error) {
       console.error('Error extracting customer name:', error);
@@ -46,9 +173,158 @@ const CustomerPortal = () => {
     }
   };
 
+  // Helper function to get userId with proper fallback chain
+  const getUserId = async (): Promise<string | null> => {
+    // 1. First, try to get from expertclaims_session (stored during login)
+    const sessionStr = localStorage.getItem('expertclaims_session');
+    if (sessionStr) {
+      try {
+        const session = JSON.parse(sessionStr);
+        if (session.userId) {
+          console.log('Got userId from expertclaims_session:', session.userId);
+          return session.userId.toString();
+        }
+      } catch (error) {
+        console.error('Error parsing expertclaims_session:', error);
+      }
+    }
+    
+    // 2. Try individual userId key (backward compatibility)
+    const userIdFromKey = localStorage.getItem('userId');
+    if (userIdFromKey) {
+      console.log('Got userId from localStorage userId key:', userIdFromKey);
+      return userIdFromKey;
+    }
+    
+    // 3. Try from customer session details
+    const customerSessionRaw = localStorage.getItem('expertclaims_customer_session_details');
+    if (customerSessionRaw) {
+      try {
+        const customerSessionData = JSON.parse(customerSessionRaw);
+        const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
+        if (customerSession?.userid) {
+          console.log('Got userId from customer_session_details:', customerSession.userid);
+          return customerSession.userid.toString();
+        }
+      } catch (e) {
+        console.error('Error parsing customer session data:', e);
+      }
+    }
+    
+    // 4. Try /customer/getuserid API (extracts from JWT token or session_id)
+    try {
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
+      
+      if (jwtToken || sessionId) {
+        const userIdResponse = await fetch(`${buildApiUrl('customer/getuserid')}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(jwtToken && { 'jwt_token': jwtToken }),
+            ...(sessionId && { 'session_id': sessionId })
+          }
+        });
+        
+        if (userIdResponse.ok) {
+          const userIdData = await userIdResponse.json();
+          const userId = userIdData?.user_id || userIdData?.userId || null;
+          if (userId) {
+            console.log('Got userId from getuserid API:', userId);
+            // Store it for future use
+            if (sessionStr) {
+              try {
+                const session = JSON.parse(sessionStr);
+                session.userId = userId.toString();
+                localStorage.setItem('expertclaims_session', JSON.stringify(session));
+                localStorage.setItem('userId', userId.toString());
+              } catch (e) {
+                console.error('Error updating session:', e);
+              }
+            }
+            return userId.toString();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching userId from getuserid API:', error);
+    }
+    
+    // 5. Last resort: Fetch from getcustomersessiondetails API if we have mobile number
+    const customerSessionRaw2 = localStorage.getItem('expertclaims_customer_session_details');
+    let mobileNumber = '';
+    if (customerSessionRaw2) {
+      try {
+        const customerSessionData = JSON.parse(customerSessionRaw2);
+        const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
+        mobileNumber = customerSession?.mobile_number || '';
+      } catch (e) {
+        console.error('Error parsing customer session data:', e);
+      }
+    }
+    
+    if (mobileNumber) {
+      try {
+        const sessionStr = localStorage.getItem('expertclaims_session');
+        let sessionId = '';
+        if (sessionStr) {
+          try {
+            const session = JSON.parse(sessionStr);
+            sessionId = session.sessionId || '';
+          } catch (error) {
+            console.error('Error parsing session:', error);
+          }
+        }
+        
+        const sessionResponse = await fetch(`http://localhost:3000/customer/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobileNumber)}`, {
+          method: 'GET',
+          headers: {
+            'accept': 'application/json',
+            'content-type': 'application/json',
+            'session_id': sessionId
+          }
+        });
+        
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          const sessionDetails = Array.isArray(sessionData) ? sessionData[0] : sessionData;
+          if (sessionDetails?.userid) {
+            console.log('Got userId from getcustomersessiondetails API:', sessionDetails.userid);
+            // Store it for future use
+            if (sessionStr) {
+              try {
+                const session = JSON.parse(sessionStr);
+                session.userId = sessionDetails.userid.toString();
+                localStorage.setItem('expertclaims_session', JSON.stringify(session));
+                localStorage.setItem('userId', sessionDetails.userid.toString());
+              } catch (e) {
+                console.error('Error updating session:', e);
+              }
+            }
+            return sessionDetails.userid.toString();
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching customer session details:', error);
+      }
+    }
+    
+    return null;
+  };
+
   // Load customer session details on component mount
   useEffect(() => {
-    getCustomerName();
+    getCustomerName(); // Now async, but we don't need to await it
     const sessionDetails = AuthService.getCustomerSessionDetails();
     if (sessionDetails) {
       setCustomerSessionDetails(sessionDetails);
@@ -62,58 +338,10 @@ const CustomerPortal = () => {
       try {
         setLoading(true);
         
-        // Get mobile number from customer session details
-        const customerSessionRaw = localStorage.getItem('expertclaims_customer_session_details');
-        let mobileNumber = '';
-        let userId = null;
-        
-        if (customerSessionRaw) {
-          try {
-            const customerSessionData = JSON.parse(customerSessionRaw);
-            const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
-            mobileNumber = customerSession?.mobile_number || '';
-            userId = customerSession?.userid || null;
-          } catch (e) {
-            console.error('Error parsing customer session data:', e);
-          }
-        }
-        
-        // If we don't have userid yet, fetch from getcustomersessiondetails API
-        if (!userId && mobileNumber) {
-          try {
-            // Get session_id from localStorage
-            const sessionStr = localStorage.getItem('expertclaims_session');
-            let sessionId = '';
-            if (sessionStr) {
-              try {
-                const session = JSON.parse(sessionStr);
-                sessionId = session.sessionId || '';
-              } catch (error) {
-                console.error('Error parsing session:', error);
-              }
-            }
-            
-            const sessionResponse = await fetch(`${buildApiUrl('customer/getcustomersessiondetails')}?mobile_number=${encodeURIComponent(mobileNumber)}`, {
-              method: 'GET',
-              headers: {
-                'accept': 'application/json',
-                'content-type': 'application/json',
-                'session_id': sessionId
-              }
-            });
-            
-            if (sessionResponse.ok) {
-              const sessionData = await sessionResponse.json();
-              const sessionDetails = Array.isArray(sessionData) ? sessionData[0] : sessionData;
-              userId = sessionDetails?.userid || null;
-            }
-          } catch (error) {
-            console.error('Error fetching customer session details:', error);
-          }
-        }
+        const userId = await getUserId();
         
         if (!userId) {
-          console.error('No userid found');
+          console.error('No userid found after all attempts');
           setLoading(false);
           return;
         }
@@ -138,6 +366,12 @@ const CustomerPortal = () => {
         const response = await fetch(buildApiUrl('customer/customer-dashboard'), {
           method: 'POST',
           headers: {
+            'accept': '*/*',
+            'accept-language': 'en-US,en;q=0.9',
+            'accept-profile': 'expc',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
+            'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',
+            'content-profile': 'expc',
             'jwt_token': jwtToken,
             'session_id': sessionId
           },
@@ -146,12 +380,67 @@ const CustomerPortal = () => {
 
         if (response.ok) {
           const data = await response.json();
-          // Only use the summary data, ignore the claims data
-          const { summary } = data[0] || {};
-          setDashboardData({ summary }); 
-          console.log('Dashboard summary data loaded:', { summary });
+          console.log('Full dashboard API response:', data);
+          
+          // Handle different response formats
+          let dashboardResponse = Array.isArray(data) ? data[0] : data;
+          
+          // Extract summary data - could be nested or at root level
+          let summary = dashboardResponse?.summary || dashboardResponse;
+          
+          // Map API response fields to our expected format
+          // Handle different possible field names from API
+          const mappedSummary = {
+            totalClaims: summary?.totalClaims || 
+                        summary?.total_claims || 
+                        summary?.totalTasks || 
+                        summary?.total_tasks ||
+                        (summary?.claims ? summary.claims.length : 0) ||
+                        0,
+            underReview: summary?.underReview || 
+                        summary?.under_review || 
+                        summary?.reviewCounts || 
+                        summary?.review_counts ||
+                        summary?.inProgress ||
+                        summary?.in_progress ||
+                        0,
+            approved: summary?.approved || 
+                     summary?.completedCounts || 
+                     summary?.completed_counts ||
+                     summary?.approvedCounts ||
+                     summary?.approved_counts ||
+                     0,
+            rejected: summary?.rejected || 
+                     summary?.rejectedCounts || 
+                     summary?.rejected_counts ||
+                     summary?.cancelledCounts ||
+                     summary?.cancelled_counts ||
+                     0
+          };
+          
+          console.log('Mapped summary data:', mappedSummary);
+          setDashboardData({ summary: mappedSummary });
+          
+          // Try to extract customer name from dashboard response if available
+          if (dashboardResponse) {
+            let name = dashboardResponse?.customer_name ||
+                       dashboardResponse?.name ||
+                       dashboardResponse?.full_name ||
+                       (dashboardResponse?.first_name && dashboardResponse?.last_name 
+                         ? `${dashboardResponse.first_name} ${dashboardResponse.last_name}`.trim()
+                         : dashboardResponse?.first_name || dashboardResponse?.last_name || null);
+            
+            if (name && name !== 'Customer') {
+              console.log('Got customer name from dashboard API (customer_name):', name);
+              setCustomerName(name);
+            }
+          }
+          
+          console.log('Dashboard summary data loaded:', mappedSummary);
         } else {
           console.error('Failed to fetch dashboard data');
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -219,7 +508,7 @@ const CustomerPortal = () => {
         }
   
         if (!userId) {
-          console.error('No userid found');
+          console.error('No userid found after all attempts');
           setLoading(false);
           return;
         }
@@ -268,10 +557,37 @@ const CustomerPortal = () => {
           const data = await response.json();
           // Ensure data is an array
           const caseArray = Array.isArray(data) ? data : (data?.data || data?.cases || []);
-          setCaseData(caseArray); 
-          console.log('Customer case data:', data);
+          setCaseData(caseArray);
+          
+          // Determine if there are more pages
+          // If we got a full page of results, there might be more pages
+          const hasMore = caseArray.length === limit;
+          setHasMorePages(hasMore);
+          
+          // If API provides total count, use it
+          if (data?.total !== undefined) {
+            setTotalCount(data.total);
+          } else if (data?.totalCount !== undefined) {
+            setTotalCount(data.totalCount);
+          } else if (data?.count !== undefined) {
+            setTotalCount(data.count);
+          } else {
+            // Estimate total count based on current page and hasMore
+            if (hasMore) {
+              // If we have a full page, estimate at least (currentPage * pageSize) + 1
+              setTotalCount(null); // Keep null to indicate we don't know exact count
+            } else {
+              // This is the last page, total is approximately (currentPage - 1) * pageSize + caseArray.length
+              setTotalCount((page - 1) * limit + caseArray.length);
+            }
+          }
+          
+          console.log('Customer case data:', caseArray);
+          console.log('Has more pages:', hasMore);
+          console.log('Total count:', totalCount);
         } else {
           console.error('Failed to fetch customer case');
+          setHasMorePages(false);
         }
       } catch (error) {
         console.error('Error fetching customer case:', error);
@@ -285,10 +601,10 @@ const CustomerPortal = () => {
 
   
 
-  // Get customer stats from API data or fallback to mock data
+  // Get customer stats from API data or fallback to default values
   const customerStats = dashboardData?.summary || {
     totalClaims: 0,
-    inProgress: 0,
+    underReview: 0,
     approved: 0,
     rejected: 0
   };
@@ -320,11 +636,19 @@ const CustomerPortal = () => {
     return matchesSearch && matchesStatus;
   });
 
-  // Pagination logic
+  // Pagination logic - use server-side pagination
   const displayClaims = filteredClaims;
-  const totalPages = Math.ceil(displayClaims.length / pageSize);
+  // For server-side pagination, we don't slice the data - API already returns the correct page
+  // But we still need totalPages for UI display
+  // If we have totalCount, use it; otherwise estimate based on hasMorePages
+  const estimatedTotalPages = totalCount !== null 
+    ? Math.ceil(totalCount / pageSize)
+    : (hasMorePages ? currentPage + 1 : currentPage); // If hasMore, at least one more page exists
+  const totalPages = estimatedTotalPages;
+  
+  // Calculate start and end indices for display (server-side pagination)
   const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
+  const endIndex = startIndex + displayClaims.length;
 
   // Handle page size change
   const handlePageSizeChange = (newPageSize: string) => {
@@ -590,7 +914,7 @@ const CustomerPortal = () => {
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 {/* Pagination Info */}
                 <div className="text-sm text-gray-600">
-                  Showing {startIndex + 1} to {Math.min(endIndex, displayClaims.length)} of {displayClaims.length} entries
+                  Showing {startIndex + 1} to {endIndex} of {totalCount !== null ? totalCount : displayClaims.length} entries
                 </div>
 
                 {/* Pagination Navigation */}
@@ -608,37 +932,45 @@ const CustomerPortal = () => {
                   
                   {/* Page Numbers */}
                   <div className="flex items-center space-x-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
+                    {(() => {
+                      // Calculate which pages to show
+                      const maxPagesToShow = 5;
+                      let pagesToShow: number[] = [];
+                      
+                      if (totalPages <= maxPagesToShow) {
+                        // Show all pages if total is small
+                        pagesToShow = Array.from({ length: totalPages }, (_, i) => i + 1);
                       } else if (currentPage <= 3) {
-                        pageNum = i + 1;
+                        // Show first 5 pages
+                        pagesToShow = [1, 2, 3, 4, 5];
                       } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
+                        // Show last 5 pages
+                        pagesToShow = [totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
                       } else {
-                        pageNum = currentPage - 2 + i;
+                        // Show pages around current page
+                        pagesToShow = [currentPage - 2, currentPage - 1, currentPage, currentPage + 1, currentPage + 2];
                       }
                       
-                      return (
+                      return pagesToShow.map((pageNum) => (
                         <Button
                           key={pageNum}
                           variant={currentPage === pageNum ? "default" : "outline"}
                           size="sm"
                           onClick={() => setCurrentPage(pageNum)}
                           className="w-8 h-8 p-0"
+                          disabled={pageNum > totalPages && !hasMorePages}
                         >
                           {pageNum}
                         </Button>
-                      );
-                    })}
+                      ));
+                    })()}
                   </div>
                   
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => prev + 1)}
+                    disabled={!hasMorePages}
                     className="flex items-center space-x-1"
                   >
                     <span>Next</span>

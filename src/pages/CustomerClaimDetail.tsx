@@ -114,6 +114,121 @@ const CustomerClaimDetail = () => {
 
 
 
+  // Helper function to get userId with proper fallback chain
+  const getUserId = async (): Promise<string | null> => {
+    // 1. First, try to get from expertclaims_session (stored during login)
+    const sessionStr = localStorage.getItem('expertclaims_session');
+    if (sessionStr) {
+      try {
+        const session = JSON.parse(sessionStr);
+        if (session.userId) {
+          console.log('Got userId from expertclaims_session:', session.userId);
+          return session.userId.toString();
+        }
+      } catch (error) {
+        console.error('Error parsing expertclaims_session:', error);
+      }
+    }
+    
+    // 2. Try individual userId key (backward compatibility)
+    const userIdFromKey = localStorage.getItem('userId');
+    if (userIdFromKey) {
+      console.log('Got userId from localStorage userId key:', userIdFromKey);
+      return userIdFromKey;
+    }
+    
+    // 3. Try from customer session details
+    const customerSessionRaw = localStorage.getItem('expertclaims_customer_session_details');
+    if (customerSessionRaw) {
+      try {
+        const customerSessionData = JSON.parse(customerSessionRaw);
+        const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
+        if (customerSession?.userid) {
+          console.log('Got userId from customer_session_details:', customerSession.userid);
+          return customerSession.userid.toString();
+        }
+      } catch (e) {
+        console.error('Error parsing customer session data:', e);
+      }
+    }
+    
+    // 4. Try /customer/getuserid API (extracts from JWT token or session_id)
+    try {
+      const sessionStr = localStorage.getItem('expertclaims_session');
+      let sessionId = '';
+      let jwtToken = '';
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          sessionId = session.sessionId || '';
+          jwtToken = session.jwtToken || '';
+        } catch (error) {
+          console.error('Error parsing session:', error);
+        }
+      }
+      
+      if (jwtToken || sessionId) {
+        const userIdResponse = await fetch(`${buildApiUrl('customer/getuserid')}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(jwtToken && { 'jwt_token': jwtToken }),
+            ...(sessionId && { 'session_id': sessionId })
+          }
+        });
+        
+        if (userIdResponse.ok) {
+          const userIdData = await userIdResponse.json();
+          const userId = userIdData?.user_id || userIdData?.userId || null;
+          if (userId) {
+            console.log('Got userId from getuserid API:', userId);
+            // Store it for future use
+            if (sessionStr) {
+              try {
+                const session = JSON.parse(sessionStr);
+                session.userId = userId.toString();
+                localStorage.setItem('expertclaims_session', JSON.stringify(session));
+                localStorage.setItem('userId', userId.toString());
+              } catch (e) {
+                console.error('Error updating session:', e);
+              }
+            }
+            return userId.toString();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching userId from getuserid API:', error);
+    }
+    
+    return null;
+  };
+
+  // Helper function to compare case IDs (handles different formats)
+  const compareCaseIds = (urlCaseId: string, apiCaseId: any): boolean => {
+    // Convert both to strings for comparison
+    const urlId = String(urlCaseId).toLowerCase().trim();
+    const apiId = String(apiCaseId).toLowerCase().trim();
+    
+    // Direct match
+    if (urlId === apiId) return true;
+    
+    // Try extracting numeric part from ECSI format (e.g., "ECSI-25-367" -> "367")
+    const urlNumericMatch = urlId.match(/(\d+)$/);
+    if (urlNumericMatch) {
+      const urlNumeric = urlNumericMatch[1];
+      if (urlNumeric === apiId) return true;
+    }
+    
+    // Try matching numeric part of API ID
+    const apiNumericMatch = apiId.match(/(\d+)$/);
+    if (apiNumericMatch && urlNumericMatch) {
+      if (apiNumericMatch[1] === urlNumericMatch[1]) return true;
+    }
+    
+    return false;
+  };
+
   useEffect(() => {
     const fetchClaimDetails = async () => {
       try {
@@ -124,57 +239,15 @@ const CustomerClaimDetail = () => {
           return;
         }
 
-        // Get userid from customer session details
-        const customerSessionRaw = localStorage.getItem('expertclaims_customer_session_details');
-        let mobileNumber = '';
-        let userId = null;
-        
-        if (customerSessionRaw) {
-          try {
-            const customerSessionData = JSON.parse(customerSessionRaw);
-            const customerSession = Array.isArray(customerSessionData) ? customerSessionData[0] : customerSessionData;
-            mobileNumber = customerSession?.mobile_number || '';
-            userId = customerSession?.userid || null;
-          } catch (e) {
-            console.error('Error parsing customer session data:', e);
-          }
-        }
-        
-        // If we don't have userid yet, fetch from getcustomersessiondetails API
-        if (!userId && mobileNumber) {
-          try {
-            const sessionStr = localStorage.getItem('expertclaims_session');
-            let sessionId = '';
-            if (sessionStr) {
-              try {
-                const session = JSON.parse(sessionStr);
-                sessionId = session.sessionId || '';
-              } catch (error) {
-                console.error('Error parsing session:', error);
-              }
-            }
-            
-            const sessionResponse = await fetch(`${buildApiUrl('customer/getcustomersessiondetails')}?mobile_number=${encodeURIComponent(mobileNumber)}`, {
-              method: 'GET',
-              headers: {
-                'accept': 'application/json',
-                'content-type': 'application/json',
-                'session_id': sessionId
-              }
-            });
-            
-            if (sessionResponse.ok) {
-              const sessionData = await sessionResponse.json();
-              const sessionDetails = Array.isArray(sessionData) ? sessionData[0] : sessionData;
-              userId = sessionDetails?.userid || null;
-            }
-          } catch (error) {
-            console.error('Error fetching customer session details:', error);
-          }
-        }
+        const userId = await getUserId();
         
         if (!userId) {
           console.error('No userid found');
+          toast({
+            title: "Error",
+            description: "User ID not found. Please ensure you are logged in.",
+            variant: "destructive",
+          });
           setLoading(false);
           return;
         }
@@ -193,9 +266,20 @@ const CustomerClaimDetail = () => {
           }
         }
 
-        // Build FormData payload
-        const formData = new FormData();
-        formData.append('user_id', userId.toString());
+        // Fetch cases across multiple pages to find the specific case
+        let foundClaim: any = null;
+        let page = 1;
+        const pageSize = 50; // Fetch larger pages to reduce API calls
+        let hasMore = true;
+
+        console.log('Looking for case_id:', case_id);
+
+        while (hasMore && !foundClaim) {
+          // Build FormData payload with pagination
+          const formData = new FormData();
+          formData.append('user_id', userId.toString());
+          formData.append('page', page.toString());
+          formData.append('size', pageSize.toString());
 
         const response = await fetch(
           buildApiUrl('customer/customer-case'),
@@ -215,32 +299,53 @@ const CustomerClaimDetail = () => {
           }
         );
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log('All cases data:', data);
-          console.log('Looking for case_id:', case_id);
-          
-          // Find the specific case by case_id from the customer-case API response
-          // Convert case_id from URL to number for comparison since API returns numeric case_id
-          const searchCaseId = String(case_id);
-          const foundClaim = data.find((item: any) => item.case_id === searchCaseId);
-          
-                  if (foundClaim) {
+          if (response.ok) {
+            const data = await response.json();
+            const caseArray = Array.isArray(data) ? data : (data?.data || data?.cases || []);
+            
+            console.log(`Page ${page} - Found ${caseArray.length} cases`);
+            console.log('Available case IDs:', caseArray.map((item: any) => item.case_id));
+            
+            // Search for the case using improved comparison
+            foundClaim = caseArray.find((item: any) => compareCaseIds(case_id, item.case_id));
+            
+            // Check if there are more pages
+            hasMore = caseArray.length === pageSize;
+            page++;
+            
+            // Limit to 10 pages to prevent infinite loops
+            if (page > 10) {
+              console.warn('Reached maximum page limit (10) while searching for case');
+              hasMore = false;
+            }
+          } else {
+            console.error('Failed to fetch claim details from page', page);
+            hasMore = false;
+          }
+        }
+
+        if (foundClaim) {
           console.log('Found case:', foundClaim);
           setClaim(foundClaim);
           
-            // Pass case_id as string (e.g., "ECSI-25-001"), NOT as number
-            fetchDocuments(searchCaseId);
+          // Use the actual case_id from the API response
+          const actualCaseId = String(foundClaim.case_id);
+          fetchDocuments(actualCaseId);
         } else {
           console.error('Case not found with ID:', case_id);
-          console.log('Available case IDs:', data.map((item: any) => item.case_id));
-          console.log('Searching for numeric ID:', searchCaseId);
-        }
-        } else {
-          console.error('Failed to fetch claim details');
+          toast({
+            title: "Case Not Found",
+            description: `The case with ID ${case_id} was not found in your account.`,
+            variant: "destructive",
+          });
         }
       } catch (error) {
         console.error('Error fetching claim details:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch case details. Please try again.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
