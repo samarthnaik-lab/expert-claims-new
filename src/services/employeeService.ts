@@ -8,8 +8,10 @@ export interface EmployeeApiResponse {
   employee_name: string;
 }
 
+import { buildApiUrl } from '@/config/api';
+
 export class EmployeeService {
-  private static readonly API_URL = 'http://localhost:3000/support/getemployees';
+  private static readonly API_URL = buildApiUrl('support/getemployees');
 
   static async getEmployees(sessionId: string, jwtToken: string): Promise<Employee[]> {
     try {

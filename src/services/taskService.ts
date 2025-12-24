@@ -57,8 +57,10 @@ export interface TaskCreateResponse {
   case_id?: string;
 }
 
+import { buildApiUrl } from '@/config/api';
+
 export class TaskService {
-  private static readonly API_URL = 'http://localhost:3000/api/createTask';
+  private static readonly API_URL = buildApiUrl('api/createTask');
 
   static async createTask(taskData: TaskCreateRequest, sessionId: string, jwtToken: string): Promise<TaskCreateResponse> {
     try {

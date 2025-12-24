@@ -12,8 +12,10 @@ export interface SingleCustomerResponse {
   customer_name: string;
 }
 
+import { buildApiUrl } from '@/config/api';
+
 export class CustomerService {
-  private static readonly API_URL = 'http://localhost:3000/support/getcustomers';
+  private static readonly API_URL = buildApiUrl('support/getcustomers');
 
   static async getCustomers(sessionId: string, jwtToken: string): Promise<Customer[]> {
     try {

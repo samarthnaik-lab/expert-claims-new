@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Shield, FileText, User, Calendar, Phone, Mail, MapPin, DollarSign, Clock, CheckCircle, AlertCircle, XCircle, MessageCircle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { formatDateDDMMYYYY } from '@/lib/utils';
+import { buildApiUrl } from '@/config/api';
 
 
 
@@ -153,7 +154,7 @@ const CustomerClaimDetail = () => {
               }
             }
             
-            const sessionResponse = await fetch(`http://localhost:3000/customer/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobileNumber)}`, {
+            const sessionResponse = await fetch(`${buildApiUrl('customer/getcustomersessiondetails')}?mobile_number=${encodeURIComponent(mobileNumber)}`, {
               method: 'GET',
               headers: {
                 'accept': 'application/json',
@@ -197,7 +198,7 @@ const CustomerClaimDetail = () => {
         formData.append('user_id', userId.toString());
 
         const response = await fetch(
-          'http://localhost:3000/customer/customer-case',
+          buildApiUrl('customer/customer-case'),
           {
             method: 'POST',
             headers: {
@@ -286,7 +287,7 @@ const CustomerClaimDetail = () => {
       }
 
       const response = await fetch(
-        'http://localhost:3000/support/list-documents',
+        buildApiUrl('support/list-documents'),
         {
           method: 'POST',
           headers: {
@@ -380,7 +381,7 @@ const CustomerClaimDetail = () => {
       };
       console.log('Request body:', requestBody);
       
-      const response = await fetch('http://localhost:3000/support/view', {
+      const response = await fetch(buildApiUrl('support/view'), {
         method: 'POST',
         headers: {
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',

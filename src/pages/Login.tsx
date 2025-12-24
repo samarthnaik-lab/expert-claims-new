@@ -10,6 +10,7 @@ import { Shield, ArrowLeft, User, Lock, Smartphone, KeyRound } from 'lucide-reac
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { AuthService } from '@/services/authService';
+import { buildApiUrl } from '@/config/api';
 
 /**
  * Get password for sending to backend
@@ -282,7 +283,7 @@ const Login = () => {
       const passwordToSend = getPasswordForBackend(formData.password, true); // true = legacy support
       
       // Call credential validation endpoint
-      const response = await fetch('http://localhost:3000/api/login', {
+      const response = await fetch(buildApiUrl('api/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -365,7 +366,7 @@ const Login = () => {
       try {
         // Step 1: Validate phone number exists
         console.log('[Customer Login] Step 1: Validating phone number...');
-        const validateResponse = await fetch('http://localhost:3000/api/customer/login', {
+        const validateResponse = await fetch(buildApiUrl('api/customer/login'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -391,7 +392,7 @@ const Login = () => {
         console.log('[Customer Login] Phone validated, sending OTP...');
 
         // Step 2: Send OTP
-        const sendOtpResponse = await fetch('http://localhost:3000/api/customer/login', {
+        const sendOtpResponse = await fetch(buildApiUrl('api/customer/login'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -446,7 +447,7 @@ const Login = () => {
       const passwordToSend = getPasswordForBackend(formData.password, true); // true = legacy support
       
       // Call send_otp endpoint
-      const response = await fetch('http://localhost:3000/api/login', {
+      const response = await fetch(buildApiUrl('api/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -591,7 +592,7 @@ const Login = () => {
         console.log('[Customer Login] Step 3: Verifying OTP...');
         
         // Use customer-specific endpoint
-        const response = await fetch('http://localhost:3000/api/customer/login', {
+        const response = await fetch(buildApiUrl('api/customer/login'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

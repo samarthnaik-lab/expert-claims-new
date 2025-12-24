@@ -432,7 +432,7 @@ const NewTask = () => {
     setIsLoadingPartners(true);
     try {
       const response = await fetch(
-        "http://localhost:3000/support/getpartner",
+        buildApiUrl("support/getpartner"),
         {
           method: "GET",
           headers: {
@@ -766,7 +766,7 @@ const NewTask = () => {
       console.log("Fetching document categories for case type:", caseTypeId);
 
       const response = await fetch(
-        `http://localhost:3000/support/getdocumentcategories?case_type_id=${caseTypeId}`,
+        `${buildApiUrl('support/getdocumentcategories')}?case_type_id=${caseTypeId}`,
         {
           method: "GET",
           headers: {
@@ -1929,7 +1929,7 @@ const NewTask = () => {
           });
 
           const uploadPromise = fetch(
-            "http://localhost:3000/api/upload",
+            buildApiUrl("api/upload"),
             {
               method: "POST",
               headers: {

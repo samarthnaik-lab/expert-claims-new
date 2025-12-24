@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { buildApiUrl } from "@/config/api";
 
 const LeaveManagement = () => {
   const navigate = useNavigate();
@@ -168,7 +169,7 @@ const LeaveManagement = () => {
       const jwtToken = localStorage.getItem("jwtToken") || "";
 
       // Use backend API endpoints - fetch with a large size to get all records
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      const baseUrl = buildApiUrl('');
       const url =
         role === "employee" && employeeId
           ? `${baseUrl}/support/getempleaves?employee_id=${employeeId}&page=1&size=10000`
@@ -229,7 +230,7 @@ const LeaveManagement = () => {
 
       // Use backend API endpoints
       // Vite uses import.meta.env, but fallback to process.env for compatibility
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      const baseUrl = buildApiUrl('');
       const url =
         role === "employee" && employeeId
           ? `${baseUrl}/support/getempleaves?employee_id=${employeeId}&page=${page}&size=${limit}`
@@ -349,7 +350,7 @@ const LeaveManagement = () => {
   const fetchLeaveTypes = async () => {
     setIsLoadingLeaveTypes(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      const baseUrl = buildApiUrl('');
       const jwtToken = localStorage.getItem("jwtToken") || "";
 
       const response = await fetch(`${baseUrl}/support/getlevetypes`, {
@@ -450,7 +451,7 @@ const LeaveManagement = () => {
         currentDate,
       });
 
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      const baseUrl = buildApiUrl('');
       const jwtToken = localStorage.getItem("jwtToken") || "";
 
       // Call the backend updateleavestatus API for approval
@@ -542,7 +543,7 @@ const LeaveManagement = () => {
         currentDate,
       });
 
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      const baseUrl = buildApiUrl('');
       const jwtToken = localStorage.getItem("jwtToken") || "";
 
       // Call the backend updateleavestatus API for rejection
@@ -672,7 +673,7 @@ const LeaveManagement = () => {
       // If employee_id is not found but user_id is available, fetch it from backend
       if (!employeeId && userDetailsStr) {
         try {
-          const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+          const baseUrl = buildApiUrl('');
           const jwtToken = localStorage.getItem("jwtToken") || "";
           
           // Parse user details to get email
@@ -714,7 +715,7 @@ const LeaveManagement = () => {
         throw new Error("Employee ID not found. You must be an employee to apply for leave. Please contact your administrator.");
       }
 
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      const baseUrl = buildApiUrl('');
       const jwtToken = localStorage.getItem("jwtToken") || "";
 
       const leaveData = {

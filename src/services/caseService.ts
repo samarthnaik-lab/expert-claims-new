@@ -99,8 +99,10 @@ export interface CaseApiResponse {
   data: CaseDetails;
 }
 
+import { buildApiUrl } from '@/config/api';
+
 export class CaseService {
-  private static readonly API_URL = 'http://localhost:3000/support/everything-cases';
+  private static readonly API_URL = buildApiUrl('support/everything-cases');
   private static readonly API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
 
   static async getCaseDetails(caseId: string, sessionId: string, jwtToken: string): Promise<CaseDetails> {

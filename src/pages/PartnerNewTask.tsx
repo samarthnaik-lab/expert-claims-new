@@ -21,6 +21,7 @@ import { ArrowLeft, Upload, FileText, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { CaseTypeService, CaseType } from "@/services/caseTypeService";
+import { buildApiUrl } from "@/config/api";
 // TaskService imports removed - only using partnerbacklogentry API now
 import mammoth from "mammoth";
 import html2canvas from "html2canvas";
@@ -540,7 +541,7 @@ const PartnerNewTask = () => {
         });
 
         const backlogResponse = await fetch(
-          "http://localhost:3000/api/partnerbacklogentry",
+          buildApiUrl("api/partnerbacklogentry"),
           {
             method: "POST",
             // Don't set Content-Type header - browser will set it automatically with boundary for FormData

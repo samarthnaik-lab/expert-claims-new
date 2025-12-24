@@ -10,8 +10,10 @@ export interface DocumentApiResponse {
   statusMessage: string;
 }
 
+import { buildApiUrl } from '@/config/api';
+
 export class DocumentService {
-  private static readonly API_URL = 'http://localhost:3000/support/getdocumentcategories';
+  private static readonly API_URL = buildApiUrl('support/getdocumentcategories');
 
   static async getDocumentsByCaseType(caseTypeId: number, sessionId: string, jwtToken: string): Promise<Document[]> {
     try {

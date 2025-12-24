@@ -17,6 +17,7 @@ import { useTableSort } from '@/hooks/useTableSort';
 import { useAuth } from '@/contexts/AuthContext';
 import { SessionExpiry } from '@/components/SessionExpiry';
 import { formatDateDDMMYYYY } from '@/lib/utils';
+import { buildApiUrl } from '@/config/api';
 
 // Task interface based on the API response
 interface Task {
@@ -149,7 +150,7 @@ const EmployeeDashboard = () => {
 
       console.log('Fetching employee dashboard data for user:', userId);
       
-      const response = await fetch(`http://localhost:3000/support/getemployedashboard?employee_id=${userId}`, {
+      const response = await fetch(`${buildApiUrl('support/getemployedashboard')}?employee_id=${userId}`, {
         method: 'GET',
         headers: {
           'accept': 'application/json',
@@ -210,7 +211,7 @@ const EmployeeDashboard = () => {
 
       console.log('Fetching tasks from API...');
       
-      const url = `http://localhost:3000/support/getemployeetasks?employee_id=${employeeId}&page=${taskCurrentPage}&size=${parseInt(taskPageLimit)}`;
+      const url = `${buildApiUrl('support/getemployeetasks')}?employee_id=${employeeId}&page=${taskCurrentPage}&size=${parseInt(taskPageLimit)}`;
       console.log('Fetching tasks with URL:', url);
       
       const response = await fetch(url, {
@@ -324,7 +325,7 @@ const EmployeeDashboard = () => {
 
       if (department.toLowerCase() === 'technical_consultant') {
         // Use new Node.js API for technical consultants
-        apiUrl = `http://localhost:3000/support/get_all_backlog_data?employee_id=${userId}`;
+        apiUrl = `${buildApiUrl('support/get_all_backlog_data')}?employee_id=${userId}`;
         headers['apikey'] = supabaseServiceRoleKey;
         headers['authorization'] = `Bearer ${supabaseServiceRoleKey}`;
         headers['session_id'] = sessionId || '';
@@ -332,7 +333,7 @@ const EmployeeDashboard = () => {
         console.log('Calling technical consultant API:', apiUrl, 'with employee_id:', userId);
       } else if (department.toLowerCase() === 'gap_analysis') {
         // Use new Node.js API for gap_analysis - gets all data with employee_id=0
-        apiUrl = `http://localhost:3000/support/get_all_backlog_data?employee_id=0`;
+        apiUrl = `${buildApiUrl('support/get_all_backlog_data')}?employee_id=0`;
         headers['apikey'] = supabaseServiceRoleKey;
         headers['authorization'] = `Bearer ${supabaseServiceRoleKey}`;
         headers['session_id'] = sessionId || '';
@@ -340,7 +341,7 @@ const EmployeeDashboard = () => {
         console.log('Calling gap_analysis API:', apiUrl);
       } else {
         // Use Node.js support API for other departments
-        apiUrl = `http://localhost:3000/support/get_all_backlog_data?employee_id=${userId}`;
+        apiUrl = `${buildApiUrl('support/get_all_backlog_data')}?employee_id=${userId}`;
         headers['accept'] = 'application/json';
         headers['accept-language'] = 'en-GB,en-US;q=0.9,en;q=0.8';
         headers['content-type'] = 'application/json';
@@ -429,7 +430,7 @@ const EmployeeDashboard = () => {
       const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o";
       
       // Build URL with query parameters
-      const employeeTaskUrl = new URL('http://localhost:3000/support/employee_all_task');
+      const employeeTaskUrl = new URL(buildApiUrl('support/employee_all_task'));
       employeeTaskUrl.searchParams.append('user_id', userId.toString());
       employeeTaskUrl.searchParams.append('page', '1');
       employeeTaskUrl.searchParams.append('size', '10');
@@ -797,7 +798,7 @@ const EmployeeDashboard = () => {
       // Supabase service role key
       const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
       
-      const response = await fetch('http://localhost:3000/support/partnerdocumentview', {
+      const response = await fetch(buildApiUrl('support/partnerdocumentview'), {
         method: 'POST',
         headers: {
           'Accept': '*/*',

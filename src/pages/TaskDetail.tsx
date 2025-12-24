@@ -15,6 +15,7 @@ import { formatDateDDMMYYYY } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CaseService, CaseDetails } from '@/services/caseService';
+import { buildApiUrl } from '@/config/api';
 
 // Extended interface for the actual API response
 interface ExtendedCaseDetails extends CaseDetails {
@@ -889,7 +890,7 @@ const TaskDetail = () => {
       };
       console.log('Request body:', requestBody);
       
-      const response = await fetch('http://localhost:3000/support/view', {
+      const response = await fetch(buildApiUrl('support/view'), {
         method: 'POST',
         headers: {
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws',

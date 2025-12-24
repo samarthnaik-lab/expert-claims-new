@@ -11,6 +11,7 @@ import { MessageCircle, Upload, FileText, LogOut, Phone, Shield, TrendingUp, Clo
 import { AuthService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
 import { SessionExpiry } from '@/components/SessionExpiry';
+import { buildApiUrl } from '@/config/api';
 
 const CustomerPortal = () => {
   const navigate = useNavigate();
@@ -92,7 +93,7 @@ const CustomerPortal = () => {
               }
             }
             
-            const sessionResponse = await fetch(`http://localhost:3000/customer/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobileNumber)}`, {
+            const sessionResponse = await fetch(`${buildApiUrl('customer/getcustomersessiondetails')}?mobile_number=${encodeURIComponent(mobileNumber)}`, {
               method: 'GET',
               headers: {
                 'accept': 'application/json',
@@ -134,7 +135,7 @@ const CustomerPortal = () => {
           }
         }
 
-        const response = await fetch('http://localhost:3000/customer/customer-dashboard', {
+        const response = await fetch(buildApiUrl('customer/customer-dashboard'), {
           method: 'POST',
           headers: {
             'jwt_token': jwtToken,
@@ -198,7 +199,7 @@ const CustomerPortal = () => {
               }
             }
             
-            const sessionResponse = await fetch(`http://localhost:3000/customer/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobileNumber)}`, {
+            const sessionResponse = await fetch(`${buildApiUrl('customer/getcustomersessiondetails')}?mobile_number=${encodeURIComponent(mobileNumber)}`, {
               method: 'GET',
               headers: {
                 'accept': 'application/json',
@@ -246,7 +247,7 @@ const CustomerPortal = () => {
         console.log('Customer Case API Body:', { user_id: userId, page: page, size: limit });
   
         const response = await fetch(
-          'http://localhost:3000/customer/customer-case',
+          buildApiUrl('customer/customer-case'),
           {
             method: 'POST',
             headers: {

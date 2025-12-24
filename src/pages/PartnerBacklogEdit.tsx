@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { formatDateDDMMYYYY } from "@/lib/utils";
+import { buildApiUrl } from "@/config/api";
 
 interface BacklogDetail {
   status: any;
@@ -257,7 +258,7 @@ const PartnerBacklogEdit = () => {
       }
 
       const response = await fetch(
-        `http://localhost:3000/public/backlog_id?backlog_id=${id}`,
+        `${buildApiUrl('public/backlog_id')}?backlog_id=${id}`,
         {
           method: "GET",
           headers: {
@@ -348,7 +349,7 @@ const PartnerBacklogEdit = () => {
       };
       console.log('Calling partnerdocumentview API with:', requestBody);
       
-      const response = await fetch('http://localhost:3000/support/partnerdocumentview', {
+      const response = await fetch(buildApiUrl('support/partnerdocumentview'), {
         method: 'POST',
         headers: {
           'Accept': '*/*',
@@ -638,7 +639,7 @@ const PartnerBacklogEdit = () => {
       const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
 
       const response = await fetch(
-        `http://localhost:3000/public/removedocument?document_id=${documentId}`,
+        `${buildApiUrl('public/removedocument')}?document_id=${documentId}`,
         {
           method: 'PATCH',
           headers: {
@@ -698,7 +699,7 @@ const PartnerBacklogEdit = () => {
     setIsAddingComment(true);
     try {
       const response = await fetch(
-        "http://localhost:3000/public/comments_insert",
+        buildApiUrl("public/comments_insert"),
         {
           method: "POST",
           headers: {
@@ -764,7 +765,7 @@ const PartnerBacklogEdit = () => {
         formData.append('backlog_id', backlogDetail!.backlog_id.toString());
         formData.append('document_type', selectedDocumentType || 'Insurance Policy');
 
-        const response = await fetch('http://localhost:3000/public/partnerbacklogentrydoc', {
+        const response = await fetch(buildApiUrl('public/partnerbacklogentrydoc'), {
           method: 'POST',
           body: formData
         });
@@ -837,7 +838,7 @@ const PartnerBacklogEdit = () => {
         case_type_id: parseInt(selectedCaseType)
       };
 
-      const response = await fetch('http://localhost:3000/public/update_backlog', {
+      const response = await fetch(buildApiUrl('public/update_backlog'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
@@ -1272,7 +1273,7 @@ const PartnerBacklogEdit = () => {
         feedback: feedback.trim()
       };
 
-      const response = await fetch('http://localhost:3000/api/feedback', {
+      const response = await fetch(buildApiUrl('api/feedback'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

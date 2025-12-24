@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserService, AdminUser } from '@/services/userService';
 import SortableTableHeader from '@/components/ui/SortableTableHeader';
 import { useTableSort } from '@/hooks/useTableSort';
+import { buildApiUrl } from '@/config/api';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -651,7 +652,7 @@ const AdminDashboard = () => {
 
       console.log('Fetching admin dashboard data...');
 
-      const response = await fetch('http://localhost:3000/admin/admindashboard', {
+      const response = await fetch(buildApiUrl('admin/admindashboard'), {
         method: 'GET',
         headers: {
           'Content-Profile': 'expc',
@@ -730,7 +731,7 @@ const AdminDashboard = () => {
       jwtToken = jwtToken || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiBlbXBsb3llZUBjb21wYW55LmNvbSIsInBhc3N3b3JkIjoiZW1wbG95ZWUxMjM0IiwiaWF0IjoxNzU2NTUwODUwfQ.Kmh5wQS9CXpRK0TmBXlJJhGlfr9ulMx8ou5nCk7th8g';
 
       // Fetch all users with a large size limit
-      const response = await fetch(`http://localhost:3000/admin/getusers?page=1&size=10000`, {
+      const response = await fetch(`${buildApiUrl('admin/getusers')}?page=1&size=10000`, {
         method: 'GET',
         headers: {
           'accept': '*/*',
@@ -834,7 +835,7 @@ const AdminDashboard = () => {
       console.log('Using session ID:', sessionId);
       console.log('Using JWT token:', jwtToken);
 
-      const response = await fetch(`http://localhost:3000/admin/getusers?page=${userCurrentPage}&size=${parseInt(userPageLimit)}`, {
+      const response = await fetch(`${buildApiUrl('admin/getusers')}?page=${userCurrentPage}&size=${parseInt(userPageLimit)}`, {
         method: 'GET',
         headers: {
           'accept': '*/*',
@@ -1030,7 +1031,7 @@ const AdminDashboard = () => {
       }
 
       // Fetch all tasks with a large size limit from admin backend
-      const url = `http://localhost:3000/admin/gettasks?page=1&size=10000`;
+      const url = `${buildApiUrl('admin/gettasks')}?page=1&size=10000`;
       
       const response = await fetch(url, {
         method: 'GET',
@@ -1120,7 +1121,7 @@ const AdminDashboard = () => {
       console.log('Fetching task management data...');
 
       // Use admin backend URL for paginated task list in Task Management tab
-      const url = `http://localhost:3000/admin/gettasks?page=${taskCurrentPage}&size=${parseInt(taskPageLimit)}`;
+      const url = `${buildApiUrl('admin/gettasks')}?page=${taskCurrentPage}&size=${parseInt(taskPageLimit)}`;
       console.log('Fetching tasks with URL:', url);
 
       const response = await fetch(url, {
@@ -1390,7 +1391,7 @@ const AdminDashboard = () => {
       }
 
       // Fetch all leave requests with a large size limit from backend
-      const url = `http://localhost:3000/admin/getleaves?page=1&size=10000`;
+      const url = `${buildApiUrl('admin/getleaves')}?page=1&size=10000`;
       
       const response = await fetch(url, {
         method: 'GET',
@@ -1463,7 +1464,7 @@ const AdminDashboard = () => {
       console.log('Fetching leave requests data...');
 
       // Use backend endpoint instead of n8n webhook
-      const url = `http://localhost:3000/admin/getleaves?page=${leaveCurrentPage}&size=${parseInt(leavePageLimit)}`;
+      const url = `${buildApiUrl('admin/getleaves')}?page=${leaveCurrentPage}&size=${parseInt(leavePageLimit)}`;
       console.log('Fetching leave requests with URL:', url);
 
       const response = await fetch(url, {
@@ -1649,7 +1650,7 @@ Created Time: ${report.created_time}
         type: 'edit'
       });
       
-      const url = `http://localhost:3000/admin/getusers?${params.toString()}`;
+      const url = `${buildApiUrl('admin/getusers')}?${params.toString()}`;
       
       console.log('Calling getusers API with URL:', url);
       console.log('Query parameters:', { id: userId, type: 'edit' });
@@ -1841,7 +1842,7 @@ Created Time: ${report.created_time}
       console.log(`Updating leave request ${leaveId} to ${action} by user ${userId} on ${approvedDate}...`);
 
       // Use backend endpoint instead of n8n webhook
-      const response = await fetch('http://localhost:3000/admin/updateleavestatus', {
+      const response = await fetch(buildApiUrl('admin/updateleavestatus'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1962,7 +1963,7 @@ Created Time: ${report.created_time}
       const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
       
       // Fetch all cases for gap analysis (employee_id=0)
-      const response = await fetch('http://localhost:3000/admin/gapanalysis?employee_id=0', {
+      const response = await fetch(`${buildApiUrl('admin/gapanalysis')}?employee_id=0`, {
         method: 'GET',
         headers: {
           'accept': 'application/json',
@@ -2012,7 +2013,7 @@ Created Time: ${report.created_time}
       const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MDY3ODYsImV4cCI6MjA3MDQ4Mjc4Nn0.Ssi2327jY_9cu5lQorYBdNjJJBWejz91j_kCgtfaj0o';
       
       // Fetch all cases for gap analysis (employee_id=0)
-      const response = await fetch('http://localhost:3000/admin/gapanalysis?employee_id=0', {
+      const response = await fetch(`${buildApiUrl('admin/gapanalysis')}?employee_id=0`, {
         method: 'GET',
         headers: {
           'accept': 'application/json',
@@ -2088,7 +2089,7 @@ Created Time: ${report.created_time}
         }
       }
       
-      const response = await fetch(`http://localhost:3000/admin/backlog_id?backlog_id=${item.backlog_id}`, {
+      const response = await fetch(`${buildApiUrl('admin/backlog_id')}?backlog_id=${item.backlog_id}`, {
         method: 'GET',
         headers: {
           'accept': '*/*',
@@ -2153,7 +2154,7 @@ Created Time: ${report.created_time}
         }
       }
 
-      const response = await fetch('http://localhost:3000/admin/deletecase', {
+      const response = await fetch(buildApiUrl('admin/deletecase'), {
         method: 'DELETE',
         headers: {
           'accept': 'application/json',
@@ -2302,7 +2303,7 @@ Created Time: ${report.created_time}
       // Supabase service role key
       const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyYm5sdmdlY3pueXFlbHJ5amVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkwNjc4NiwiZXhwIjoyMDcwNDgyNzg2fQ.EeSnf_51c6VYPoUphbHC_HU9eU47ybFjDAtYa8oBbws';
       
-      const response = await fetch('http://localhost:3000/support/partnerdocumentview', {
+      const response = await fetch(buildApiUrl('support/partnerdocumentview'), {
         method: 'POST',
         headers: {
           'Accept': '*/*',

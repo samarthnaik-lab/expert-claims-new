@@ -10,8 +10,10 @@ export interface CaseTypeApiResponse {
   statusMessage: string;
 }
 
+import { buildApiUrl } from '@/config/api';
+
 export class CaseTypeService {
-  private static readonly API_URL = 'http://localhost:3000/support/case_type';
+  private static readonly API_URL = buildApiUrl('support/case_type');
 
   static async getCaseTypes(sessionId: string, jwtToken: string): Promise<CaseType[]> {
     try {

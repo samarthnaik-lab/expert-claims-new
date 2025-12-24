@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield, Upload, FileText, X, CheckCircle, AlertCircle, Trash2, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { buildApiUrl } from '@/config/api';
 
 interface UploadedFile {
   id: string;
@@ -132,7 +133,7 @@ const CustomerDocumentUpload = () => {
               }
             }
             
-            const sessionResponse = await fetch(`http://localhost:3000/customer/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobileNumber)}`, {
+            const sessionResponse = await fetch(`${buildApiUrl('customer/getcustomersessiondetails')}?mobile_number=${encodeURIComponent(mobileNumber)}`, {
               method: 'GET',
               headers: {
                 'accept': 'application/json',
@@ -176,7 +177,7 @@ const CustomerDocumentUpload = () => {
         formData.append('user_id', userId.toString());
   
         const response = await fetch(
-          'http://localhost:3000/customer/customer-case',
+          buildApiUrl('customer/customer-case'),
           {
             method: 'POST',
             headers: {
@@ -302,7 +303,7 @@ const CustomerDocumentUpload = () => {
       ));
       
       const response = await fetch(
-        'http://localhost:3000/api/upload',
+        buildApiUrl('api/upload'),
         {
           method: 'POST',
           headers: {
@@ -533,7 +534,7 @@ const CustomerDocumentUpload = () => {
      }
 
      const response = await fetch(
-          "http://localhost:3000/customer/getdocumentcatagories",
+          buildApiUrl("customer/getdocumentcatagories"),
           {
             method: "GET",
             headers: {
