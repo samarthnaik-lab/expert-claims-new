@@ -4156,7 +4156,7 @@ const NewTask = () => {
                 </div>
               </div>
               <div>
-                <Label>Assign Date *</Label>
+                <Label>Assign Date </Label>
                 <Popover open={assignDateCalendarOpen} onOpenChange={setAssignDateCalendarOpen}>
                   <PopoverTrigger asChild>
                     <div className="relative w-full">
