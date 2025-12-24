@@ -188,6 +188,7 @@ const NewTask = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [languageComboboxOpen, setLanguageComboboxOpen] = useState(false);
   const [assignDateCalendarOpen, setAssignDateCalendarOpen] = useState(false);
+  const [paymentDateCalendarOpen, setPaymentDateCalendarOpen] = useState(false);
   const [partnerComboboxOpen, setPartnerComboboxOpen] = useState(false);
   const [assignedToComboboxOpen, setAssignedToComboboxOpen] = useState(false);
   const [customerComboboxOpen, setCustomerComboboxOpen] = useState(false);
@@ -4673,17 +4674,77 @@ const NewTask = () => {
 
                   <div>
                     <Label htmlFor="due_date">Payment Date</Label>
-                    <Input
-                      id="due_date"
-                      type="date"
-                      value={newPayment.due_date}
-                      onChange={(e) =>
-                        setNewPayment({
-                          ...newPayment,
-                          due_date: e.target.value,
-                        })
-                      }
-                    />
+                    <Popover open={paymentDateCalendarOpen} onOpenChange={setPaymentDateCalendarOpen}>
+                      <PopoverTrigger asChild>
+                        <div className="relative w-full">
+                          <Input
+                            id="due_date"
+                            type="text"
+                            readOnly
+                            value={newPayment.due_date ? (() => {
+                              try {
+                                const dateStr = newPayment.due_date;
+                                if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                  const [year, month, day] = dateStr.split('-').map(Number);
+                                  return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+                                }
+                                const date = new Date(dateStr);
+                                if (!isNaN(date.getTime())) {
+                                  const day = String(date.getDate()).padStart(2, '0');
+                                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                                  const year = date.getFullYear();
+                                  return `${day}/${month}/${year}`;
+                                }
+                                return '';
+                              } catch {
+                                return '';
+                              }
+                            })() : ''}
+                            placeholder="DD/MM/YYYY"
+                            onClick={() => setPaymentDateCalendarOpen(true)}
+                            className="w-full cursor-pointer pr-10"
+                          />
+                          <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={newPayment.due_date ? (() => {
+                            try {
+                              const dateStr = newPayment.due_date;
+                              if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                const [year, month, day] = dateStr.split('-').map(Number);
+                                return new Date(year, month - 1, day);
+                              }
+                              const date = new Date(dateStr);
+                              return !isNaN(date.getTime()) ? date : undefined;
+                            } catch {
+                              return undefined;
+                            }
+                          })() : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              const year = date.getFullYear();
+                              const month = String(date.getMonth() + 1).padStart(2, '0');
+                              const day = String(date.getDate()).padStart(2, '0');
+                              const formattedDate = `${year}-${month}-${day}`;
+                              setNewPayment({
+                                ...newPayment,
+                                due_date: formattedDate,
+                              });
+                              setPaymentDateCalendarOpen(false);
+                            }
+                          }}
+                          disabled={(date) => {
+                            const twoMonthsAgo = new Date();
+                            twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+                            return date < twoMonthsAgo;
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div>
