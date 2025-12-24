@@ -2225,6 +2225,21 @@ const NewTask = () => {
           description: "Customer selection is required",
           variant: "destructive",
         });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Validate age if creating a new customer
+      const selectedCustomer = customers.find(
+        (customer) => customer.customer_id.toString() === formData.customer_id
+      );
+      if (!selectedCustomer && (!newCustomer.age || !newCustomer.age.trim())) {
+        toast({
+          title: "Error",
+          description: "Age is required for new customer",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
         return;
       }
 
@@ -2234,6 +2249,7 @@ const NewTask = () => {
           description: "User not authenticated",
           variant: "destructive",
         });
+        setIsSubmitting(false);
         return;
       }
 
@@ -3434,8 +3450,11 @@ const NewTask = () => {
                                 </Select>
                               </div>
                               <div>
-                                <Label>Age</Label>
+                                <Label>Age <span className="text-red-500">*</span></Label>
                                 <Input
+                                  type="number"
+                                  min="0"
+                                  max="100"
                                   value={newCustomer.age}
                                   onChange={(e) =>
                                     setNewCustomer({
@@ -3444,6 +3463,7 @@ const NewTask = () => {
                                     })
                                   }
                                   placeholder="Enter age"
+                                  required
                                 />
                               </div>
                               <div>
