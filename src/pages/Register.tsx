@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronDown, Check, ChevronsUpDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { buildApiUrl } from '@/config/api';
 
 // Simple hash function for password
 const hashPassword = (password: string): string => {
@@ -92,6 +93,8 @@ const Register = () => {
   const [aadharError, setAadharError] = useState('');
   const [panError, setPanError] = useState('');
   const [gstinError, setGstinError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [ageError, setAgeError] = useState('');
   const [roles] = useState<Role[]>(staticRoles);
   const [isLoadingRoles] = useState(false);
   const [partners, setPartners] = useState<Array<{ partner_id: number, user_id: number, first_name: string, last_name: string }>>([]);
@@ -202,6 +205,26 @@ const Register = () => {
 
     setFormData(prev => ({ ...prev, [field]: value }));
 
+    // Email validation
+    if (field === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (value.length > 0 && !emailRegex.test(value)) {
+        setEmailError('Please enter a valid email address');
+      } else {
+        setEmailError('');
+      }
+    }
+
+    // Age validation
+    if (field === 'age') {
+      const ageNum = parseInt(value);
+      if (value.length > 0 && (isNaN(ageNum) || ageNum < 1 || ageNum > 150)) {
+        setAgeError('Please enter a valid age (1-150)');
+      } else {
+        setAgeError('');
+      }
+    }
+
     // Password validation
     if (field === 'password' && formData.role !== 'customer' ) {
       if (value.length > 0 && value.length < 6) {
@@ -255,12 +278,50 @@ const Register = () => {
   };
 
   const handleRegister = async () => {
+    // Clear previous errors
+    setEmailError('');
+    setAgeError('');
+    setPasswordError('');
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email || !emailRegex.test(formData.email)) {
+      setEmailError('Please enter a valid email address');
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Age validation - required for all roles
+    if (!formData.age || formData.age.trim() === '') {
+      setAgeError('Age is required');
+      toast({
+        title: "Validation Error",
+        description: "Age is a required field for all roles",
+        variant: "destructive",
+      });
+      return;
+    }
+    const ageNum = parseInt(formData.age);
+    if (isNaN(ageNum) || ageNum < 1 || ageNum > 150) {
+      setAgeError('Please enter a valid age (1-150)');
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid age between 1 and 150",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Check required fields - password is only required for non-customer roles
     const isPasswordRequired = formData.role !== 'customer';
     // Mobile number is required for admin and customer roles
     const isMobileRequired = formData.role === 'admin' || formData.role === 'customer';
     // Username is auto-generated from email, so removed from required fields
-    const requiredFields = [!formData.email, !formData.first_name, !formData.last_name, !formData.role];
+    const requiredFields = [!formData.first_name, !formData.last_name, !formData.role];
     
     if (isPasswordRequired) {
       requiredFields.push(!formData.password);
@@ -587,7 +648,11 @@ const Register = () => {
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="Enter email address"
                     required
+                    className={emailError ? 'border-red-500' : ''}
                   />
+                  {emailError && (
+                    <p className="text-red-500 text-sm mt-1">{emailError}</p>
+                  )}
                 </div>
 
     
@@ -682,7 +747,7 @@ const Register = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="age">Age</Label>
+                  <Label htmlFor="age">Age *</Label>
                   <Input
                     id="age"
                     type="text"
@@ -696,7 +761,12 @@ const Register = () => {
                       }
                     }}
                     placeholder="Enter age"
+                    required
+                    className={ageError ? 'border-red-500' : ''}
                   />
+                  {ageError && (
+                    <p className="text-red-500 text-sm mt-1">{ageError}</p>
+                  )}
                 </div>
               </div>
 

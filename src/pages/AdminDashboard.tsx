@@ -2657,7 +2657,7 @@ Created Time: ${report.created_time}
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[100px]">Assignee</th>
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[120px]">Customer</th>
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
-                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Due Date</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Assigned Date</th>
                         <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[160px]">Actions</th>
                       </tr>
                     </thead>
@@ -3022,7 +3022,7 @@ Created Time: ${report.created_time}
                 {leaveLoading ? (
                   <div className="p-6 text-center">Loading leave requests...</div>
                 ) : (
-                  <div className="overflow-hidden">
+                  <div className="overflow-x-auto">
                     <table className="w-full" style={{ tableLayout: 'auto' }}>
                       <thead className="bg-gray-50 border-b">
                         <tr>
@@ -3032,85 +3032,87 @@ Created Time: ${report.created_time}
                             sortColumn={leaveSortConfig?.column || ''}
                             sortDirection={leaveSortConfig?.direction || 'asc'}
                             onSort={handleLeaveSort}
-                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                           />
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
+                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Leave Type</th>
+                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Start Date</th>
+                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">End Date</th>
+                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Days</th>
+                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Reason</th>
+                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Applied Date</th>
+                          <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[120px]">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {sortedLeaveRequests.map((request: any) => (
                           <tr key={request.application_id} className="hover:bg-gray-50">
-                            <td className="px-4 py-4 min-w-0 break-words text-sm font-medium text-blue-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.application_id}</td>
-                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.employees.first_name} {request.employees.last_name}</td>
-                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{request.leave_types?.type_name || 'N/A'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatDateDDMMYYYY(request.start_date)}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatDateDDMMYYYY(request.end_date)}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{request.total_days}</td>
-                            <td className="px-4 py-4 min-w-0 break-words text-sm text-gray-600" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={request.reason}>{request.reason}</td>
-                            <td className="px-4 py-4 whitespace-nowrap">
+                            <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm font-medium text-blue-600" title={request.application_id}>{request.application_id}</td>
+                            <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words max-w-[120px] sm:max-w-none" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={`${request.employees.first_name} ${request.employees.last_name}`}>{request.employees.first_name} {request.employees.last_name}</td>
+                            <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden md:table-cell max-w-[100px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={request.leave_types?.type_name || 'N/A'}>{request.leave_types?.type_name || 'N/A'}</td>
+                            <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">{formatDateDDMMYYYY(request.start_date)}</td>
+                            <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600 hidden sm:table-cell">{formatDateDDMMYYYY(request.end_date)}</td>
+                            <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">{request.total_days}</td>
+                            <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-600 break-words hidden lg:table-cell max-w-[150px]" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={request.reason}>{request.reason}</td>
+                            <td className="px-2 sm:px-3 py-3 whitespace-nowrap">
                               <Badge className={getStatusColor(request.status)}>
-                                <span className="capitalize">{request.status}</span>
+                                <span className="text-xs capitalize">{request.status}</span>
                               </Badge>
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
+                            <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600 hidden xl:table-cell">
                               {formatDateDDMMYYYY(request.applied_date)}
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
-                              {(() => {
-                                // Get current user role from session or userDetails
-                                const currentUserRole = session?.userRole || userDetails?.role || userDetails?.designation || '';
-                                const isAdmin = currentUserRole?.toLowerCase() === 'admin';
-                                
-                                // Show action buttons for admin role OR for pending status
-                                if (isAdmin || request.status === 'pending') {
+                            <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                              <div className="flex items-center gap-1 sm:gap-2">
+                                {(() => {
+                                  // Get current user role from session or userDetails
+                                  const currentUserRole = session?.userRole || userDetails?.role || userDetails?.designation || '';
+                                  const isAdmin = currentUserRole?.toLowerCase() === 'admin';
+                                  
+                                  // Show action buttons for admin role OR for pending status
+                                  if (isAdmin || request.status === 'pending') {
+                                    return (
+                                      <>
+                                        <button
+                                          className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                          onClick={() => handleLeaveAction(request.application_id, 'approved')}
+                                          title="Approve"
+                                          disabled={request.status === 'approved'}
+                                        >
+                                          <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                                        </button>
+                                        <button
+                                          className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                          onClick={() => handleLeaveAction(request.application_id, 'rejected')}
+                                          title="Reject"
+                                          disabled={request.status === 'rejected'}
+                                        >
+                                          <XCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                                        </button>
+                                        {request.status !== 'pending' && (
+                                          <span className="text-gray-400 text-xs hidden sm:inline ml-2">
+                                            ({request.status === 'approved' ? 'Approved' : 'Rejected'})
+                                          </span>
+                                        )}
+                                      </>
+                                    );
+                                  }
+                                  
+                                  // For non-admin and non-pending, just show status
                                   return (
-                                    <>
-                                      <button
-                                        className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                        onClick={() => handleLeaveAction(request.application_id, 'approved')}
-                                        title="Approve"
-                                        disabled={request.status === 'approved'}
-                                      >
-                                        <CheckCircle className="h-4 w-4" />
-                                      </button>
-                                      <button
-                                        className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                        onClick={() => handleLeaveAction(request.application_id, 'rejected')}
-                                        title="Reject"
-                                        disabled={request.status === 'rejected'}
-                                      >
-                                        <XCircle className="h-4 w-4" />
-                                      </button>
-                                      {request.status !== 'pending' && (
-                                        <span className="text-gray-400 text-xs ml-2">
-                                          ({request.status === 'approved' ? 'Approved' : 'Rejected'})
-                                        </span>
-                                      )}
-                                    </>
+                                    <span className="text-gray-400 text-xs">
+                                      {request.status === 'approved' ? 'Approved' : 'Rejected'}
+                                    </span>
                                   );
-                                }
-                                
-                                // For non-admin and non-pending, just show status
-                                return (
-                                  <span className="text-gray-400 text-xs">
-                                    {request.status === 'approved' ? 'Approved' : 'Rejected'}
-                                  </span>
-                                );
-                              })()}
+                                })()}
+                              </div>
                             </td>
                           </tr>
                         ))}
                         {leaveRequests.length === 0 && (
                           <tr>
-                            <td colSpan={10} className="px-4 py-4 text-center text-gray-500">
+                            <td colSpan={10} className="px-2 sm:px-3 py-4 text-center text-gray-500 text-xs sm:text-sm">
                               No leave requests found
                             </td>
                           </tr>
@@ -3123,8 +3125,8 @@ Created Time: ${report.created_time}
             </Card>
 
             {/* Pagination Controls */}
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+              <div className="text-xs sm:text-sm text-gray-700">
                 Showing {leaveRequests.length} leave requests
               </div>
               <div className="flex items-center space-x-2">
@@ -3133,11 +3135,11 @@ Created Time: ${report.created_time}
                   size="sm"
                   onClick={() => setLeaveCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={leaveCurrentPage === 1}
-                  className="border-2 border-gray-300 hover:border-primary-500"
+                  className="border-2 border-gray-300 hover:border-primary-500 text-xs sm:text-sm"
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-gray-700">
+                <span className="text-xs sm:text-sm text-gray-700">
                   Page {leaveCurrentPage}
                 </span>
                 <Button
@@ -3145,7 +3147,7 @@ Created Time: ${report.created_time}
                   size="sm"
                   onClick={() => setLeaveCurrentPage(prev => prev + 1)}
                   disabled={leaveRequests.length < parseInt(leavePageLimit)}
-                  className="border-2 border-gray-300 hover:border-primary-500"
+                  className="border-2 border-gray-300 hover:border-primary-500 text-xs sm:text-sm"
                 >
                   Next
                 </Button>
@@ -3653,7 +3655,7 @@ Created Time: ${report.created_time}
                     <div><strong>Employee ID:</strong> {selectedUser.employees.employee_id}</div>
                     <div><strong>Designation:</strong> {selectedUser.employees.designation}</div>
                     <div><strong>Manager:</strong> {selectedUser.employees.manager || 'N/A'}</div>
-                    <div><strong>Joining Date:</strong> {selectedUser.employees.joining_date}</div>
+                    <div><strong>Joining Date:</strong> {formatDateDDMMYYYY(selectedUser.employees.joining_date)}</div>
                     <div><strong>Work Phone:</strong> {selectedUser.employees.work_phone || 'N/A'}</div>
                     <div><strong>Address:</strong> {selectedUser.employees.address || 'N/A'}</div>
                   </div>

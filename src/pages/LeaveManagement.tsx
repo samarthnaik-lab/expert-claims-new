@@ -172,8 +172,8 @@ const LeaveManagement = () => {
       const baseUrl = buildApiUrl('');
       const url =
         role === "employee" && employeeId
-          ? `${baseUrl}/support/getempleaves?employee_id=${employeeId}&page=1&size=10000`
-          : `${baseUrl}/admin/getleaves?page=1&size=10000`;
+          ? `${baseUrl}support/getempleaves?employee_id=${employeeId}&page=1&size=10000`
+          : `${baseUrl}admin/getleaves?page=1&size=10000`;
 
       const response = await fetch(url, {
         method: "GET",
@@ -233,8 +233,8 @@ const LeaveManagement = () => {
       const baseUrl = buildApiUrl('');
       const url =
         role === "employee" && employeeId
-          ? `${baseUrl}/support/getempleaves?employee_id=${employeeId}&page=${page}&size=${limit}`
-          : `${baseUrl}/admin/getleaves?page=${page}&size=${limit}`;
+          ? `${baseUrl}support/getempleaves?employee_id=${employeeId}&page=${page}&size=${limit}`
+          : `${baseUrl}admin/getleaves?page=${page}&size=${limit}`;
 
       console.log("=== Leave Fetch Debug ===");
       console.log("Role:", role);
@@ -353,7 +353,7 @@ const LeaveManagement = () => {
       const baseUrl = buildApiUrl('');
       const jwtToken = localStorage.getItem("jwtToken") || "";
 
-      const response = await fetch(`${baseUrl}/support/getlevetypes`, {
+      const response = await fetch(`${baseUrl}support/getlevetypes`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -455,7 +455,7 @@ const LeaveManagement = () => {
       const jwtToken = localStorage.getItem("jwtToken") || "";
 
       // Call the backend updateleavestatus API for approval
-      const response = await fetch(`${baseUrl}/admin/updateleavestatus`, {
+      const response = await fetch(`${baseUrl}admin/updateleavestatus`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -547,7 +547,7 @@ const LeaveManagement = () => {
       const jwtToken = localStorage.getItem("jwtToken") || "";
 
       // Call the backend updateleavestatus API for rejection
-      const response = await fetch(`${baseUrl}/admin/updateleavestatus`, {
+      const response = await fetch(`${baseUrl}admin/updateleavestatus`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -683,7 +683,7 @@ const LeaveManagement = () => {
           
           if (email) {
             console.log("Fetching employee_id for email:", email);
-            const userDetailsResponse = await fetch(`${baseUrl}/support/getuserdetails?email=${encodeURIComponent(email)}`, {
+            const userDetailsResponse = await fetch(`${baseUrl}support/getuserdetails?email=${encodeURIComponent(email)}`, {
               method: "GET",
               headers: {
                 "Content-Type": "application/json",
@@ -732,7 +732,7 @@ const LeaveManagement = () => {
       console.log("Submitting leave data:", leaveData);
 
       // Call the backend apply-leave API
-      const response = await fetch(`${baseUrl}/support/apply-leave`, {
+      const response = await fetch(`${baseUrl}support/apply-leave`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
