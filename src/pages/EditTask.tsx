@@ -3270,8 +3270,8 @@ const EditTask = () => {
         <div className="min-h-screen bg-primary-500 py-6 px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
                 <Card className="shadow-lg rounded-lg bg-white">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
-                        <CardTitle className="text-2xl font-bold">Edit Task</CardTitle>
+                    <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 pt-6">
+                        <CardTitle className="text-xl sm:text-2xl font-bold">Edit Task</CardTitle>
                         <Button
                             variant="outline"
                             onClick={() => {
@@ -3284,16 +3284,16 @@ const EditTask = () => {
                                     navigate('/admin-dashboard');
                                 }
                             }}
-                            className="bg-white border-2 border-gray-300 hover:border-primary-500 hover:bg-gray-50 text-black"
+                            className="bg-white border-2 border-gray-300 hover:border-primary-500 hover:bg-gray-50 text-black w-full sm:w-auto"
                         >
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Back to Dashboard
                         </Button>
                     </CardHeader>
-                    <CardDescription className="px-6 pb-4 text-gray-500">
+                    <CardDescription className="px-4 sm:px-6 pb-4 text-gray-500">
                         Edit the task details below.
                     </CardDescription>
-                    <CardContent className="space-y-6">
+                    <CardContent className="space-y-6 px-4 sm:px-6">
                         {/* Basic Information Section */}
                         <div className="space-y-4">
                             <h3 className="text-lg font-semibold border-b pb-2">Basic Information</h3>
@@ -3982,7 +3982,7 @@ const EditTask = () => {
                         {/* Priority & Status Section */}
                         <div className="space-y-4">
                             <h3 className="text-lg font-semibold border-b pb-2">Priority & Status</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <Label>Priority</Label>
                                     <Select value={formData.priority} onValueChange={(value) => handleSelectChange('priority', value)}>

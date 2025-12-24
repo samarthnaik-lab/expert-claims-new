@@ -2225,7 +2225,7 @@ const TaskDetail = () => {
                       <h4 className="text-lg font-semibold text-gray-900">
                         Stage History ({caseDetails.case_stage_history.length})
                       </h4>
-                      <p className="text-sm text-gray-500">Real data from API</p>
+                      {/* <p className="text-sm text-gray-500">Real data from API</p> */}
                     </div>
                     {caseDetails.case_stage_history.map((history: any, index: number) => (
                       <div key={history.stage_history_id || index} className="relative">
@@ -2374,7 +2374,7 @@ const TaskDetail = () => {
                        <h4 className="text-lg font-semibold text-gray-900">
                          Payment Phases ({caseDetails.case_payment_phases.length})
                        </h4>
-                       <p className="text-sm text-gray-500">Real data from API</p>
+                       {/* <p className="text-sm text-gray-500">Real data from API</p> */}
                        {caseDetails.due_date && (
                          <p className="text-sm text-gray-600 mt-2">
                            Assigned Date: <span className="font-medium">{formatDateDDMMYYYY(caseDetails.due_date)}</span>
