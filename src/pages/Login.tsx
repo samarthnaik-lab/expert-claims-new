@@ -25,14 +25,25 @@ import { buildApiUrl } from '@/config/api';
 const maskMobileNumber = (message: string): string => {
   if (!message) return message;
   
-  // Pattern to match mobile numbers (10 digits)
-  const mobilePattern = /\b(\d{10})\b/g;
+  // Pattern to match mobile numbers (10-15 digits, with or without spaces/dashes)
+  // Matches: 8999065622, 8999 0656 22, 8999-0656-22, etc.
+  const mobilePattern = /\b(\d{10,15})\b/g;
   
   return message.replace(mobilePattern, (match) => {
-    // Keep only last 4 digits, mask the rest
-    const last4 = match.slice(-4);
-    const masked = '*'.repeat(6) + last4; // 6 stars + last 4 digits
-    return masked;
+    // Remove any spaces or dashes from the number
+    const cleanNumber = match.replace(/[\s-]/g, '');
+    
+    // Only mask if it's a valid mobile number length (10-15 digits)
+    if (cleanNumber.length >= 10 && cleanNumber.length <= 15) {
+      // Keep only last 4 digits, mask the rest
+      const last4 = cleanNumber.slice(-4);
+      const maskedLength = cleanNumber.length - 4;
+      const masked = '*'.repeat(maskedLength) + last4;
+      return masked;
+    }
+    
+    // Return original if it doesn't match mobile number pattern
+    return match;
   });
 };
 
@@ -415,9 +426,13 @@ const Login = () => {
             setFormData(prev => ({ ...prev, otp: sendOtpResult.otp }));
           }
 
+          // Mask mobile number in the message
+          const message = sendOtpResult.message || "OTP has been sent to your mobile number. Please enter the OTP code.";
+          const maskedMessage = maskMobileNumber(message);
+          
           toast({
             title: "OTP Sent Successfully",
-            description: sendOtpResult.message || "OTP has been sent to your mobile number. Please enter the OTP code.",
+            description: maskedMessage,
           });
         } else {
           toast({
