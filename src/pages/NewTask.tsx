@@ -35,7 +35,6 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { buildApiUrl } from "@/config/api";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { CaseTypeService, CaseType } from "@/services/caseTypeService";
