@@ -3407,18 +3407,20 @@ const NewTask = () => {
                             variant="outline"
                             role="combobox"
                             aria-expanded={customerComboboxOpen}
-                            className="w-full sm:flex-1 justify-between"
+                            className="w-full sm:flex-1 justify-between min-w-0 overflow-hidden"
                             disabled={isLoadingCustomers}
                           >
-                            {formData.customer_id
-                              ? customers.find((c) => c.customer_id.toString() === formData.customer_id)
-                                ? customers.find((c) => c.customer_id.toString() === formData.customer_id)?.customer_name
-                                : "Select customer"
-                              : "Select customer"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            <span className="truncate flex-1 text-left">
+                              {formData.customer_id
+                                ? customers.find((c) => c.customer_id.toString() === formData.customer_id)
+                                  ? customers.find((c) => c.customer_id.toString() === formData.customer_id)?.customer_name
+                                  : "Select customer"
+                                : "Select customer"}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-shrink-0" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                        <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[var(--radix-popover-trigger-width)] min-w-[200px] max-w-[90vw] sm:max-w-none p-0" align="start" sideOffset={4}>
                           <Command>
                             <CommandInput placeholder="Search customer..." />
                             <CommandList>
@@ -3442,16 +3444,17 @@ const NewTask = () => {
                                             handleCustomerChange(customer.customer_id.toString());
                                             setCustomerComboboxOpen(false);
                                           }}
+                                          className="cursor-pointer"
                                         >
                                           <Check
                                             className={cn(
-                                              "mr-2 h-4 w-4",
+                                              "mr-2 h-4 w-4 shrink-0",
                                               formData.customer_id === customer.customer_id.toString()
                                                 ? "opacity-100"
                                                 : "opacity-0"
                                             )}
                                           />
-                                          {customer.customer_name}
+                                          <span className="flex-1 truncate">{customer.customer_name}</span>
                                         </CommandItem>
                                       ))}
                                   </CommandGroup>
@@ -3462,8 +3465,8 @@ const NewTask = () => {
                         </PopoverContent>
                       </Popover>
                     ) : (
-                      <div className="w-full p-3 border rounded-md bg-gray-50">
-                        <span className="text-sm font-medium">
+                      <div className="w-full sm:flex-1 p-3 border rounded-md bg-gray-50 min-w-0 overflow-hidden">
+                        <span className="text-sm font-medium truncate block">
                           {newCustomer.first_name} {newCustomer.last_name}
                         </span>
                       </div>
@@ -3487,7 +3490,7 @@ const NewTask = () => {
                         <Button
                           type="button"
                           variant="outline"
-                          className="bg-white border-2 border-gray-300 hover:border-primary-500 hover:bg-gray-50 text-black w-full sm:w-auto whitespace-nowrap"
+                          className="bg-white border-2 border-gray-300 hover:border-primary-500 hover:bg-gray-50 text-black w-full sm:w-auto whitespace-nowrap flex-shrink-0"
                         >
                           Create New Customer
                         </Button>
