@@ -1213,7 +1213,7 @@ const NewTask = () => {
 
       console.log('Creating partner with data:', requestBody);
 
-      const response = await fetch('http://localhost:3000/admin/createuser', {
+      const response = await fetch(buildApiUrl('admin/createuser'), {
         method: 'POST',
         headers: {
           'accept': '*/*',

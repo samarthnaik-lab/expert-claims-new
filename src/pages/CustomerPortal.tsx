@@ -90,7 +90,7 @@ const CustomerPortal = () => {
       if (mobileNumber) {
         try {
           console.log('Calling getcustomersessiondetails API with mobile_number:', mobileNumber);
-          const sessionResponse = await fetch(`http://localhost:3000/customer/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobileNumber)}`, {
+          const sessionResponse = await fetch(`${buildApiUrl('customer/getcustomersessiondetails')}?mobile_number=${encodeURIComponent(mobileNumber)}`, {
             method: 'GET',
             headers: {
               'accept': 'application/json',
@@ -287,7 +287,7 @@ const CustomerPortal = () => {
           }
         }
         
-        const sessionResponse = await fetch(`http://localhost:3000/customer/getcustomersessiondetails?mobile_number=${encodeURIComponent(mobileNumber)}`, {
+        const sessionResponse = await fetch(`${buildApiUrl('customer/getcustomersessiondetails')}?mobile_number=${encodeURIComponent(mobileNumber)}`, {
           method: 'GET',
           headers: {
             'accept': 'application/json',
