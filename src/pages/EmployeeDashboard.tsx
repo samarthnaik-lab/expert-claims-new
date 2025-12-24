@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Calendar, User, FileText, LogOut, CheckCircle, Clock, AlertCircle, Shield, Edit, RefreshCw, Filter, ZoomIn, ZoomOut, RotateCcw, XCircle, Trash2 } from 'lucide-react';
+import { Search, Calendar, User, FileText, LogOut, CheckCircle, Clock, AlertCircle, Shield, Edit, RefreshCw, Filter, ZoomIn, ZoomOut, RotateCcw, XCircle, Trash2, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import SortableTableHeader from '@/components/ui/SortableTableHeader';
 import { useTableSort } from '@/hooks/useTableSort';
@@ -80,8 +80,14 @@ const EmployeeDashboard = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
 
+  // Sorting for tasks data
+  const { sortedData: sortedTasks, sortConfig: taskSortConfig, handleSort: handleTaskSort } = useTableSort(tasks);
+
   // Assigned tasks data from employee_all_task API
   const [assignedTasks, setAssignedTasks] = useState<any[]>([]);
+
+  // Sorting for assigned tasks data
+  const { sortedData: sortedAssignedTasks, sortConfig: assignedTaskSortConfig, handleSort: handleAssignedTaskSort } = useTableSort(assignedTasks);
   const [isLoadingAssignedTasks, setIsLoadingAssignedTasks] = useState(false);
   const [assignedTaskCurrentPage, setAssignedTaskCurrentPage] = useState(1);
   const [assignedTaskPageLimit, setAssignedTaskPageLimit] = useState('10');
@@ -643,7 +649,7 @@ const EmployeeDashboard = () => {
     ]
   };
 
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = sortedTasks.filter(task => {
     const searchLower = searchTerm.toLowerCase();
     
     const matchesSearch = task.case_summary?.toLowerCase().includes(searchLower) ||
@@ -1669,20 +1675,27 @@ const EmployeeDashboard = () => {
                       <table className="w-full">
                         <thead className="bg-gradient-to-r from-blue-50 to-indigo-50">
                           <tr>
-                            <th className="text-left p-3 font-semibold text-gray-700 text-sm w-20">ID</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 text-sm min-w-[200px]">Task Name</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 text-sm min-w-[150px]">Customer</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 text-sm w-32 hidden lg:table-cell">Mobile</th>
-                            <th className="text-center p-3 font-semibold text-gray-700 text-sm w-28">Priority</th>
-                            <th className="text-center p-3 font-semibold text-gray-700 text-sm w-32">Status</th>
-                            <th className="text-center p-3 font-semibold text-gray-700 text-sm w-32 hidden lg:table-cell">Assigned Date</th>
-                            <th className="text-center p-3 font-semibold text-gray-700 text-sm w-40">Actions</th>
+                            <SortableTableHeader
+                              column="case_id"
+                              label="ID"
+                              sortColumn={taskSortConfig?.column || ''}
+                              sortDirection={taskSortConfig?.direction || 'asc'}
+                              onSort={handleTaskSort}
+                              className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-16"
+                            />
+                            <th className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-40">Task Name</th>
+                            <th className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-28">Customer</th>
+                            <th className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-28 hidden lg:table-cell">Mobile</th>
+                            <th className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-24">Priority</th>
+                            <th className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-28">Status</th>
+                            <th className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-28 hidden lg:table-cell">Assigned Date</th>
+                            <th className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-32">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {filteredTasks.map(task => (
                             <tr key={task.case_id} className="hover:bg-blue-50/30 transition-colors duration-150">
-                              <td className="p-3">
+                              <td className="px-1 py-2 text-center">
                                 <button
                                   onClick={() => navigate(`/task/${task.case_id}`)}
                                   className="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
@@ -1690,43 +1703,47 @@ const EmployeeDashboard = () => {
                                   {task.case_id || 'N/A'}
                                 </button>
                               </td>
-                              <td className="p-3">
+                              <td className="px-1 py-1.5 text-center">
                                 <div className="font-medium text-gray-900 text-sm line-clamp-2">{task.case_summary || 'No Summary'}</div>
                               </td>
-                              <td className="p-3 text-gray-700 text-sm">{task.customer_name || 'Unknown Customer'}</td>
-                              <td className="p-3 text-gray-600 text-sm hidden lg:table-cell">{task.mobile_number || 'N/A'}</td>
-                              <td className="p-3 text-center">
+                              <td className="px-1 py-1.5 text-center text-gray-700 text-sm">{task.customer_name || 'Unknown Customer'}</td>
+                              <td className="px-1 py-1.5 text-center text-gray-600 text-sm hidden lg:table-cell">{task.mobile_number || 'N/A'}</td>
+                              <td className="px-1 py-1.5 text-center">
                                 <Badge className={`${getPriorityColor(task.priority)} px-2 py-0.5 rounded-full text-xs font-medium`}>
                                   {task.priority || 'N/A'}
                                 </Badge>
                               </td>
-                              <td className="p-3 text-center">
+                              <td className="px-1 py-1.5 text-center">
                                 <Badge className={`${getStatusColor(task.ticket_stage)} px-2 py-0.5 rounded-full text-xs font-medium`}>
                                   {task.ticket_stage || 'Unknown Status'}
                                 </Badge>
                               </td>
-                              <td className="p-3 text-center text-xs text-gray-600 hidden lg:table-cell">
+                              <td className="px-1 py-1.5 text-center text-xs text-gray-600 hidden lg:table-cell">
                                 {task.created_time || task.assigned_date || task.due_date 
                                   ? formatDateDDMMYYYY(task.created_time || task.assigned_date || task.due_date)
                                   : 'N/A'}
                               </td>
-                              <td className="p-3">
-                                <div className="flex items-center justify-center gap-1.5">
+                              <td className="px-1 py-1.5 text-center">
+                                <div className="flex items-center justify-center gap-1 sm:gap-2">
                                   <Button 
-                                    size="sm" 
                                     variant="outline"
+                                    size="sm"
                                     onClick={() => navigate(`/task/${task.case_id}`)}
-                                    className="h-7 px-2 text-xs border border-gray-300 hover:border-blue-500 hover:bg-blue-50 rounded-md transition-all"
+                                    className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
+                                    title="View"
                                   >
-                                    View
+                                    <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    <span className="hidden sm:inline ml-1">View</span>
                                   </Button>
                                   <Button 
-                                    size="sm" 
                                     variant="outline"
+                                    size="sm"
                                     onClick={() => navigate(`/edit-task/${task.case_id}`)}
-                                    className="h-7 px-2 text-xs border border-gray-300 hover:border-blue-500 hover:bg-blue-50 rounded-md transition-all"
+                                    className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
+                                    title="Edit"
                                   >
-                                    <Edit className="h-3 w-3" />
+                                    <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    <span className="hidden sm:inline ml-1">Edit</span>
                                   </Button>
                                 </div>
                               </td>
@@ -1768,22 +1785,26 @@ const EmployeeDashboard = () => {
                               ? formatDateDDMMYYYY(task.created_time || task.assigned_date || task.due_date)
                               : 'N/A'}</div>
                           </div>
-                          <div className="flex gap-1.5">
+                          <div className="flex gap-1 sm:gap-2">
                             <Button 
-                              size="sm" 
                               variant="outline"
+                              size="sm"
                               onClick={() => navigate(`/task/${task.case_id}`)}
-                              className="h-7 px-3 text-xs"
+                              className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
+                              title="View"
                             >
-                              View
+                              <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="hidden sm:inline ml-1">View</span>
                             </Button>
                             <Button 
-                              size="sm" 
                               variant="outline"
+                              size="sm"
                               onClick={() => navigate(`/edit-task/${task.case_id}`)}
-                              className="h-7 px-3 text-xs"
+                              className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
+                              title="Edit"
                             >
-                              <Edit className="h-3 w-3" />
+                              <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="hidden sm:inline ml-1">Edit</span>
                             </Button>
                           </div>
                         </div>
@@ -1910,67 +1931,81 @@ const EmployeeDashboard = () => {
                     <div className="hidden md:block">
                       <div className="rounded-lg border border-gray-200 overflow-hidden">
                         <table className="w-full">
-                          <thead className="bg-gradient-to-r from-emerald-50 to-teal-50">
+                          <thead className="bg-gradient-to-r from-blue-50 to-indigo-50">
                             <tr>
-                              <th className="text-left p-3 font-semibold text-gray-700 text-sm w-20">Task ID</th>
-                              <th className="text-left p-3 font-semibold text-gray-700 text-sm min-w-[200px]">Task Name</th>
-                              <th className="text-left p-3 font-semibold text-gray-700 text-sm min-w-[180px] hidden lg:table-cell">Description</th>
-                              <th className="text-center p-3 font-semibold text-gray-700 text-sm w-28">Status</th>
-                              <th className="text-center p-3 font-semibold text-gray-700 text-sm w-28">Priority</th>
-                              <th className="text-center p-3 font-semibold text-gray-700 text-sm w-32 hidden lg:table-cell">Assign Date</th>
-                              <th className="text-center p-3 font-semibold text-gray-700 text-sm w-40">Actions</th>
+                              <SortableTableHeader
+                                column="id"
+                                label="Task ID"
+                                sortColumn={assignedTaskSortConfig?.column || ''}
+                                sortDirection={assignedTaskSortConfig?.direction || 'asc'}
+                                onSort={handleAssignedTaskSort}
+                                className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-16"
+                              />
+                              <th className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-40">Task Name</th>
+                              <th className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-32 hidden lg:table-cell">Description</th>
+                              <th className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-28">Status</th>
+                              <th className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-24">Priority</th>
+                              <th className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-32 hidden lg:table-cell">Assign Date</th>
+                              <th className="text-center px-1 py-1.5 font-semibold text-gray-700 text-sm w-32">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
-                            {assignedTasks
+                            {sortedAssignedTasks
                               .slice((assignedTaskCurrentPage - 1) * parseInt(assignedTaskPageLimit), assignedTaskCurrentPage * parseInt(assignedTaskPageLimit))
                               .map((task: any, index: number) => (
-                              <tr key={task.id || task.task_id || task.case_id || index} className="hover:bg-emerald-50/30 transition-colors duration-150">
-                                <td className="p-3">
-                                  <span className="font-mono text-xs text-emerald-600">
+                              <tr key={task.id || task.task_id || task.case_id || index} className="hover:bg-blue-50/30 transition-colors duration-150">
+                                <td className="px-1 py-1.5 text-center">
+                                  <button
+                                    onClick={() => navigate(`/task/${task.id || task.task_id || task.case_id}`)}
+                                    className="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                                  >
                                     {task.id || task.task_id || task.case_id || 'N/A'}
-                                  </span>
+                                  </button>
                                 </td>
-                                <td className="p-3">
+                                <td className="px-1 py-1.5 text-center">
                                   <div className="font-medium text-gray-900 text-sm line-clamp-2">{task.task_name || task.case_summary || task.title || task.name || 'No Title'}</div>
                                 </td>
-                                <td className="p-3 text-gray-700 text-sm hidden lg:table-cell">
+                                <td className="px-1 py-1.5 text-center text-gray-700 text-sm hidden lg:table-cell">
                                   <div className="line-clamp-2">{task.description || task.case_description || task.task_description || 'No Description'}</div>
                                 </td>
-                                <td className="p-3 text-center">
+                                <td className="px-1 py-1.5 text-center">
                                   <Badge className={`${getStatusColor(task.status || task.ticket_stage || task.task_status)} px-2 py-0.5 rounded-full text-xs font-medium`}>
                                     {task.status || task.ticket_stage || task.task_status || 'Unknown'}
                                   </Badge>
                                 </td>
-                                <td className="p-3 text-center">
+                                <td className="px-1 py-1.5 text-center">
                                   <Badge className={`${getPriorityColor(task.priority || task.task_priority)} px-2 py-0.5 rounded-full text-xs font-medium`}>
                                     {task.priority || task.task_priority || 'N/A'}
                                   </Badge>
                                 </td>
-                                <td className="p-3 text-center text-xs text-gray-600 hidden lg:table-cell">
+                                <td className="px-1 py-1.5 text-center text-xs text-gray-600 hidden lg:table-cell">
                                   {task.assigned_date || task.created_at || task.created_time || task.due_date || task.due_date_time
                                     ? formatDateDDMMYYYY(task.assigned_date || task.created_at || task.created_time || task.due_date || task.due_date_time)
                                     : 'N/A'}
                                 </td>
-                                <td className="p-3">
-                                  <div className="flex items-center justify-center gap-1.5">
+                                <td className="px-1 py-1.5 text-center">
+                                  <div className="flex items-center justify-center gap-1 sm:gap-2">
                                     {(task.case_id || task.id || task.task_id) && (
                                       <>
                                         <Button 
-                                          size="sm" 
                                           variant="outline"
+                                          size="sm"
                                           onClick={() => navigate(`/task/${task.case_id || task.id || task.task_id}`)}
-                                          className="h-7 px-2 text-xs border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 rounded-md transition-all"
+                                          className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
+                                          title="View"
                                         >
-                                          View
+                                          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                                          <span className="hidden sm:inline ml-1">View</span>
                                         </Button>
                                         <Button 
-                                          size="sm" 
                                           variant="outline"
+                                          size="sm"
                                           onClick={() => navigate(`/edit-task/${task.case_id || task.id || task.task_id}`)}
-                                          className="h-7 px-2 text-xs border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 rounded-md transition-all"
+                                          className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
+                                          title="Edit"
                                         >
-                                          <Edit className="h-3 w-3" />
+                                          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                                          <span className="hidden sm:inline ml-1">Edit</span>
                                         </Button>
                                       </>
                                     )}
@@ -2012,24 +2047,28 @@ const EmployeeDashboard = () => {
                                 ? formatDateDDMMYYYY(task.assigned_date || task.created_at || task.created_time || task.due_date || task.due_date_time)
                                 : 'N/A'}
                             </div>
-                            <div className="flex gap-1.5">
+                            <div className="flex gap-1 sm:gap-2">
                               {(task.case_id || task.id || task.task_id) && (
                                 <>
                                   <Button 
-                                    size="sm" 
                                     variant="outline"
+                                    size="sm"
                                     onClick={() => navigate(`/task/${task.case_id || task.id || task.task_id}`)}
-                                    className="h-7 px-3 text-xs"
+                                    className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
+                                    title="View"
                                   >
-                                    View
+                                    <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    <span className="hidden sm:inline ml-1">View</span>
                                   </Button>
                                   <Button 
-                                    size="sm" 
                                     variant="outline"
+                                    size="sm"
                                     onClick={() => navigate(`/edit-task/${task.case_id || task.id || task.task_id}`)}
-                                    className="h-7 px-3 text-xs"
+                                    className="border-2 border-gray-300 hover:border-primary-500 h-7 sm:h-8 px-2 sm:px-3"
+                                    title="Edit"
                                   >
-                                    <Edit className="h-3 w-3" />
+                                    <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    <span className="hidden sm:inline ml-1">Edit</span>
                                   </Button>
                                 </>
                               )}

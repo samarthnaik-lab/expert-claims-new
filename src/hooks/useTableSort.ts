@@ -28,7 +28,7 @@ export const useTableSort = <T>(data: T[], defaultSort?: SortConfig) => {
       let bValue = (b as any)[sortConfig.column];
 
       // Handle ID columns specifically - convert to number for proper sorting
-      if (sortConfig.column === 'backlog_id' || sortConfig.column === 'task_id') {
+      if (sortConfig.column === 'backlog_id' || sortConfig.column === 'task_id' || sortConfig.column === 'case_id' || sortConfig.column === 'id') {
         // Extract last 3+ digits from ID (e.g., "ECSI-GA-25-080" -> "080", "ECSI-25-242" -> "242")
         // Handles future growth: "ECSI-GA-25-1234" -> "1234"
         const extractLastDigits = (id: string | number) => {
@@ -38,6 +38,12 @@ export const useTableSort = <T>(data: T[], defaultSort?: SortConfig) => {
           const match = idStr.match(/(\d{3,})$/); // Match last 3+ digits
           return match ? Number(match[1]) : 0;
         };
+        
+        // For 'id' column, check multiple possible field names
+        if (sortConfig.column === 'id') {
+          aValue = (a as any).id || (a as any).task_id || (a as any).case_id || aValue;
+          bValue = (b as any).id || (b as any).task_id || (b as any).case_id || bValue;
+        }
         
         aValue = extractLastDigits(aValue);
         bValue = extractLastDigits(bValue);
